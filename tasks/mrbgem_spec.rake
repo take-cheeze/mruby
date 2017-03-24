@@ -350,6 +350,8 @@ module MRuby
           spec.dependencies.each do |dep|
             unless gem_table.key? dep[:gem]
               if dep[:default]; default_gems << dep
+              elsif File.exist? "#{MRUBY_ROOT}/mrbgems/#{dep[:gem]}"
+                default_gems << { :gem => dep[:gem], :default => { :core => dep[:gem] } }
               else default_gems << { :gem => dep[:gem], :default => { :mgem => dep[:gem] } }
               end
             end
