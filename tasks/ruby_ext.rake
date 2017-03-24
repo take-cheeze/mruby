@@ -2,7 +2,13 @@ class Object
   class << self
     def attr_block(*syms)
       syms.flatten.each do |sym|
-        class_eval "def #{sym}(&block);block.call(@#{sym}) if block_given?;@#{sym};end"
+        class_eval do
+          define_method sym do |&block|
+            iv = instance_variable_get :"@#{sym}"
+            block.call(iv) if block
+            iv
+          end
+        end
       end
     end
   end
