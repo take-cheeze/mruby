@@ -313,7 +313,7 @@ convert_type(mrb_state *mrb, mrb_value val, const char *tname, const char *metho
   m = mrb_intern_cstr(mrb, method);
   if (!mrb_respond_to(mrb, val, m)) {
     if (raise) {
-      mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %S into %S", inspect_type(mrb, val), mrb_str_new_cstr(mrb, tname));
+      mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %S into %S (with :%S)", inspect_type(mrb, val), mrb_str_new_cstr(mrb, tname), mrb_symbol_value(m));
     }
     return mrb_nil_value();
   }
