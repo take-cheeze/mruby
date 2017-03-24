@@ -307,6 +307,8 @@ module MRuby
         @ary = []
       end
 
+      def size; @ary.size end
+
       def each(&b)
         @ary.each(&b)
       end
