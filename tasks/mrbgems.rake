@@ -12,8 +12,8 @@ MRuby.each_target do
       open(t.name, 'w') do |f|
         gem_func_gems = gems.select { |g| g.generate_functions }
         gem_func_decls = gem_func_gems.each_with_object('') do |g, s|
-          s << "void GENERATED_TMP_mrb_#{g.funcname}_gem_init(mrb_state*);\n" \
-               "void GENERATED_TMP_mrb_#{g.funcname}_gem_final(mrb_state*);\n"
+          s << "void GENERATED_TMP_mrb_#{g.funcname}_gem_init(mrb_state*);\n" <<
+            "void GENERATED_TMP_mrb_#{g.funcname}_gem_final(mrb_state*);\n"
         end
         gem_init_calls = gem_func_gems.each_with_object('') do |g, s|
           s << "  GENERATED_TMP_mrb_#{g.funcname}_gem_init(mrb);\n"
