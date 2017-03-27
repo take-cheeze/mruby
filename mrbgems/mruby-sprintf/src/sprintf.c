@@ -634,7 +634,6 @@ retry:
       case '{': {
         const char *start = p;
         char term = (*p == '<') ? '>' : '}';
-        mrb_value symname;
 
         for (; p < end && *p != term; )
           p++;
@@ -642,8 +641,7 @@ retry:
           mrb_raisef(mrb, E_ARGUMENT_ERROR, "name%S after <%S>",
                      mrb_str_new(mrb, start, p - start + 1), mrb_sym2str(mrb, id));
         }
-        symname = mrb_str_new(mrb, start + 1, p - start - 1);
-        id = mrb_intern_str(mrb, symname);
+        id = mrb_intern(mrb, start + 1, p - start - 1);
         nextvalue = GETNAMEARG(mrb_symbol_value(id), start, (int)(p - start + 1));
         if (mrb_undef_p(nextvalue)) {
           mrb_raisef(mrb, E_KEY_ERROR, "key%S not found", mrb_str_new(mrb, start, p - start + 1));
