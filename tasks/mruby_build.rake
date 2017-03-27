@@ -65,6 +65,7 @@ module MRuby
         end
 
         build_dir = build_dir || ENV['MRUBY_BUILD_DIR'] || "#{MRUBY_ROOT}/build"
+        build_dir = File.absolute_path build_dir
 
         @file_separator = '/'
         @build_dir = "#{build_dir}/#{@name}"
