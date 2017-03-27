@@ -13,7 +13,11 @@
 /* allocated memory address should be multiple of POOL_ALIGNMENT */
 /* or undef it if alignment does not matter */
 #ifndef POOL_ALIGNMENT
+#if UINTPTR_MAX > UINT32_MAX
+#define POOL_ALIGNMENT 8
+#else
 #define POOL_ALIGNMENT 4
+#endif
 #endif
 /* page size of memory pool */
 #ifndef POOL_PAGE_SIZE
