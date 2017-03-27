@@ -160,7 +160,8 @@ module MRuby
 
       file cxx_src => [src, __FILE__] do |t|
         FileUtils.mkdir_p File.dirname t.name
-        IO.write t.name, <<EOS
+        File.open t.name, 'w' do |f|
+          f.write <<EOS
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 
@@ -172,6 +173,7 @@ extern "C" {
 }
 #endif
 EOS
+        end
       end
 
       file obj => cxx_src do |t|

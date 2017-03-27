@@ -9,7 +9,8 @@ end
 
 assert('regression for #1572') do
   script, bin = Tempfile.new('test.rb'), Tempfile.new('test.mrb')
-  File.write script.path, 'p "ok"'
+  script.write 'p "ok"'
+  script.flush
   system "#{cmd('mrbc')} -g -o #{bin.path} #{script.path}"
   o = `#{cmd('mruby')} -b #{bin.path}`.strip
   assert_equal o, '"ok"'
