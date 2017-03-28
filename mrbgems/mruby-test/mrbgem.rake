@@ -151,11 +151,18 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
   # of the test gem depending on a change to the gem
   # selection
   active_gems = "#{build_dir}/active_gems.lst"
-  FileUtils.mkdir_p File.dirname(active_gems)
-  open(active_gems, 'w+') do |f|
-    build.gems.each do |g|
-      f.puts g.name
+  active_gems_block = Proc.new do
+    FileUtils.mkdir_p File.dirname(active_gems)
+    open(active_gems, 'w+') do |f|
+      build.gems.each do |g|
+        f.puts g.name
+      end
     end
+  end
+  active_gems_block.call
+
+  file active_gems => [MRUBY_CONFIG] do |t|
+    active_gems_block
   end
   file clib => active_gems
 
