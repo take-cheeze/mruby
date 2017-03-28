@@ -435,12 +435,24 @@ mrb_struct_aref(mrb_state *mrb, mrb_value s)
   return struct_aref_int(mrb, s, mrb_int(mrb, idx));
 }
 
+static void
+mrb_struct_modify(mrb_state *mrb, struct RArray *s)
+{
+  if (MRB_FROZEN_P(s)) {
+    mrb_raise(mrb, E_RUNTIME_ERROR, "can't modify frozen struct");
+  }
+
+  mrb_ary_modify(mrb, s);
+}
+
 static mrb_value
 mrb_struct_aset_sym(mrb_state *mrb, mrb_value s, mrb_sym id, mrb_value val)
 {
   mrb_value members, *ptr;
   const mrb_value *ptr_members;
   mrb_int i, len;
+
+  mrb_struct_modify(mrb, mrb_ary_ptr(s));
 
   members = struct_members(mrb, s);
   len = RARRAY_LEN(members);
