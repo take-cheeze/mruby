@@ -111,7 +111,7 @@ Set ANDROID_PLATFORM environment variable or set :platform parameter
         when /mips/       then 'mipsel-linux-android-*'
         end
 
-      gcc_toolchain_version = Dir[home_path.join('toolchains', test)].map{|t| t.match(/-(\d+\.\d+)$/); $1.to_f }.max
+      gcc_toolchain_version = Dir.glob(home_path.join('toolchains', test)).map{|t| t.match(/-(\d+\.\d+)$/); $1.to_f }.max
       @gcc_toolchain_path = home_path.join('toolchains', prefix + gcc_toolchain_version.to_s, 'prebuilt', host_platform)
     end
     @gcc_toolchain_path

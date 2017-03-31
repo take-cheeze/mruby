@@ -25,7 +25,7 @@ ARGV.each do |gem|
     gem = gem.gsub('\\', '/')
   end
 
-  Dir["#{gem}/bintest/**/*.rb"].each do |file|
+  Dir.glob("#{gem}/bintest/**/*.rb").each do |file|
     load file
   end
 end
