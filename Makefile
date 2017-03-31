@@ -18,12 +18,13 @@ DEP_FILE := $(SRC_DIR)/mrbgems/mruby-bin-minirake/.dep_gems.txt
 DEPS := $(shell cat $(DEP_FILE))
 SYM_DEPS := $(subst -,_, $(DEPS))
 
-NON_CORE_MRBGEMS_DIR := $(patsubst %/,%,$(dir $(BUILD_DIR)))
+NON_CORE_MRBGEMS_DIR := $(patsubst %/,%,$(dir $(BUILD_DIR)))/mrbgems
+MRBGEM_CLONE_RESULT := $(shell $(SRC_DIR)/tasks/clone_minirake_dependencies.sh $(NON_CORE_MRBGEMS_DIR))
 
 MRBGEM_DIRS := $(foreach gem,$(DEPS),$(if $(wildcard \
   $(SRC_DIR)/mrbgems/$(gem)/mrbgem.rake), \
   $(SRC_DIR)/mrbgems/$(gem), \
-  $(NON_CORE_MRBGEMS_DIR)/mrbgems/$(gem)))
+  $(NON_CORE_MRBGEMS_DIR)/$(gem)))
 MRBGEM_C_SRCS := $(foreach dir,$(MRBGEM_DIRS),$(wildcard $(dir)/src/*.c)) $(SRC_DIR)/mrblib/init_mrblib.c
 MRBGEM_CXX_SRCS := $(foreach dir,$(MRBGEM_DIRS),$(wildcard $(dir)/src/*.cxx))
 MRBGEM_CPP_SRCS := $(foreach dir,$(MRBGEM_DIRS),$(wildcard $(dir)/src/*.cpp))
