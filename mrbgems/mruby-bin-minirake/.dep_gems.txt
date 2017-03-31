@@ -32,6 +32,7 @@ mruby-rbconfig
 mruby-error
 mruby-object-ext
 mruby-hash-ext
+mruby-print
 mruby-env
 mruby-getoptlong
 mruby-forwardable

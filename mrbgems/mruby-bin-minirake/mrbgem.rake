@@ -12,6 +12,7 @@ MRuby::Gem::Specification.new 'mruby-bin-minirake' do |spec|
   add_dependency 'mruby-bin-mruby', core: 'mruby-bin-mruby'
   add_dependency 'mruby-object-ext', core: 'mruby-object-ext'
   add_dependency 'mruby-hash-ext', core: 'mruby-hash-ext'
+  add_dependency 'mruby-print', core: 'mruby-print'
 
   add_dependency 'mruby-getoptlong', mgem: 'mruby-getoptlong'
   add_dependency 'mruby-forwardable', mgem: 'mruby-forwardable'
