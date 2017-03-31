@@ -307,7 +307,9 @@ EOS
     def run_bintest
       targets = @gems.select { |v| File.directory? "#{v.dir}/bintest" }.map { |v| filename v.dir }
       targets << filename(".") if File.directory? "./bintest"
-      sh "ruby test/bintest.rb #{targets.join ' '}"
+      executer = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"])
+      puts "Running bintest with executer: #{executer}"
+      sh "#{executer} test/bintest.rb #{targets.join ' '}"
     end
 
     def print_build_summary
