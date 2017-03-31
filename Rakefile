@@ -171,3 +171,11 @@ task :doc do
     puts "  $ gem install yard-mruby"
   end
 end
+
+File.open "#{File.dirname MRuby.targets['host'].build_dir}/minirake_dep.mak", 'w' do |f|
+  MiniRake::Task::TASKS.each do |name,task|
+    renamed = "minirake_#{name}" if name =~ /^(all|test|clean)$/
+    f.write "#{renamed || name} : #{task.prerequisites.join(' ')}\n"
+    f.write "\t#{$0} #{name}\n"
+  end
+end

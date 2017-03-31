@@ -314,3 +314,7 @@ $(BUILD_DIR)/%.o : %.cpp
 $(BUILD_DIR)/%.o : %.c
 	@$(MKDIR_P) $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+ifneq ($(wildcard $(dir $(BUILD_DIR))minirake_dep.mak),)
+include $(dir $(BUILD_DIR))minirake_dep.mak
+endif
