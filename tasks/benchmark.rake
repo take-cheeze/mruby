@@ -10,7 +10,7 @@ end
 
 def build_config_name
   if ENV['MRUBY_CONFIG']
-    File.basename(ENV['MRUBY_CONFIG'], '.rb').gsub('build_config_', '')
+    File.basename(ENV['MRUBY_CONFIG']).sub(/.rb$/, '').gsub('build_config_', '')
   else
     "build"
   end
@@ -54,7 +54,7 @@ MRuby.each_target do |target|
   mruby_bin = "#{target.build_dir}/bin/mruby"
 
   bm_files.each do |bm_file|
-    bm_name = File.basename bm_file, ".rb"
+    bm_name = File.basename(bm_file).sub(/.rb$/, '')
 
     dat_dir = File.join('benchmark', build_config_name, target.name)
     dat_file = File.join(dat_dir, "#{bm_name}.dat")
