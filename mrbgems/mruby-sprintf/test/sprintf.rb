@@ -1,6 +1,10 @@
 #assert('Kernel.sprintf') do
 #end
 
+assert 'Kernel#sprintf' do
+  assert_equal 'test', sprintf('%{foo}', foo: 'test')
+end
+
 assert('String#%') do
   assert_equal "one=1", "one=%d" % 1
   assert_equal "1 one 1.0", "%d %s %3.1f" % [ 1, "one", 1.01 ]
