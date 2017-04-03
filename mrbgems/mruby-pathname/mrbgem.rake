@@ -8,8 +8,9 @@ MRuby::Gem::Specification.new 'mruby-pathname' do |spec|
   add_dependency 'mruby-proc-ext', core: 'mruby-proc-ext'
 
   add_dependency 'mruby-io', mgem: 'mruby-io'
-  add_dependency 'mruby-fileutils', mgem: 'mruby-fileutils'
   add_dependency 'mruby-onig-regexp', mgem: 'mruby-onig-regexp'
+
+  add_dependency 'mruby-fileutils', github: 'mrbgems/mruby-fileutils', branch: 'minirake'
 
   add_test_dependency 'mruby-tempfile', mgem: 'mruby-tempfile'
   add_test_dependency 'mruby-kernel-ext', core: 'mruby-kernel-ext'

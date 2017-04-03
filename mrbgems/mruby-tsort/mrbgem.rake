@@ -7,5 +7,6 @@ MRuby::Gem::Specification.new 'mruby-tsort' do |spec|
   add_dependency 'mruby-array-ext', core: 'mruby-array-ext'
   add_dependency 'mruby-symbol-ext', core: 'mruby-symbol-ext'
   add_dependency 'mruby-enum-lazy', core: 'mruby-enum-lazy'
-  add_dependency 'mruby-method', mgem: 'mruby-method'
+
+  add_dependency 'mruby-method', github: 'mrbgems/mruby-method', branch: 'minirake'
 end

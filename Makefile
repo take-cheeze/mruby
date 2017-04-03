@@ -14,11 +14,15 @@ MINIRAKE := $(BUILD_DIR)/bin/minirake
 MRBC := $(BUILD_DIR)/bin/mrbc
 BIN_MRUBY := $(BUILD_DIR)/bin/mruby
 
+# MINIRAKE_FLAGS := -t
+
 DEP_FILE := $(SRC_DIR)/mrbgems/mruby-bin-minirake/.dep_gems.txt
 DEPS := $(shell cat $(DEP_FILE))
 SYM_DEPS := $(subst -,_, $(DEPS))
 
-NON_CORE_MRBGEMS_DIR := $(patsubst %/,%,$(dir $(BUILD_DIR)))/mrbgems
+MINIRAKE_MRBGEMS_DIR := minirake_mrbgems
+NON_CORE_MRBGEMS_DIR := $(patsubst %/,%,$(dir $(BUILD_DIR)))/$(MINIRAKE_MRBGEMS_DIR)
+NON_CORE_MRBGEMS_BUILD_DIR := $(BUILD_DIR)/build/$(MINIRAKE_MRBGEMS_DIR)
 MRBGEM_CLONE_RESULT := $(shell $(SRC_DIR)/tasks/clone_minirake_dependencies.sh $(NON_CORE_MRBGEMS_DIR))
 
 MRBGEM_DIRS := $(foreach gem,$(DEPS),$(if $(wildcard \
@@ -77,24 +81,24 @@ CLI_LIBS := $(ONIGMO_LIB) $(LIBYAML_LIB)
 MRBCFLAGS := -g
 
 all : $(MINIRAKE)
-	$(MINIRAKE)
+	$(MINIRAKE) $(MINIRAKE_FLAGS) all
 .PHONY : all
 
 
-test : | all $(BIN_MRUBY)
-	$(MINIRAKE) test
+test : | $(BIN_MRUBY)
+	$(MINIRAKE) $(MINIRAKE_FLAGS) test
 .PHONY : test
 
 clean :
 ifeq ($(wildcard $(MINIRAKE)),)
 	$(RM) -r $(BUILD_DIR)
 else
-	$(MINIRAKE) clean
+	$(MINIRAKE) $(MINIRAKE_FLAGS) clean
 endif
 .PHONY : clean
 
-$(BUILD_DIR)/build/mrbgems/mruby-onig-regexp/src/mruby_onig_regexp.o : CPPFLAGS += -I$(dir $(ONIGMO_HEADER)) -DHAVE_ONIGMO_H
-$(BUILD_DIR)/build/mrbgems/mruby-onig-regexp/src/mruby_onig_regexp.o : $(ONIGMO_HEADER)
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-onig-regexp/src/mruby_onig_regexp.o : CPPFLAGS += -I$(dir $(ONIGMO_HEADER)) -DHAVE_ONIGMO_H
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-onig-regexp/src/mruby_onig_regexp.o : $(ONIGMO_HEADER)
 $(ONIGMO_HEADER) : $(ONIGMO_LIB)
 $(ONIGMO_LIB) : $(ONIGMO_DIR)
 	@$(MKDIR_P) $(dir $@)
@@ -108,8 +112,8 @@ $(ONIGMO_ARCHIVE) :
 	@$(MKDIR_P) $(dir $@)
 	$(DOWNLOADER) $@ $(ONIGMO_URL)
 
-$(BUILD_DIR)/build/mrbgems/mruby-yaml/src/yaml.o : CPPFLAGS += -I$(dir $(LIBYAML_HEADER))
-$(BUILD_DIR)/build/mrbgems/mruby-yaml/src/yaml.o : $(LIBYAML_HEADER)
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-yaml/src/yaml.o : CPPFLAGS += -I$(dir $(LIBYAML_HEADER))
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-yaml/src/yaml.o : $(LIBYAML_HEADER)
 $(LIBYAML_HEADER) : $(LIBYAML_LIB)
 $(LIBYAML_LIB) : $(LIBYAML_DIR)
 	@$(MKDIR_P) $(dir $@)
@@ -123,16 +127,16 @@ $(LIBYAML_ARCHIVE) :
 	@$(MKDIR_P) $(dir $@)
 	$(DOWNLOADER) $@ $(LIBYAML_URL)
 
-$(BUILD_DIR)/build/mrbgems/mruby-file-stat/src/file-stat.o : CPPFLAGS += -I$(BUILD_DIR)/build/mrbgems/mruby-file-stat
-$(BUILD_DIR)/build/mrbgems/mruby-file-stat/src/file-stat.o : $(BUILD_DIR)/build/mrbgems/mruby-file-stat/config.h
-$(BUILD_DIR)/build/mrbgems/mruby-file-stat/config.h :
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-file-stat/src/file-stat.o : CPPFLAGS += -I$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-file-stat
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-file-stat/src/file-stat.o : $(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-file-stat/config.h
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-file-stat/config.h :
 	@$(MKDIR_P) $(dir $@)
-	cd $(dir $@) && $(SRC_DIR)/build/mrbgems/mruby-file-stat/configure
+	cd $(dir $@) && $(NON_CORE_MRBGEMS_DIR)/mruby-file-stat/configure
 
-$(BUILD_DIR)/build/mrbgems/mruby-dir/src/dir.o : CPPFLAGS += -I$(SRC_DIR)/src
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-dir/src/dir.o : CPPFLAGS += -I$(SRC_DIR)/src
 $(BUILD_DIR)/core/y.tab.o : CPPFLAGS += -I$(SRC_DIR)/mrbgems/mruby-compiler/core
-$(BUILD_DIR)/build/mrbgems/mruby-require/src/require.o : CPPFLAGS += -I$(SRC_DIR)/src
-$(BUILD_DIR)/build/mrbgems/mruby-pack/src/pack.o : CPPFLAGS += -I$(SRC_DIR)/src
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-require/src/require.o : CPPFLAGS += -I$(SRC_DIR)/src
+$(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-pack/src/pack.o : CPPFLAGS += -I$(SRC_DIR)/src
 
 # build `mruby` command
 $(MINIRAKE) : $(BUILD_DIR)/minirake.o $(CLI_MAIN_OBJS) $(LIBMRUBY) $(CLI_LIBS)

@@ -14,19 +14,19 @@ MRuby::Gem::Specification.new 'mruby-bin-minirake' do |spec|
   add_dependency 'mruby-hash-ext', core: 'mruby-hash-ext'
   add_dependency 'mruby-print', core: 'mruby-print'
 
-  add_dependency 'mruby-getoptlong', mgem: 'mruby-getoptlong'
   add_dependency 'mruby-forwardable', mgem: 'mruby-forwardable'
   add_dependency 'mruby-shellwords', mgem: 'mruby-shellwords'
-  add_dependency 'mruby-yaml', mgem: 'mruby-yaml'
   add_dependency 'mruby-marshal', mgem: 'mruby-marshal'
-  add_dependency 'mruby-process', mgem: 'mruby-process'
   add_dependency 'mruby-io', mgem: 'mruby-io'
   add_dependency 'mruby-env', mgem: 'mruby-env'
   add_dependency 'mruby-onig-regexp', mgem: 'mruby-onig-regexp'
   add_dependency 'mruby-dir-glob', mgem: 'mruby-dir-glob'
-  add_dependency 'mruby-open3', mgem: 'mruby-open3'
 
-  add_dependency 'mruby-fileutils', github: 'hfm/mruby-fileutils'
+  add_dependency 'mruby-open3', github: 'mrbgems/mruby-open3', branch: 'minirake'
+  add_dependency 'mruby-process', github: 'mrbgems/mruby-process', branch: 'minirake'
+  add_dependency 'mruby-yaml', github: 'mrbgems/mruby-yaml', branch: 'minirake'
+  add_dependency 'mruby-getoptlong', github: 'mrbgems/mruby-getoptlong', branch: 'minirake'
+  add_dependency 'mruby-fileutils', github: 'mrbgems/mruby-fileutils', branch: 'minirake'
 
   minirake_gem_list = "#{dir}/.dep_gems.txt"
 
