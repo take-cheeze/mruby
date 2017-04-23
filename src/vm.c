@@ -65,9 +65,12 @@ The value below allows about 60000 recursive calls in the simplest case. */
 # define DEBUG(x)
 #endif
 
+#define ARGS_PASS_BY_ARRAY -1
+#define ARGS_PASS_BY_ARRAY_P(argc) ((argc) < 0)
+
 #define ARENA_RESTORE(mrb,ai) (mrb)->gc.arena_idx = (ai)
 
-#define CALL_MAXARGS 127
+#define CALL_PASS_BY_ARRAY 127
 
 void mrb_method_missing(mrb_state *mrb, mrb_sym name, mrb_value self, mrb_value args);
 
@@ -404,7 +407,7 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
       mrb_ary_unshift(mrb, args, mrb_symbol_value(mid));
       stack_extend(mrb, n+2);
       mrb->c->stack[n+1] = args;
-      argc = -1;
+      argc = ARGS_PASS_BY_ARRAY;
     }
     if (mrb->c->ci - mrb->c->cibase > MRB_FUNCALL_DEPTH_MAX) {
       mrb_exc_raise(mrb, mrb_obj_value(mrb->stack_err));
@@ -423,15 +426,15 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
       ci->nregs = argc + 2;
       stack_extend(mrb, ci->nregs);
     }
-    else if (argc >= CALL_MAXARGS) {
+    else if (argc >= CALL_PASS_BY_ARRAY) {
       mrb_value args = mrb_ary_new_from_values(mrb, argc, argv);
       stack_extend(mrb, ci->nregs);
       mrb->c->stack[1] = args;
-      ci->argc = -1;
+      ci->argc = ARGS_PASS_BY_ARRAY;
       argc = 1;
     }
     else {
-      if (argc < 0) argc = 1;
+      if (ARGS_PASS_BY_ARRAY_P(argc)) argc = 1;
       ci->nregs = p->body.irep->nregs + argc;
       stack_extend(mrb, ci->nregs);
     }
@@ -479,7 +482,7 @@ mrb_exec_irep(mrb_state *mrb, mrb_value self, struct RProc *p)
   if (MRB_PROC_CFUNC_P(p)) {
     return p->body.func(mrb, self);
   }
-  if (ci->argc < 0) {
+  if (ARGS_PASS_BY_ARRAY_P(ci->argc)) {
     stack_extend(mrb, (p->body.irep->nregs < 3) ? 3 : p->body.irep->nregs);
   }
   else {
@@ -753,7 +756,7 @@ mrb_yield_cont(mrb_state *mrb, mrb_value b, mrb_value self, mrb_int argc, const 
   stack_extend(mrb, 3);
   mrb->c->stack[1] = mrb_ary_new_from_values(mrb, argc, argv);
   mrb->c->stack[2] = mrb_nil_value();
-  ci->argc = -1;
+  ci->argc = ARGS_PASS_BY_ARRAY;
   return mrb_exec_irep(mrb, self, p);
 }
 
@@ -786,7 +789,7 @@ argnum_error(mrb_state *mrb, mrb_int num)
   mrb_value str;
   mrb_int argc = mrb->c->ci->argc;
 
-  if (argc < 0) {
+  if (ARGS_PASS_BY_ARRAY_P(argc)) {
     mrb_value args = mrb->c->stack[1];
     if (mrb_array_p(args)) {
       argc = RARRAY_LEN(args);
@@ -1233,7 +1236,7 @@ RETRY_TRY_BLOCK:
       int bidx;
 
       recv = regs[a];
-      if (n == CALL_MAXARGS) {
+      if (n == CALL_PASS_BY_ARRAY) {
         bidx = a+2;
       }
       else {
@@ -1267,7 +1270,7 @@ RETRY_TRY_BLOCK:
         if (!m) {
           mrb_value args;
 
-          if (n == CALL_MAXARGS) {
+          if (n == CALL_PASS_BY_ARRAY) {
             args = regs[a+1];
           }
           else {
@@ -1276,7 +1279,7 @@ RETRY_TRY_BLOCK:
           mrb_method_missing(mrb, mid, recv, args);
         }
         mid = missing;
-        if (n != CALL_MAXARGS) {
+        if (n != CALL_PASS_BY_ARRAY) {
           mrb_value blk = regs[bidx];
 
           if (a+2 > irep->nregs) {
@@ -1284,7 +1287,7 @@ RETRY_TRY_BLOCK:
           }
           regs[a+1] = mrb_ary_new_from_values(mrb, n, regs+a+1);
           regs[a+2] = blk;
-          n = CALL_MAXARGS;
+          n = CALL_PASS_BY_ARRAY;
         }
         mrb_ary_unshift(mrb, regs[a+1], sym);
       }
@@ -1303,8 +1306,8 @@ RETRY_TRY_BLOCK:
       mrb->c->stack += a;
 
       if (MRB_PROC_CFUNC_P(m)) {
-        if (n == CALL_MAXARGS) {
-          ci->argc = -1;
+        if (n == CALL_PASS_BY_ARRAY) {
+          ci->argc = ARGS_PASS_BY_ARRAY;
           ci->nregs = 3;
         }
         else {
@@ -1342,8 +1345,8 @@ RETRY_TRY_BLOCK:
         pool = irep->pool;
         syms = irep->syms;
         ci->nregs = irep->nregs;
-        if (n == CALL_MAXARGS) {
-          ci->argc = -1;
+        if (n == CALL_PASS_BY_ARRAY) {
+          ci->argc = ARGS_PASS_BY_ARRAY;
           stack_extend(mrb, (irep->nregs < 3) ? 3 : irep->nregs);
         }
         else {
@@ -1412,7 +1415,7 @@ RETRY_TRY_BLOCK:
         pool = irep->pool;
         syms = irep->syms;
         ci->nregs = irep->nregs;
-        if (ci->argc < 0) {
+        if (ARGS_PASS_BY_ARRAY_P(ci->argc)) {
           stack_extend(mrb, (irep->nregs < 3) ? 3 : irep->nregs);
         }
         else {
@@ -1454,7 +1457,7 @@ RETRY_TRY_BLOCK:
         if (!m) {
           mrb_value args;
 
-          if (n == CALL_MAXARGS) {
+          if (n == CALL_PASS_BY_ARRAY) {
             args = regs[a+1];
           }
           else {
@@ -1463,11 +1466,11 @@ RETRY_TRY_BLOCK:
           mrb_method_missing(mrb, mid, recv, args);
         }
         mid = missing;
-        if (n == CALL_MAXARGS-1) {
+        if (n == CALL_PASS_BY_ARRAY-1) {
           regs[a+1] = mrb_ary_new_from_values(mrb, n, regs+a+1);
           n++;
         }
-        if (n == CALL_MAXARGS) {
+        if (n == CALL_PASS_BY_ARRAY) {
           mrb_ary_unshift(mrb, regs[a+1], mrb_symbol_value(ci->mid));
         }
         else {
@@ -1476,7 +1479,7 @@ RETRY_TRY_BLOCK:
         }
       }
 
-      if (n == CALL_MAXARGS) {
+      if (n == CALL_PASS_BY_ARRAY) {
         bidx = a+2;
       }
       else {
@@ -1501,8 +1504,8 @@ RETRY_TRY_BLOCK:
       ci->stackent = mrb->c->stack;
       ci->target_class = c;
       ci->pc = pc + 1;
-      if (n == CALL_MAXARGS) {
-        ci->argc = -1;
+      if (n == CALL_PASS_BY_ARRAY) {
+        ci->argc = ARGS_PASS_BY_ARRAY;
       }
       else {
         ci->argc = n;
@@ -1515,7 +1518,7 @@ RETRY_TRY_BLOCK:
       if (MRB_PROC_CFUNC_P(m)) {
         mrb_value v;
 
-        if (n == CALL_MAXARGS) {
+        if (n == CALL_PASS_BY_ARRAY) {
           ci->nregs = 3;
         }
         else {
@@ -1555,7 +1558,7 @@ RETRY_TRY_BLOCK:
         pool = irep->pool;
         syms = irep->syms;
         ci->nregs = irep->nregs;
-        if (n == CALL_MAXARGS) {
+        if (n == CALL_PASS_BY_ARRAY) {
           stack_extend(mrb, (irep->nregs < 3) ? 3 : irep->nregs);
         }
         else {
@@ -1639,9 +1642,9 @@ RETRY_TRY_BLOCK:
       mrb_value *argv = regs+1;
       mrb_value *argv0 = argv;
       int len = m1 + o + r + m2;
-      mrb_value *blk = &argv[argc < 0 ? 1 : argc];
+      mrb_value *blk = &argv[ARGS_PASS_BY_ARRAY_P(argc) ? 1 : argc];
 
-      if (argc < 0) {
+      if (ARGS_PASS_BY_ARRAY_P(argc)) {
         struct RArray *ary = mrb_ary_ptr(regs[1]);
         argv = ary->ptr;
         argc = ary->len;
@@ -1937,7 +1940,7 @@ RETRY_TRY_BLOCK:
         if (!m) {
           mrb_value args;
 
-          if (n == CALL_MAXARGS) {
+          if (n == CALL_PASS_BY_ARRAY) {
             args = regs[a+1];
           }
           else {
@@ -1946,7 +1949,7 @@ RETRY_TRY_BLOCK:
           mrb_method_missing(mrb, mid, recv, args);
         }
         mid = missing;
-        if (n == CALL_MAXARGS) {
+        if (n == CALL_PASS_BY_ARRAY) {
           mrb_ary_unshift(mrb, regs[a+1], sym);
         }
         else {
@@ -1959,8 +1962,8 @@ RETRY_TRY_BLOCK:
       ci = mrb->c->ci;
       ci->mid = mid;
       ci->target_class = c;
-      if (n == CALL_MAXARGS) {
-        ci->argc = -1;
+      if (n == CALL_PASS_BY_ARRAY) {
+        ci->argc = ARGS_PASS_BY_ARRAY;
       }
       else {
         ci->argc = n;
@@ -1980,7 +1983,7 @@ RETRY_TRY_BLOCK:
         irep = m->body.irep;
         pool = irep->pool;
         syms = irep->syms;
-        if (ci->argc < 0) {
+        if (ARGS_PASS_BY_ARRAY_P(ci->argc)) {
           stack_extend(mrb, (irep->nregs < 3) ? 3 : irep->nregs);
         }
         else {
@@ -2715,7 +2718,7 @@ RETRY_TRY_BLOCK:
 MRB_API mrb_value
 mrb_run(mrb_state *mrb, struct RProc *proc, mrb_value self)
 {
-  if (mrb->c->ci->argc < 0) {
+  if (ARGS_PASS_BY_ARRAY_P(mrb->c->ci->argc)) {
     return mrb_vm_run(mrb, proc, self, 3); /* receiver, args and block) */
   }
   else {

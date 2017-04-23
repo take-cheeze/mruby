@@ -789,7 +789,8 @@ attrsym(codegen_scope *s, mrb_sym a)
   return mrb_intern(s->mrb, name2, len+1);
 }
 
-#define CALL_MAXARGS 127
+#define CALL_PASS_BY_ARRAY 127
+#define CALL_MAXARGS (CALL_PASS_BY_ARRAY - 1)
 
 static int
 gen_values(codegen_scope *s, node *t, int val, int extra)
@@ -800,7 +801,7 @@ gen_values(codegen_scope *s, node *t, int val, int extra)
   while (t) {
     is_splat = (intptr_t)t->car->car == NODE_SPLAT; /* splat mode */
     if (
-      n+extra >= CALL_MAXARGS - 1 /* need to subtract one because vm.c expects an array if n == CALL_MAXARGS */
+      n+extra >= CALL_MAXARGS /* need to subtract one because vm.c expects an array if n == CALL_PASS_BY_ARRAY */
       || is_splat) {
       if (val) {
         if (is_splat && n == 0 && (intptr_t)t->car->cdr->car == NODE_ARRAY) {
@@ -932,7 +933,7 @@ gen_call(codegen_scope *s, node *tree, mrb_sym name, int sp, int val, int safe)
       genop(s, MKOP_ABC(OP_EQ, cursp(), idx, n));
     }
     else {
-      if (sendv) n = CALL_MAXARGS;
+      if (sendv) n = CALL_PASS_BY_ARRAY;
       if (blk > 0) {                   /* no block */
         genop(s, MKOP_ABC(OP_SEND, cursp(), idx, n));
       }
@@ -1825,7 +1826,7 @@ codegen(codegen_scope *s, node *tree, int val)
             push();
             genop(s, MKOP_AB(OP_MOVE, cursp(), base));
             genop(s, MKOP_AB(OP_MOVE, cursp()+1, base+1));
-            callargs = CALL_MAXARGS;
+            callargs = CALL_PASS_BY_ARRAY;
           }
           genop(s, MKOP_ABC(OP_SEND, cursp(), idx, callargs));
         }
@@ -1865,7 +1866,7 @@ codegen(codegen_scope *s, node *tree, int val)
 
           idx = new_msym(s, m2);
           pop();
-          if (callargs == CALL_MAXARGS) {
+          if (callargs == CALL_PASS_BY_ARRAY) {
             genop(s, MKOP_AB(OP_ARYPUSH, cursp(), cursp()+1));
             pop();
             genop(s, MKOP_ABC(OP_SEND, cursp(), idx, callargs));
@@ -1920,7 +1921,7 @@ codegen(codegen_scope *s, node *tree, int val)
         if (val && vsp >= 0) {
           genop(s, MKOP_AB(OP_MOVE, vsp, cursp()));
         }
-        if (callargs == CALL_MAXARGS) {
+        if (callargs == CALL_PASS_BY_ARRAY) {
           pop();
           genop(s, MKOP_AB(OP_ARYPUSH, cursp(), cursp()+1));
         }
@@ -1959,7 +1960,7 @@ codegen(codegen_scope *s, node *tree, int val)
         push(); pop();
       }
       pop_n(n+1);
-      if (sendv) n = CALL_MAXARGS;
+      if (sendv) n = CALL_PASS_BY_ARRAY;
       genop(s, MKOP_ABC(OP_SUPER, cursp(), 0, n));
       if (val) push();
     }
@@ -1984,7 +1985,7 @@ codegen(codegen_scope *s, node *tree, int val)
         pop();
       }
       pop(); pop();
-      genop(s, MKOP_ABC(OP_SUPER, cursp(), 0, CALL_MAXARGS));
+      genop(s, MKOP_ABC(OP_SUPER, cursp(), 0, CALL_PASS_BY_ARRAY));
       if (val) push();
     }
     break;
@@ -2027,7 +2028,7 @@ codegen(codegen_scope *s, node *tree, int val)
       }
       pop_n(n+1);
       genop(s, MKOP_ABx(OP_BLKPUSH, cursp(), (ainfo<<4)|(lv & 0xf)));
-      if (sendv) n = CALL_MAXARGS;
+      if (sendv) n = CALL_PASS_BY_ARRAY;
       genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "call")), n));
       if (val) push();
     }
@@ -2602,7 +2603,7 @@ codegen(codegen_scope *s, node *tree, int val)
       push();
       while (t) {
         int symbol;
-        if (num >= CALL_MAXARGS - 1) {
+        if (num >= CALL_MAXARGS) {
           pop_n(num);
           genop(s, MKOP_ABC(OP_ARRAY, cursp(), cursp(), num));
           while (t) {
@@ -2613,7 +2614,7 @@ codegen(codegen_scope *s, node *tree, int val)
             genop(s, MKOP_AB(OP_ARYPUSH, cursp(), cursp()+1));
             t = t->cdr;
           }
-          num = CALL_MAXARGS;
+          num = CALL_PASS_BY_ARRAY;
           break;
         }
         symbol = new_msym(s, sym(t->car));
@@ -2623,7 +2624,7 @@ codegen(codegen_scope *s, node *tree, int val)
         num++;
       }
       pop();
-      if (num < CALL_MAXARGS) {
+      if (num < CALL_PASS_BY_ARRAY) {
         pop_n(num);
       }
       genop(s, MKOP_ABC(OP_SEND, cursp(), undef, num));
