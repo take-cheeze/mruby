@@ -5,9 +5,17 @@
 #include <mruby/string.h>
 #include <mruby/proc.h>
 
+
 #ifndef MRB_DISABLE_STDIO
+
+static void
+print_indent(int indent)
+{
+  while (indent--) { printf("  "); }
+}
+
 static int
-print_r(mrb_state *mrb, mrb_irep *irep, size_t n, int pre)
+print_r(mrb_state *mrb, mrb_irep *irep, size_t n, int pre, int indent)
 {
   size_t i;
 
@@ -29,7 +37,7 @@ print_r(mrb_state *mrb, mrb_irep *irep, size_t n, int pre)
 #define RAB 3
 
 static void
-print_lv(mrb_state *mrb, mrb_irep *irep, mrb_code c, int r)
+print_lv(mrb_state *mrb, mrb_irep *irep, mrb_code c, int r, int indent)
 {
   int pre = 0;
 
@@ -41,17 +49,17 @@ print_lv(mrb_state *mrb, mrb_irep *irep, mrb_code c, int r)
   }
   printf("\t; ");
   if (r & RA) {
-    pre = print_r(mrb, irep, GETARG_A(c), 0);
+    pre = print_r(mrb, irep, GETARG_A(c), 0, indent);
   }
   if (r & RB) {
-    print_r(mrb, irep, GETARG_B(c), pre);
+    print_r(mrb, irep, GETARG_B(c), pre, indent);
   }
   printf("\n");
 }
 #endif
 
 static void
-codedump(mrb_state *mrb, mrb_irep *irep)
+codedump(mrb_state *mrb, mrb_irep *irep, int indent)
 {
 #ifndef MRB_DISABLE_STDIO
   int i;
@@ -61,6 +69,7 @@ codedump(mrb_state *mrb, mrb_irep *irep)
   int32_t line;
 
   if (!irep) return;
+  print_indent(indent);
   printf("irep %p nregs=%d nlocals=%d pools=%d syms=%d reps=%d\n", (void*)irep,
          irep->nregs, irep->nlocals, (int)irep->plen, (int)irep->slen, (int)irep->rlen);
 
@@ -69,9 +78,13 @@ codedump(mrb_state *mrb, mrb_irep *irep)
 
     next_file = mrb_debug_get_filename(irep, i);
     if (next_file && file != next_file) {
+      print_indent(indent);
       printf("file: %s\n", next_file);
       file = next_file;
     }
+
+    print_indent(indent);
+
     line = mrb_debug_get_line(irep, i);
     if (line < 0) {
       printf("      ");
@@ -88,7 +101,7 @@ codedump(mrb_state *mrb, mrb_irep *irep)
       break;
     case OP_MOVE:
       printf("OP_MOVE\tR%d\tR%d\t", GETARG_A(c), GETARG_B(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_LOADL:
       {
@@ -96,97 +109,97 @@ codedump(mrb_state *mrb, mrb_irep *irep)
         mrb_value s = mrb_inspect(mrb, v);
         printf("OP_LOADL\tR%d\tL(%d)\t; %s", GETARG_A(c), GETARG_Bx(c), RSTRING_PTR(s));
       }
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_LOADI:
       printf("OP_LOADI\tR%d\t%d\t", GETARG_A(c), GETARG_sBx(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_LOADSYM:
       printf("OP_LOADSYM\tR%d\t:%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_LOADNIL:
       printf("OP_LOADNIL\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_LOADSELF:
       printf("OP_LOADSELF\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_LOADT:
       printf("OP_LOADT\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_LOADF:
       printf("OP_LOADF\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_GETGLOBAL:
       printf("OP_GETGLOBAL\tR%d\t:%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_SETGLOBAL:
       printf("OP_SETGLOBAL\t:%s\tR%d\t",
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]),
              GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_GETCONST:
       printf("OP_GETCONST\tR%d\t:%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_SETCONST:
       printf("OP_SETCONST\t:%s\tR%d\t",
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]),
              GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_GETMCNST:
       printf("OP_GETMCNST\tR%d\tR%d::%s", GETARG_A(c), GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_SETMCNST:
       printf("OP_SETMCNST\tR%d::%s\tR%d", GETARG_A(c)+1,
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]),
              GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_GETIV:
       printf("OP_GETIV\tR%d\t%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_SETIV:
       printf("OP_SETIV\t%s\tR%d",
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]),
              GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_GETUPVAR:
       printf("OP_GETUPVAR\tR%d\t%d\t%d",
              GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_SETUPVAR:
       printf("OP_SETUPVAR\tR%d\t%d\t%d",
              GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_GETCV:
       printf("OP_GETCV\tR%d\t%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_SETCV:
       printf("OP_SETCV\t%s\tR%d",
              mrb_sym2name(mrb, irep->syms[GETARG_Bx(c)]),
              GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_JMP:
       printf("OP_JMP\t%03d\n", i+GETARG_sBx(c));
@@ -222,7 +235,7 @@ codedump(mrb_state *mrb, mrb_irep *irep)
              (GETARG_Bx(c)>>9)&0x1,
              (GETARG_Bx(c)>>4)&0x1f,
              (GETARG_Bx(c)>>0)&0xf);
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
 
     case OP_ENTER:
@@ -246,7 +259,7 @@ codedump(mrb_state *mrb, mrb_irep *irep)
       default:
         printf("\tbroken\t"); break;
       }
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_BLKPUSH:
       printf("OP_BLKPUSH\tR%d\t%d:%d:%d:%d", GETARG_A(c),
@@ -254,7 +267,7 @@ codedump(mrb_state *mrb, mrb_irep *irep)
              (GETARG_Bx(c)>>9)&0x1,
              (GETARG_Bx(c)>>4)&0x1f,
              (GETARG_Bx(c)>>0)&0xf);
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
 
     case OP_LAMBDA:
@@ -267,16 +280,16 @@ codedump(mrb_state *mrb, mrb_irep *irep)
       case OP_L_LAMBDA:
         printf("lambda"); break;
       }
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_RANGE:
       printf("OP_RANGE\tR%d\tR%d\t%d", GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_METHOD:
       printf("OP_METHOD\tR%d\t:%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_B(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
 
     case OP_ADD:
@@ -341,23 +354,23 @@ codedump(mrb_state *mrb, mrb_irep *irep)
 
     case OP_ARRAY:
       printf("OP_ARRAY\tR%d\tR%d\t%d", GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_ARYCAT:
       printf("OP_ARYCAT\tR%d\tR%d\t", GETARG_A(c), GETARG_B(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_ARYPUSH:
       printf("OP_ARYPUSH\tR%d\tR%d\t", GETARG_A(c), GETARG_B(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_AREF:
       printf("OP_AREF\tR%d\tR%d\t%d", GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_APOST:
       printf("OP_APOST\tR%d\t%d\t%d", GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_STRING:
       {
@@ -365,42 +378,42 @@ codedump(mrb_state *mrb, mrb_irep *irep)
         mrb_value s = mrb_str_dump(mrb, mrb_str_new(mrb, RSTRING_PTR(v), RSTRING_LEN(v)));
         printf("OP_STRING\tR%d\tL(%d)\t; %s", GETARG_A(c), GETARG_Bx(c), RSTRING_PTR(s));
       }
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_STRCAT:
       printf("OP_STRCAT\tR%d\tR%d\t", GETARG_A(c), GETARG_B(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_HASH:
       printf("OP_HASH\tR%d\tR%d\t%d", GETARG_A(c), GETARG_B(c), GETARG_C(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
 
     case OP_OCLASS:
       printf("OP_OCLASS\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_CLASS:
       printf("OP_CLASS\tR%d\t:%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_B(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_MODULE:
       printf("OP_MODULE\tR%d\t:%s", GETARG_A(c),
              mrb_sym2name(mrb, irep->syms[GETARG_B(c)]));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_EXEC:
       printf("OP_EXEC\tR%d\tI(%+d)", GETARG_A(c), GETARG_Bx(c)+1);
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_SCLASS:
       printf("OP_SCLASS\tR%d\tR%d\t", GETARG_A(c), GETARG_B(c));
-      print_lv(mrb, irep, c, RAB);
+      print_lv(mrb, irep, c, RAB, indent);
       break;
     case OP_TCLASS:
       printf("OP_TCLASS\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_ERR:
       {
@@ -423,19 +436,19 @@ codedump(mrb_state *mrb, mrb_irep *irep)
 
         if (b == 0) {
           printf("OP_RESCUE\tR%d\t\t%s", a, cnt ? "cont" : "");
-          print_lv(mrb, irep, c, RA);
+          print_lv(mrb, irep, c, RA, indent);
           break;
         }
         else {
           printf("OP_RESCUE\tR%d\tR%d\t%s", a, b, cnt ? "cont" : "");
-          print_lv(mrb, irep, c, RAB);
+          print_lv(mrb, irep, c, RAB, indent);
           break;
         }
       }
       break;
     case OP_RAISE:
       printf("OP_RAISE\tR%d\t\t", GETARG_A(c));
-      print_lv(mrb, irep, c, RA);
+      print_lv(mrb, irep, c, RA, indent);
       break;
     case OP_POPERR:
       printf("OP_POPERR\t%d\t\t\n", GETARG_A(c));
@@ -456,18 +469,22 @@ codedump(mrb_state *mrb, mrb_irep *irep)
 }
 
 static void
-codedump_recur(mrb_state *mrb, mrb_irep *irep)
+codedump_recur(mrb_state *mrb, mrb_irep *irep, int indent)
 {
   size_t i;
 
-  codedump(mrb, irep);
+  codedump(mrb, irep, indent);
   for (i=0; i<irep->rlen; i++) {
-    codedump_recur(mrb, irep->reps[i]);
+#ifndef MRB_DISABLE_STDIO
+    print_indent(indent);
+    printf("%3zuth child irep\n", i + 1);
+#endif
+    codedump_recur(mrb, irep->reps[i], indent + 1);
   }
 }
 
 void
 mrb_codedump_all(mrb_state *mrb, struct RProc *proc)
 {
-  codedump_recur(mrb, proc->body.irep);
+  codedump_recur(mrb, proc->body.irep, 0);
 }
