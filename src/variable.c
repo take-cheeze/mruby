@@ -873,23 +873,19 @@ mrb_cv_defined(mrb_state *mrb, mrb_value mod, mrb_sym sym)
   return mrb_mod_cv_defined(mrb, mrb_class_ptr(mod), sym);
 }
 
+#define GET_TARGET_CLASS(c) \
+  ((c)->ci->proc->target_class? (c)->ci->proc->target_class : (c)->ci->target_class)
+
 mrb_value
 mrb_vm_cv_get(mrb_state *mrb, mrb_sym sym)
 {
-  struct RClass *c = mrb->c->ci->proc->target_class;
-
-  if (!c) c = mrb->c->ci->target_class;
-
-  return mrb_mod_cv_get(mrb, c, sym);
+  return mrb_mod_cv_get(mrb, GET_TARGET_CLASS(mrb->c), sym);
 }
 
 void
 mrb_vm_cv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  struct RClass *c = mrb->c->ci->proc->target_class;
-
-  if (!c) c = mrb->c->ci->target_class;
-  mrb_mod_cv_set(mrb, c, sym, v);
+  mrb_mod_cv_set(mrb, GET_TARGET_CLASS(mrb->c), sym, v);
 }
 
 static void
@@ -943,9 +939,8 @@ mrb_const_get(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 mrb_value
 mrb_vm_const_get(mrb_state *mrb, mrb_sym sym)
 {
-  struct RClass *c = mrb->c->ci->proc->target_class;
+  struct RClass *c = GET_TARGET_CLASS(mrb->c);
 
-  if (!c) c = mrb->c->ci->target_class;
   if (c) {
     struct RClass *c2;
     mrb_value v;
@@ -983,10 +978,7 @@ mrb_const_set(mrb_state *mrb, mrb_value mod, mrb_sym sym, mrb_value v)
 void
 mrb_vm_const_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  struct RClass *c = mrb->c->ci->proc->target_class;
-
-  if (!c) c = mrb->c->ci->target_class;
-  mrb_obj_iv_set(mrb, (struct RObject*)c, sym, v);
+  mrb_obj_iv_set(mrb, (struct RObject*)GET_TARGET_CLASS(mrb->c), sym, v);
 }
 
 MRB_API void
