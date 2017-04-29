@@ -1063,8 +1063,8 @@ gen_vmassignment(codegen_scope *s, node *tree, int rhs, int val)
     else {
       pop();
     }
-    push_n(post);
-    pop_n(post);
+    push_n(post + 1);
+    pop_n(post + 1);
     genop(s, MKOP_ABC(OP_APOST, cursp(), n, post));
     n = 1;
     if (t->car) {               /* rest */
