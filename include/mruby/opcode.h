@@ -49,7 +49,7 @@
 #define MKOP_Ax(op,ax)      (MKOPCODE(op)|MKARG_Ax(ax))
 #define MKOP_Abc(op,a,b,c)  (MKOP_A(op,a)|MKARG_bc(b,c))
 
-enum {
+enum mrb_opcode {
   /*-----------------------------------------------------------------------
   operation code  operand description
   ------------------------------------------------------------------------*/
