@@ -13,11 +13,11 @@ static struct mrb_irep *
 get_closure_irep(mrb_state *mrb, int level)
 {
   struct mrb_context *c = mrb->c;
-  struct REnv *e = c->ci[-1].proc->env;
+  struct REnv *e = c->ci->ret_ci->proc->env;
   struct RProc *proc;
 
   if (level == 0) {
-    proc = c->ci[-1].proc;
+    proc = c->ci->ret_ci->proc;
     if (MRB_PROC_CFUNC_P(proc)) {
       return NULL;
     }
@@ -193,16 +193,16 @@ create_proc_from_string(mrb_state *mrb, char *s, int len, mrb_value binding, con
     mrbc_context_free(mrb, cxt);
     mrb_raise(mrb, E_SCRIPT_ERROR, "codegen error");
   }
-  if (c->ci[-1].proc->target_class) {
-    proc->target_class = c->ci[-1].proc->target_class;
+  if (c->ci->ret_ci->proc->target_class) {
+    proc->target_class = c->ci->ret_ci->proc->target_class;
   }
-  e = c->ci[-1].proc->env;
-  if (!e) e = c->ci[-1].env;
+  e = c->ci->ret_ci->proc->env;
+  if (!e) e = c->ci->ret_ci->env;
   e = (struct REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV, (struct RClass*)e);
   e->cxt.c = c;
   e->target_ci = c->ci->ret_ci;
   e->stack = c->ci->stackent;
-  MRB_SET_ENV_STACK_LEN(e, c->ci[-1].proc->body.irep->nlocals);
+  MRB_SET_ENV_STACK_LEN(e, c->ci->ret_ci->proc->body.irep->nlocals);
   c->ci->target_class = proc->target_class;
   c->ci->env = 0;
   proc->env = e;

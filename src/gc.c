@@ -899,11 +899,13 @@ gc_gray_mark(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
       struct mrb_context *c = ((struct RFiber*)obj)->cxt;
       mrb_callinfo *ci;
 
-      children += c->ci? c->ci->eidx : 0; // mark ensure stack
+      if (c) {
+        children += c->ci? c->ci->eidx : 0; // mark ensure stack
 
-      // mark closure
-      for (ci = c->ci; ci; ci = ci->ret_ci) {
-        children += 3 + ci->nregs;
+        // mark closure
+        for (ci = c->ci; ci; ci = ci->ret_ci) {
+          children += 3 + ci->nregs;
+        }
       }
     }
     break;

@@ -70,7 +70,7 @@ fiber_init(mrb_state *mrb, mrb_value self)
   struct RProc *p;
   mrb_callinfo *ci;
   mrb_value blk;
-  size_t slen;
+  int i;
 
   mrb_get_args(mrb, "&", &blk);
 
@@ -86,31 +86,40 @@ fiber_init(mrb_state *mrb, mrb_value self)
   *c = mrb_context_zero;
   f->cxt = c;
 
-  /* initialize VM stack */
-  slen = FIBER_STACK_INIT_SIZE;
-  if (p->body.irep->nregs > slen) {
-    slen += p->body.irep->nregs;
-  }
-
-  /* copy receiver from a block */
-  c->stack[0] = mrb->c->stack[0];
-
   /* adjust return callinfo */
-  ci = c->ci = (mrb_callinfo*)mrb_malloc(mrb, sizeof(mrb_callinfo) + sizeof(mrb_value) * p->body.irep->nregs);
+  ci = (mrb_callinfo*)mrb_malloc(mrb, sizeof(mrb_callinfo) + sizeof(mrb_value) * p->body.irep->nregs);
   ci->target_class = p->target_class;
   ci->proc = p;
   ci->pc = p->body.irep->iseq;
   ci->nregs = p->body.irep->nregs;
+  ci->mid = 0;
+  ci->stackent = NULL;
+  ci->ridx = 0;
+  ci->eidx = 0;
+  ci->env = NULL;
+  ci->err = NULL;
+  ci->argc = 0;
+  ci->argv = NULL;
+  ci->ret_ci = NULL;
+  ci->acc = 0;
+  c->stack = (mrb_value*)(ci + 1);
+
+  /* copy receiver from a block */
+  c->stack[0] = mrb->c->stack[0];
+
+  for (i = 1; i < ci->nregs; ++i) { SET_NIL_VALUE(c->stack[i]); }
 
   /* push dummy callinfo */
   c->ci = (mrb_callinfo*)mrb_malloc(mrb, sizeof(mrb_callinfo));
   *(c->ci) = *ci;
   c->ci->ret_ci = ci;
+  c->ci->stackent = c->stack;
 
   c->ci_depth = 2;
-
   c->fib = f;
   c->status = MRB_FIBER_CREATED;
+
+  mrb_assert(c->stack == c->ci->stackent);
 
   return self;
 }
@@ -145,6 +154,7 @@ fiber_check_cfunc(mrb_state *mrb, struct mrb_context *c)
 
   for (ci = c->ci; ci; ci = ci->ret_ci) {
     if (ci->acc < 0) {
+      mrb_assert(FALSE);
       mrb_raise(mrb, E_FIBER_ERROR, "can't cross C function boundary");
     }
   }
@@ -170,12 +180,7 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr
   mrb->c->status = resume ? MRB_FIBER_RESUMED : MRB_FIBER_TRANSFERRED;
   c->prev = resume ? mrb->c : (c->prev ? c->prev : mrb->root_c);
   if (c->status == MRB_FIBER_CREATED) {
-    mrb_value *b = c->stack+1;
-    mrb_value *e = b + len;
-
-    while (b<e) {
-      *b++ = *a++;
-    }
+    c->ci->ret_ci->argv = a;
     c->ci->ret_ci->argc = len;
     value = c->stack[0] = c->ci->proc->env->stack[0];
   }
