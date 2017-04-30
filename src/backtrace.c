@@ -97,32 +97,28 @@ get_backtrace_i(mrb_state *mrb, struct backtrace_location *loc, void *data)
 }
 
 static void
-each_backtrace(mrb_state *mrb, mrb_int ciidx, mrb_code *pc0, each_backtrace_func func, void *data)
+each_backtrace(mrb_state *mrb, mrb_int ciidx, mrb_code const *pc0, each_backtrace_func func, void *data)
 {
   int i;
+  mrb_callinfo *ci;
 
-  if (ciidx >= mrb->c->ciend - mrb->c->cibase)
-    ciidx = 10; /* ciidx is broken... */
-
-  for (i = ciidx; i >= 0; i--) {
+  for (ci = mrb->c->ci, i = ciidx; ci && i >= 0; i--, ci = ci->ret_ci) {
     struct backtrace_location_raw loc;
-    mrb_callinfo *ci;
     mrb_irep *irep;
-    mrb_code *pc;
-
-    ci = &mrb->c->cibase[i];
+    mrb_code const *pc;
 
     if (!ci->proc) continue;
+
     if (MRB_PROC_CFUNC_P(ci->proc)) continue;
 
     irep = ci->proc->body.irep;
     if (!irep) continue;
 
-    if (mrb->c->cibase[i].err) {
-      pc = mrb->c->cibase[i].err;
+    if (ci->err) {
+      pc = ci->err;
     }
     else if (i+1 <= ciidx) {
-      pc = mrb->c->cibase[i+1].pc - 1;
+      pc = ci->pc - 1;
     }
     else {
       pc = pc0;
@@ -172,7 +168,7 @@ output_backtrace_i(mrb_state *mrb, struct backtrace_location_raw *loc_raw, void 
 }
 
 static void
-output_backtrace(mrb_state *mrb, mrb_int ciidx, mrb_code *pc0, output_stream_func func, void *data)
+output_backtrace(mrb_state *mrb, mrb_int ciidx, mrb_code const *pc0, output_stream_func func, void *data)
 {
   struct output_backtrace_args args;
   args.func = func;
@@ -307,13 +303,10 @@ MRB_API mrb_value
 mrb_get_backtrace(mrb_state *mrb)
 {
   mrb_value ary;
-  mrb_callinfo *ci = mrb->c->ci;
-  mrb_code *pc = ci->pc;
-  mrb_int ciidx = (mrb_int)(ci - mrb->c->cibase - 1);
+  mrb_code const *pc = mrb->c->ci->pc;
 
-  if (ciidx < 0) ciidx = 0;
-  ary = mrb_ary_new(mrb);
-  output_backtrace(mrb, ciidx, pc, get_backtrace_i, (void*)mrb_ary_ptr(ary));
+  ary = mrb_ary_new_capa(mrb, mrb->c->ci_depth);
+  output_backtrace(mrb, mrb->c->ci_depth, pc, get_backtrace_i, (void*)mrb_ary_ptr(ary));
 
   return ary;
 }
@@ -393,7 +386,7 @@ mrb_restore_backtrace(mrb_state *mrb)
   int i;
   mrb_value backtrace;
 
-  backtrace = mrb_ary_new(mrb);
+  backtrace = mrb_ary_new_capa(mrb, mrb->backtrace.n);
   for (i = 0; i < mrb->backtrace.n; i++) {
     int ai;
     mrb_backtrace_entry *entry;

@@ -134,40 +134,27 @@ mrb_obj_id_m(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
 {
-  mrb_callinfo *ci = mrb->c->ci;
-  mrb_value *bp;
+  mrb_callinfo const *ci = mrb->c->ci->ret_ci;
+  mrb_value const *sp = mrb->c->ci->stackent;
 
-  bp = ci->stackent + 1;
-  ci--;
-  if (ci <= mrb->c->cibase) {
-    return mrb_false_value();
-  }
+  if (!ci) { return mrb_false_value(); }
+
   /* block_given? called within block; check upper scope */
   if (ci->proc->env) {
     struct REnv *e = ci->proc->env;
 
-    while (e->c) {
-      e = (struct REnv*)e->c;
-    }
-    /* top-level does not have block slot (always false) */
-    if (e->stack == mrb->c->stbase)
+    while (e->c) { e = (struct REnv*)e->c; }
+
+    if (!MRB_ENV_STACK_SHARED_P(e)) {
+      mrb_assert(FALSE);
       return mrb_false_value();
-    if (e->stack && e->cioff < 0) {
-      /* use saved block arg position */
-      bp = &e->stack[-e->cioff];
-      ci = 0;                 /* no callinfo available */
     }
-    else {
-      ci = e->cxt.c->cibase + e->cioff;
-      bp = ci[1].stackent + 1;
-    }
+
+    ci = e->target_ci;
+    sp = e->stack;
   }
-  if (ci && ci->argc > 0) {
-    bp += ci->argc;
-  }
-  if (mrb_nil_p(*bp))
-    return mrb_false_value();
-  return mrb_true_value();
+
+  return mrb_bool_value(ci->ret_ci && !mrb_nil_p(sp[ci->argc + 1]));
 }
 
 /* 15.3.1.3.7  */
@@ -872,7 +859,7 @@ mrb_f_raise(mrb_state *mrb, mrb_value self)
     /* fall through */
   default:
     exc = mrb_make_exception(mrb, argc, a);
-    mrb_obj_iv_set(mrb, mrb_obj_ptr(exc), mrb_intern_lit(mrb, "lastpc"), mrb_cptr_value(mrb, mrb->c->ci->pc));
+    mrb_obj_iv_set(mrb, mrb_obj_ptr(exc), mrb_intern_lit(mrb, "lastpc"), mrb_cptr_value(mrb, (void*)mrb->c->ci->pc));
     mrb_exc_raise(mrb, exc);
     break;
   }
@@ -923,11 +910,11 @@ mrb_method_missing(mrb_state *mrb, mrb_sym name, mrb_value self, mrb_value args)
   mrb_value repr;
 
   inspect = mrb_intern_lit(mrb, "inspect");
-  if (mrb->c->ci > mrb->c->cibase && mrb->c->ci[-1].mid == inspect) {
+  if (mrb->c->ci->ret_ci && mrb->c->ci->ret_ci->mid == inspect) {
     /* method missing in inspect; avoid recursion */
     repr = mrb_any_to_s(mrb, self);
   }
-  else if (mrb_respond_to(mrb, self, inspect) && mrb->c->ci - mrb->c->cibase < 16) {
+  else if (mrb_respond_to(mrb, self, inspect)) {
     repr = mrb_funcall_argv(mrb, self, inspect, 0, 0);
     if (mrb_string_p(repr) && RSTRING_LEN(repr) > 64) {
       repr = mrb_any_to_s(mrb, self);
@@ -1144,7 +1131,7 @@ mrb_local_variables(mrb_state *mrb, mrb_value self)
   struct mrb_irep *irep;
   size_t i;
 
-  proc = mrb->c->ci[-1].proc;
+  proc = mrb->c->ci->ret_ci->proc;
 
   if (MRB_PROC_CFUNC_P(proc)) {
     return mrb_ary_new(mrb);
@@ -1161,12 +1148,11 @@ mrb_local_variables(mrb_state *mrb, mrb_value self)
     }
   }
   if (proc->env) {
-    struct REnv *e = proc->env;
-
-    while (e) {
+    struct REnv *e;
+    for (e = proc->env; e; e = (struct REnv*)e->c) {
       if (MRB_ENV_STACK_SHARED_P(e) &&
-          !MRB_PROC_CFUNC_P(e->cxt.c->cibase[e->cioff].proc)) {
-        irep = e->cxt.c->cibase[e->cioff].proc->body.irep;
+          !MRB_PROC_CFUNC_P(e->target_ci->proc)) {
+        irep = e->target_ci->proc->body.irep;
         if (irep->lv) {
           for (i = 0; i + 1 < irep->nlocals; ++i) {
             if (irep->lv[i].name) {
@@ -1175,7 +1161,6 @@ mrb_local_variables(mrb_state *mrb, mrb_value self)
           }
         }
       }
-      e = (struct REnv*)e->c;
     }
   }
 

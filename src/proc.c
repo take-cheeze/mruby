@@ -42,7 +42,7 @@ env_new(mrb_state *mrb, int nlocals)
   e = (struct REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV, (struct RClass*)mrb->c->ci->proc->env);
   MRB_SET_ENV_STACK_LEN(e, nlocals);
   e->cxt.c = mrb->c;
-  e->cioff = mrb->c->ci - mrb->c->cibase;
+  e->target_ci = mrb->c->ci;
   e->stack = mrb->c->stack;
 
   return e;
@@ -51,16 +51,10 @@ env_new(mrb_state *mrb, int nlocals)
 static void
 closure_setup(mrb_state *mrb, struct RProc *p, int nlocals)
 {
-  struct REnv *e;
-
   if (!mrb->c->ci->env) {
-    e = env_new(mrb, nlocals);
-    mrb->c->ci->env = e;
+    mrb->c->ci->env = env_new(mrb, nlocals);
   }
-  else {
-    e = mrb->c->ci->env;
-  }
-  p->env = e;
+  p->env = mrb->c->ci->env;
   mrb_field_write_barrier(mrb, (struct RBasic *)p, (struct RBasic *)p->env);
 }
 

@@ -91,41 +91,23 @@ fiber_init(mrb_state *mrb, mrb_value self)
   if (p->body.irep->nregs > slen) {
     slen += p->body.irep->nregs;
   }
-  c->stbase = (mrb_value *)mrb_malloc(mrb, slen*sizeof(mrb_value));
-  c->stend = c->stbase + slen;
-  c->stack = c->stbase;
-
-#ifdef MRB_NAN_BOXING
-  {
-    mrb_value *p = c->stbase;
-    mrb_value *pend = c->stend;
-
-    while (p < pend) {
-      SET_NIL_VALUE(*p);
-      p++;
-    }
-  }
-#else
-  memset(c->stbase, 0, slen * sizeof(mrb_value));
-#endif
 
   /* copy receiver from a block */
   c->stack[0] = mrb->c->stack[0];
 
-  /* initialize callinfo stack */
-  c->cibase = (mrb_callinfo *)mrb_calloc(mrb, FIBER_CI_INIT_SIZE, sizeof(mrb_callinfo));
-  c->ciend = c->cibase + FIBER_CI_INIT_SIZE;
-  c->ci = c->cibase;
-  c->ci->stackent = c->stack;
-
   /* adjust return callinfo */
-  ci = c->ci;
+  ci = c->ci = (mrb_callinfo*)mrb_malloc(mrb, sizeof(mrb_callinfo) + sizeof(mrb_value) * p->body.irep->nregs);
   ci->target_class = p->target_class;
   ci->proc = p;
   ci->pc = p->body.irep->iseq;
   ci->nregs = p->body.irep->nregs;
-  ci[1] = ci[0];
-  c->ci++;                      /* push dummy callinfo */
+
+  /* push dummy callinfo */
+  c->ci = (mrb_callinfo*)mrb_malloc(mrb, sizeof(mrb_callinfo));
+  *(c->ci) = *ci;
+  c->ci->ret_ci = ci;
+
+  c->ci_depth = 2;
 
   c->fib = f;
   c->status = MRB_FIBER_CREATED;
@@ -161,7 +143,7 @@ fiber_check_cfunc(mrb_state *mrb, struct mrb_context *c)
 {
   mrb_callinfo *ci;
 
-  for (ci = c->ci; ci >= c->cibase; ci--) {
+  for (ci = c->ci; ci; ci = ci->ret_ci) {
     if (ci->acc < 0) {
       mrb_raise(mrb, E_FIBER_ERROR, "can't cross C function boundary");
     }
@@ -194,7 +176,7 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr
     while (b<e) {
       *b++ = *a++;
     }
-    c->cibase->argc = len;
+    c->ci->ret_ci->argc = len;
     value = c->stack[0] = c->ci->proc->env->stack[0];
   }
   else {
@@ -206,7 +188,7 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr
 
   if (vmexec) {
     c->vmexec = TRUE;
-    value = mrb_vm_exec(mrb, c->ci[-1].proc, c->ci->pc);
+    value = mrb_vm_exec(mrb, c->ci->ret_ci->proc, c->ci->pc);
     mrb->c = old_c;
   }
   else {

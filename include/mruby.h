@@ -107,19 +107,21 @@ typedef void* (*mrb_allocf) (struct mrb_state *mrb, void*, size_t, void *ud);
 #define MRB_FIXED_STATE_ATEXIT_STACK_SIZE 5
 #endif
 
-typedef struct {
+typedef struct mrb_callinfo {
   mrb_sym mid;
   struct RProc *proc;
-  mrb_value *stackent;
+  mrb_value *stackent; // previous stack pointer
   int nregs;
   int ridx;
   int eidx;
   struct REnv *env;
-  mrb_code *pc;                 /* return address */
-  mrb_code *err;                /* error position */
+  mrb_code const *pc;                 /* return address */
+  mrb_code const *err;                /* error position */
   int argc;
+  mrb_value const *argv;
   int acc;
   struct RClass *target_class;
+  struct mrb_callinfo *ret_ci;
 } mrb_callinfo;
 
 enum mrb_fiber_state {
@@ -135,12 +137,11 @@ struct mrb_context {
   struct mrb_context *prev;
 
   mrb_value *stack;                       /* stack of virtual machine */
-  mrb_value *stbase, *stend;
 
   mrb_callinfo *ci;
-  mrb_callinfo *cibase, *ciend;
+  int ci_depth;
 
-  mrb_code **rescue;                      /* exception handler stack */
+  mrb_code const **rescue;                      /* exception handler stack */
   int rsize;
   struct RProc **ensure;                  /* ensure handler stack */
   int esize;
@@ -182,6 +183,7 @@ typedef struct mrb_state {
     int n_allocated;
     mrb_backtrace_entry *entries;
   } backtrace;
+
   struct iv_tbl *globals;                 /* global variable table */
 
   struct RObject *top_self;
@@ -1024,7 +1026,7 @@ MRB_API mrb_value mrb_top_self(mrb_state *);
 MRB_API mrb_value mrb_run(mrb_state*, struct RProc*, mrb_value);
 MRB_API mrb_value mrb_top_run(mrb_state*, struct RProc*, mrb_value, unsigned int);
 MRB_API mrb_value mrb_vm_run(mrb_state*, struct RProc*, mrb_value, unsigned int);
-MRB_API mrb_value mrb_vm_exec(mrb_state*, struct RProc*, mrb_code*);
+MRB_API mrb_value mrb_vm_exec(mrb_state*, struct RProc*, mrb_code const*);
 /* compatibility macros */
 #define mrb_toplevel_run_keep(m,p,k) mrb_top_run((m),(p),mrb_top_self(m),(k))
 #define mrb_toplevel_run(m,p) mrb_toplevel_run_keep((m),(p),0)

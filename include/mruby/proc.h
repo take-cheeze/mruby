@@ -18,7 +18,7 @@ MRB_BEGIN_DECL
 struct REnv {
   MRB_OBJECT_HEADER;
   mrb_value *stack;
-  ptrdiff_t cioff;
+  struct mrb_callinfo *target_ci;
   union {
     mrb_sym mid;
     struct mrb_context *c;
@@ -27,8 +27,8 @@ struct REnv {
 
 #define MRB_SET_ENV_STACK_LEN(e,len) (e)->flags = (unsigned int)(len)
 #define MRB_ENV_STACK_LEN(e) ((mrb_int)(e)->flags)
-#define MRB_ENV_UNSHARE_STACK(e) ((e)->cioff = -1)
-#define MRB_ENV_STACK_SHARED_P(e) ((e)->cioff >= 0)
+#define MRB_ENV_UNSHARE_STACK(e) ((e)->target_ci = NULL)
+#define MRB_ENV_STACK_SHARED_P(e) ((e)->target_ci)
 
 MRB_API void mrb_env_unshare(mrb_state*, struct REnv*);
 

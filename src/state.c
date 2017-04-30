@@ -46,6 +46,12 @@ mrb_open_core(mrb_allocf f, void *ud)
 
   mrb_init_core(mrb);
 
+  if (mrb->exc) {
+    mrb_print_error(mrb);
+    mrb->exc = NULL;
+    return NULL;
+  }
+
   return mrb;
 }
 
@@ -222,9 +228,15 @@ void mrb_free_backtrace(mrb_state *mrb);
 MRB_API void
 mrb_free_context(mrb_state *mrb, struct mrb_context *c)
 {
+  mrb_callinfo *ci;
   if (!c) return;
-  mrb_free(mrb, c->stbase);
-  mrb_free(mrb, c->cibase);
+
+  for (ci = c->ci; ci; ) {
+    mrb_callinfo *prev_ci = ci;
+    ci = ci->ret_ci;
+    mrb_free(mrb, prev_ci);
+  }
+
   mrb_free(mrb, c->rescue);
   mrb_free(mrb, c->ensure);
   mrb_free(mrb, c);

@@ -73,8 +73,7 @@ mrb_f_caller(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_f_method(mrb_state *mrb, mrb_value self)
 {
-  mrb_callinfo *ci = mrb->c->ci;
-  ci--;
+  mrb_callinfo *ci = mrb->c->ci->ret_ci;
   if (ci->mid)
     return mrb_symbol_value(ci->mid);
   else

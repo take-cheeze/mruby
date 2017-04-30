@@ -223,14 +223,13 @@ exc_set_backtrace(mrb_state *mrb, mrb_value exc)
 static void
 exc_debug_info(mrb_state *mrb, struct RObject *exc)
 {
-  mrb_callinfo *ci = mrb->c->ci;
-  mrb_code *pc = ci->pc;
+  mrb_callinfo const* ci;
 
-  mrb_obj_iv_set(mrb, exc, mrb_intern_lit(mrb, "ciidx"), mrb_fixnum_value((mrb_int)(ci - mrb->c->cibase)));
-  while (ci >= mrb->c->cibase) {
-    mrb_code *err = ci->err;
+  mrb_obj_iv_set(mrb, exc, mrb_intern_lit(mrb, "ciidx"), mrb_fixnum_value(mrb->c->ci_depth));
+  for (ci = mrb->c->ci; ci; ci = ci->ret_ci) {
+    mrb_code const *err = ci->err;
 
-    if (!err && pc) err = pc - 1;
+    if (!err && ci->pc) err = ci->pc - 1;
     if (err && ci->proc && !MRB_PROC_CFUNC_P(ci->proc)) {
       mrb_irep *irep = ci->proc->body.irep;
 
@@ -242,8 +241,6 @@ exc_debug_info(mrb_state *mrb, struct RObject *exc)
         return;
       }
     }
-    pc = ci->pc;
-    ci--;
   }
 }
 
