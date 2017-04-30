@@ -1576,8 +1576,7 @@ RETRY_TRY_BLOCK:
         case OP_R_NORMAL:
           if (!ci->ret_ci) {
             if (!mrb->c->prev) { /* toplevel return */
-              localjump_error(mrb, LOCALJUMP_ERROR_RETURN);
-              goto L_RAISE;
+              break;
             }
             if (!mrb->c->prev->ci->ret_ci) {
               mrb_exc_set(mrb, mrb_exc_new_str_lit(mrb, E_FIBER_ERROR, "double resume"));
