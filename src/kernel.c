@@ -146,7 +146,7 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
     while (e->c) { e = (struct REnv*)e->c; }
 
     if (!MRB_ENV_STACK_SHARED_P(e)) {
-      mrb_assert(FALSE);
+      // mrb_assert(FALSE);
       return mrb_false_value();
     }
 

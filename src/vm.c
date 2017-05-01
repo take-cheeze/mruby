@@ -138,10 +138,9 @@ top_env(mrb_state *mrb, struct RProc *proc)
 #define CI_ACC_DIRECT  -2
 #define CI_ACC_RESUMED -3
 
-#define CI_SHARED_STACK(nregs) (-1 - (nregs))
-
 static mrb_callinfo*
-stack_expand(mrb_state *mrb, mrb_callinfo *ci, int new_nregs) {
+stack_expand(mrb_state *mrb, mrb_callinfo *ci, int new_nregs)
+{
   int const old_nregs = ci->nregs;
   mrb_bool const reset_argv = mrb->c->stack + 2 == ci->argv;
 
@@ -153,6 +152,12 @@ stack_expand(mrb_state *mrb, mrb_callinfo *ci, int new_nregs) {
   ci->nregs = new_nregs;
   mrb->c->stack = (mrb_value*)(ci + 1);
   stack_clear(mrb->c->stack + old_nregs, new_nregs - old_nregs);
+
+  if (ci->env) {
+    mrb_assert(MRB_ENV_STACK_SHARED_P(ci->env));
+    ci->env->stack = mrb->c->stack;
+    ci->env->target_ci = ci;
+  }
 
   if (reset_argv) { ci->argv = mrb->c->stack + 2; }
 
@@ -244,13 +249,12 @@ static mrb_code const *
 cipop(mrb_state *mrb)
 {
   struct mrb_callinfo *old_ci = mrb->c->ci;
-  struct REnv *env = old_ci->env;
   mrb_code const *pc = old_ci->pc;
 
   ecall_current_ci(mrb);
 
-  if (env) {
-    mrb_env_unshare(mrb, env);
+  if (old_ci->env) {
+    mrb_env_unshare(mrb, old_ci->env);
   }
 
   if (old_ci->ret_ci) {
@@ -767,12 +771,18 @@ mrb_vm_run(mrb_state *mrb, struct RProc *proc, mrb_value self, unsigned int stac
   mrb_value result;
   struct mrb_context *c = mrb->c;
 
-  mrb_assert(!MRB_PROC_CFUNC_P(proc));
-
   if (!c->ci) {
     cipush(mrb, mrb->object_class, 0, proc, FALSE);
+    c->ci->argc = 0;
+  }
+  else {
+    stack_expand(mrb, c->ci,
+                 stack_keep > proc->body.irep->nregs
+                 ? stack_keep : proc->body.irep->nregs);
+    c->ci->proc = proc;
   }
   c->stack[0] = self;
+
   result = mrb_vm_exec(mrb, proc, irep->iseq);
   mrb->c = c;
   return result;
@@ -827,7 +837,7 @@ RETRY_TRY_BLOCK:
     goto L_RAISE;
   }
   mrb->jmp = &c_jmp;
-  mrb_assert(mrb->c->ci->proc == proc);
+  // mrb_assert(mrb->c->ci->proc == proc);
   mrb_assert(mrb->c->ci->nregs >= irep->nregs);
 
 #define regs (mrb->c->stack)
@@ -2381,7 +2391,6 @@ RETRY_TRY_BLOCK:
         return mrb_obj_value(mrb->exc);
       }
       res = regs[irep->nlocals];
-      cipop(mrb);
       return res;
     }
 
@@ -2414,32 +2423,20 @@ RETRY_TRY_BLOCK:
 MRB_API mrb_value
 mrb_run(mrb_state *mrb, struct RProc *proc, mrb_value self)
 {
-  if (ARGS_PASS_BY_ARRAY_P(mrb->c->ci->argc)) {
-    return mrb_vm_run(mrb, proc, self, 3); /* receiver, args and block) */
-  }
-  else {
-    return mrb_vm_run(mrb, proc, self, mrb->c->ci->argc + 2); /* argc + 2 (receiver and block) */
-  }
+  return mrb_vm_run(mrb, proc, self, ARGS_PASS_BY_ARRAY_P(mrb->c->ci->argc)
+                    ? 3 /* receiver, args and block) */
+                    : mrb->c->ci->argc + 2); /* argc + 2 (receiver and block) */
 }
 
 MRB_API mrb_value
 mrb_top_run(mrb_state *mrb, struct RProc *proc, mrb_value self, unsigned int stack_keep)
 {
-  mrb_callinfo *ci;
-  mrb_value v;
-
-  if (!mrb->c->ci) {
-    v = mrb_vm_run(mrb, proc, self, stack_keep);
-    mrb_assert(!mrb->c->ci);
-    return v;
+  if (GET_OPCODE(proc->body.irep->iseq[proc->body.irep->ilen - 1]) != OP_STOP) {
+    mrb_callinfo *ci = cipush(mrb, mrb->object_class, 0, proc, FALSE);
+    ci->acc = CI_ACC_SKIP;
+    ci->argc = 0;
   }
-
-  ci = cipush(mrb, mrb->object_class, 0, proc, FALSE);
-  ci->acc = CI_ACC_SKIP;
-  ci->argc = 0;
-  v = mrb_vm_run(mrb, proc, self, stack_keep);
-
-  return v;
+  return mrb_vm_run(mrb, proc, self, stack_keep);
 }
 
 #if defined(MRB_ENABLE_CXX_EXCEPTION) && defined(__cplusplus)

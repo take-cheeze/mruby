@@ -91,6 +91,7 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
   mrb_field_write_barrier(mrb, (struct RBasic *)p, (struct RBasic *)p->env);
   MRB_ENV_UNSHARE_STACK(e);
   e->stack = (mrb_value*)mrb_malloc(mrb, sizeof(mrb_value) * argc);
+  e->cxt.mid = 0;
   if (argv) {
     for (i = 0; i < argc; ++i) {
       e->stack[i] = argv[i];
