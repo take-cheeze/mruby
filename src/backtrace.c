@@ -101,28 +101,19 @@ each_backtrace(mrb_state *mrb, mrb_int ciidx, mrb_code const *pc0, each_backtrac
 {
   int i;
   mrb_callinfo *ci;
+  mrb_code const *pc = pc0;
 
-  for (ci = mrb->c->ci, i = ciidx; ci && i >= 0; i--, ci = ci->ret_ci) {
+  for (ci = mrb->c->ci, i = ciidx; ci && i >= 0; i--, pc = ci->pc - 1, ci = ci->ret_ci) {
     struct backtrace_location_raw loc;
     mrb_irep *irep;
-    mrb_code const *pc;
 
-    if (!ci->proc) continue;
-
-    if (MRB_PROC_CFUNC_P(ci->proc)) continue;
+    if (!ci->proc || MRB_PROC_CFUNC_P(ci->proc)) continue;
 
     irep = ci->proc->body.irep;
     if (!irep) continue;
 
-    if (ci->err) {
-      pc = ci->err;
-    }
-    else if (i+1 <= ciidx) {
-      pc = ci->pc - 1;
-    }
-    else {
-      pc = pc0;
-    }
+    if (ci->err) { pc = ci->err; }
+
     loc.filename = mrb_debug_get_filename(irep, (uint32_t)(pc - irep->iseq));
     loc.lineno = mrb_debug_get_line(irep, (uint32_t)(pc - irep->iseq));
 
