@@ -143,7 +143,7 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
     return mrb_false_value();
   }
   /* block_given? called within block; check upper scope */
-  if (ci->proc->env) {
+  if (ci->proc->env && ci->proc->env->stack) {
     struct REnv *e = ci->proc->env;
 
     while (e->c) {
@@ -152,7 +152,7 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
     /* top-level does not have block slot (always false) */
     if (e->stack == mrb->c->stbase)
       return mrb_false_value();
-    if (e->stack && e->cioff < 0) {
+    if (!MRB_ENV_STACK_SHARED_P(e)) {
       /* use saved block arg position */
       bp = &e->stack[-e->cioff];
       ci = 0;                 /* no callinfo available */

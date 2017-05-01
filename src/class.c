@@ -1283,6 +1283,7 @@ mrb_method_search_vm(mrb_state *mrb, struct RClass **cp, mrb_sym mid)
     }
     c = c->super;
   }
+
   return NULL;                  /* no method */
 }
 
@@ -1730,11 +1731,32 @@ mrb_obj_class(mrb_state *mrb, mrb_value obj)
 }
 
 MRB_API void
-mrb_alias_method(mrb_state *mrb, struct RClass *c, mrb_sym a, mrb_sym b)
+mrb_alias_method(mrb_state *mrb, struct RClass *c, mrb_sym alias, mrb_sym orig)
 {
-  struct RProc *m = mrb_method_search(mrb, c, b);
+  struct RProc *orig_m = mrb_method_search(mrb, c, orig);
+  // struct RProc *alias_m = orig_m;
 
-  mrb_define_method_raw(mrb, c, a, m);
+  if (!MRB_PROC_ALIAS_P(orig_m)) {
+    // alias_m = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, orig_m->c);
+    // mrb_proc_copy(alias_m, orig_m);
+    orig_m->flags |= MRB_PROC_ALIAS_BIT;
+
+    if (!orig_m->env) {
+      orig_m->env = (struct REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV, NULL);
+      MRB_ENV_UNSHARE_STACK(orig_m->env);
+      MRB_SET_ENV_STACK_LEN(orig_m->env, 0);
+      orig_m->env->cxt.mid = orig;
+      orig_m->env->stack = NULL;
+    }
+    else if (MRB_ENV_STACK_SHARED_P(orig_m->env)) {
+      orig_m->env->cxt.c->cibase[orig_m->env->cioff].mid = orig;
+    }
+    else {
+      orig_m->env->cxt.mid = orig;
+    }
+  }
+
+  mrb_define_method_raw(mrb, c, alias, orig_m);
 }
 
 /*!

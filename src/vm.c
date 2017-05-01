@@ -1430,7 +1430,7 @@ RETRY_TRY_BLOCK:
       /* A C  R(A) := super(R(A+1),... ,R(A+C+1)) */
       mrb_value recv;
       mrb_callinfo *ci = mrb->c->ci;
-      struct RProc *m;
+      struct RProc *m = NULL;
       struct RClass *c;
       mrb_sym mid = ci->mid;
       int a = GETARG_A(i);
@@ -1446,8 +1446,20 @@ RETRY_TRY_BLOCK:
         goto L_RAISE;
       }
       recv = regs[0];
-      c = mrb->c->ci->target_class->super;
-      m = mrb_method_search_vm(mrb, &c, mid);
+      if (MRB_PROC_ALIAS_P(ci->proc)) {
+        mid = MRB_ENV_STACK_SHARED_P(ci->proc->env)
+              ? ci->proc->env->cxt.c->cibase[ci->proc->env->cioff].mid
+              : ci->proc->env->cxt.mid;
+        c = ci->target_class;
+        m = mrb_method_search_vm(mrb, &c, mid);
+
+        /* avoid recursion */
+        if (m == ci->proc) { m = NULL; }
+      }
+      if (!m) {
+        c = ci->target_class->super;
+        m = mrb_method_search_vm(mrb, &c, mid);
+      }
       if (!m) {
         mrb_sym missing = mrb_intern_lit(mrb, "method_missing");
         m = mrb_method_search_vm(mrb, &c, missing);

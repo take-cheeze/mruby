@@ -725,7 +725,6 @@ end
   end
 
   assert 'Module#prepend super in alias' do
-    skip "super does not currently work in aliased methods"
     bug7842 = '[Bug #7842]'
 
     p = labeled_module("P") do
@@ -749,6 +748,10 @@ end
 
     assert_nothing_raised do
       assert_equal("PBA", b.new.m3, bug7842)
+    end
+
+    assert_nothing_raised do
+      assert_equal("PBA", b.new.m, bug7842)
     end
   end
 

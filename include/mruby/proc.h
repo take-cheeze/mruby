@@ -51,6 +51,8 @@ struct RProc {
 #define MRB_ASPEC_KDICT(a)        ((a) & (1<<1))
 #define MRB_ASPEC_BLOCK(a)        ((a) & 1)
 
+#define MRB_PROC_ALIAS_BIT 64
+#define MRB_PROC_ALIAS_P(p) (((p)->flags & MRB_PROC_ALIAS_BIT) != 0)
 #define MRB_PROC_CFUNC 128
 #define MRB_PROC_CFUNC_P(p) (((p)->flags & MRB_PROC_CFUNC) != 0)
 #define MRB_PROC_STRICT 256
