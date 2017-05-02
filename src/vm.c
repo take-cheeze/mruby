@@ -1299,7 +1299,7 @@ RETRY_TRY_BLOCK:
         goto L_RAISE;
       }
       recv = regs[0];
-      blk = regs[n == CALL_PASS_BY_ARRAY? a+2 : a+n+1];
+      blk = regs[a + (n == CALL_PASS_BY_ARRAY? 2 : n+1)];
       c = mrb->c->ci->target_class->super;
       m = mrb_method_search_vm(mrb, &c, mid);
       if (!m) {
@@ -1379,7 +1379,7 @@ RETRY_TRY_BLOCK:
         mrb_exc_set(mrb, exc);
         goto L_RAISE;
       }
-      if (lv == 0) stack = regs + 2;
+      if (lv == 0) stack = regs + 1;
       else {
         struct REnv *e = uvenv(mrb, lv-1);
         if (!e) goto L_NOSUPER;
@@ -1412,7 +1412,7 @@ RETRY_TRY_BLOCK:
         }
         rest->len = m1+len+m2;
       }
-      regs[a+1] = stack[m1+r+m2];
+      regs[a+1] = stack[m1+r+m2]; // set block
       ARENA_RESTORE(mrb, ai);
       NEXT;
     }
