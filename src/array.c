@@ -48,36 +48,12 @@ mrb_ary_new(mrb_state *mrb)
   return mrb_ary_new_capa(mrb, 0);
 }
 
-/*
- * to copy array, use this instead of memcpy because of portability
- * * gcc on ARM may fail optimization of memcpy
- *   http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.faqs/ka3934.html
- * * gcc on MIPS also fail
- *   http://gcc.gnu.org/bugzilla/show_bug.cgi?id=39755
- * * memcpy doesn't exist on freestanding environment
- *
- * If you optimize for binary size, use memcpy instead of this at your own risk
- * of above portability issue.
- *
- * see also http://togetter.com/li/462898
- *
- */
-static inline void
-array_copy(mrb_value *dst, const mrb_value *src, mrb_int size)
-{
-  mrb_int i;
-
-  for (i = 0; i < size; i++) {
-    dst[i] = src[i];
-  }
-}
-
 MRB_API mrb_value
 mrb_ary_new_from_values(mrb_state *mrb, mrb_int size, const mrb_value *vals)
 {
   struct RArray *a = ary_new_capa(mrb, size);
 
-  array_copy(a->ptr, vals, size);
+  values_copy_init(mrb, a->ptr, vals, size);
   a->len = size;
 
   return mrb_obj_value(a);
@@ -89,20 +65,10 @@ mrb_assoc_new(mrb_state *mrb, mrb_value car, mrb_value cdr)
   struct RArray *a;
 
   a = ary_new_capa(mrb, 2);
-  a->ptr[0] = car;
-  a->ptr[1] = cdr;
+  mrb_ref_init(mrb, a->ptr[0], car);
+  mrb_ref_init(mrb, a->ptr[1], cdr);
   a->len = 2;
   return mrb_obj_value(a);
-}
-
-static void
-ary_fill_with_nil(mrb_value *ptr, mrb_int size)
-{
-  mrb_value nil = mrb_nil_value();
-
-  while (size--) {
-    *ptr++ = nil;
-  }
 }
 
 static void
@@ -128,7 +94,7 @@ ary_modify(mrb_state *mrb, struct RArray *a)
       len = a->len * sizeof(mrb_value);
       ptr = (mrb_value *)mrb_malloc(mrb, len);
       if (p) {
-        array_copy(ptr, p, a->len);
+        values_copy_init(mrb, ptr, p, a->len);
       }
       a->ptr = ptr;
       a->aux.capa = a->len;
@@ -141,7 +107,7 @@ ary_modify(mrb_state *mrb, struct RArray *a)
 MRB_API void
 mrb_ary_modify(mrb_state *mrb, struct RArray* a)
 {
-  mrb_write_barrier(mrb, (struct RBasic*)a);
+  // mrb_write_barrier(mrb, (struct RBasic*)a);
   ary_modify(mrb, a);
 }
 
@@ -234,7 +200,7 @@ mrb_ary_resize(mrb_state *mrb, mrb_value ary, mrb_int new_len)
     }
     else {
       ary_expand_capa(mrb, a, new_len);
-      ary_fill_with_nil(a->ptr + old_len, new_len - old_len);
+      values_nil_init(a->ptr + old_len, new_len - old_len);
     }
   }
 
@@ -252,7 +218,7 @@ mrb_ary_s_create(mrb_state *mrb, mrb_value klass)
   mrb_get_args(mrb, "*", &vals, &len);
   ary = mrb_ary_new_from_values(mrb, len, vals);
   a = mrb_ary_ptr(ary);
-  a->c = mrb_class_ptr(klass);
+  mrb_obj_ref_set(mrb, a->c, mrb_class_ptr(klass));
 
   return ary;
 }
@@ -271,8 +237,7 @@ ary_concat(mrb_state *mrb, struct RArray *a, struct RArray *a2)
   if (a->aux.capa < len) {
     ary_expand_capa(mrb, a, len);
   }
-  array_copy(a->ptr+a->len, a2->ptr, a2->len);
-  mrb_write_barrier(mrb, (struct RBasic*)a);
+  values_copy_init(mrb, a->ptr+a->len, a2->ptr, a2->len);
   a->len = len;
 }
 
@@ -307,8 +272,8 @@ mrb_ary_plus(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "array size too big");
   }
   a2 = ary_new_capa(mrb, a1->len + blen);
-  array_copy(a2->ptr, a1->ptr, a1->len);
-  array_copy(a2->ptr + a1->len, ptr, blen);
+  values_copy_init(mrb, a2->ptr, a1->ptr, a1->len);
+  values_copy_init(mrb, a2->ptr + a1->len, ptr, blen);
   a2->len = a1->len + blen;
 
   return mrb_obj_value(a2);
@@ -320,8 +285,8 @@ ary_replace(mrb_state *mrb, struct RArray *a, mrb_value *argv, mrb_int len)
   ary_modify(mrb, a);
   if (a->aux.capa < len)
     ary_expand_capa(mrb, a, len);
-  array_copy(a->ptr, argv, len);
-  mrb_write_barrier(mrb, (struct RBasic*)a);
+  values_copy(mrb, a->ptr, argv, a->len);
+  values_copy_init(mrb, a->ptr + a->len, argv + a->len, len - a->len);
   a->len = len;
 }
 
@@ -366,7 +331,7 @@ mrb_ary_times(mrb_state *mrb, mrb_value self)
   a2 = ary_new_capa(mrb, a1->len * times);
   ptr = a2->ptr;
   while (times--) {
-    array_copy(ptr, a1->ptr, a1->len);
+    values_copy_init(mrb, ptr, a1->ptr, a1->len);
     ptr += a1->len;
     a2->len += a1->len;
   }
@@ -407,6 +372,7 @@ mrb_ary_reverse(mrb_state *mrb, mrb_value self)
     e  = p1 + a->len;
     p2 = b->ptr + a->len - 1;
     while (p1 < e) {
+      mrb_inc_ref(mrb, *p1);
       *p2-- = *p1++;
     }
     b->len = a->len;
@@ -422,9 +388,9 @@ mrb_ary_push(mrb_state *mrb, mrb_value ary, mrb_value elem)
   ary_modify(mrb, a);
   if (a->len == a->aux.capa)
     ary_expand_capa(mrb, a, a->len + 1);
-  a->ptr[a->len++] = elem;
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)a, elem);
-}
+  mrb_ref_init(mrb, a->ptr[a->len], elem);
+  a->len++;
+ }
 
 static mrb_value
 mrb_ary_push_m(mrb_state *mrb, mrb_value self)
@@ -447,6 +413,8 @@ mrb_ary_pop(mrb_state *mrb, mrb_value ary)
 
   ary_modify(mrb, a);
   if (a->len == 0) return mrb_nil_value();
+  mrb_gc_protect(mrb, a->ptr[a->len - 1]);
+  mrb_ref_clear(mrb, a->ptr[a->len - 1]);
   return a->ptr[--a->len];
 }
 
@@ -498,17 +466,15 @@ mrb_ary_unshift(mrb_state *mrb, mrb_value self, mrb_value item)
       && a->aux.shared->refcnt == 1 /* shared only referenced from this array */
       && a->ptr - a->aux.shared->ptr >= 1) /* there's room for unshifted item */ {
     a->ptr--;
-    a->ptr[0] = item;
   }
   else {
     ary_modify(mrb, a);
     if (a->aux.capa < a->len + 1)
       ary_expand_capa(mrb, a, a->len + 1);
-    value_move(a->ptr + 1, a->ptr, a->len);
-    a->ptr[0] = item;
+    values_move(a->ptr + 1, a->ptr, a->len);
   }
+  mrb_ref_set(mrb, a->ptr[0], item);
   a->len++;
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)a, item);
 
   return self;
 }
@@ -534,13 +500,10 @@ mrb_ary_unshift_m(mrb_state *mrb, mrb_value self)
     if (len == 0) return self;
     if (a->aux.capa < a->len + len)
       ary_expand_capa(mrb, a, a->len + len);
-    value_move(a->ptr + len, a->ptr, a->len);
+    values_move(a->ptr + len, a->ptr, a->len);
   }
-  array_copy(a->ptr, vals, len);
+  values_copy_init(mrb, a->ptr, vals, len);
   a->len += len;
-  while (len--) {
-    mrb_field_write_barrier_value(mrb, (struct RBasic*)a, vals[len]);
-  }
 
   return self;
 }
@@ -573,12 +536,11 @@ mrb_ary_set(mrb_state *mrb, mrb_value ary, mrb_int n, mrb_value val)
   if (a->len <= n) {
     if (a->aux.capa <= n)
       ary_expand_capa(mrb, a, n + 1);
-    ary_fill_with_nil(a->ptr + a->len, n + 1 - a->len);
+    values_nil_init(a->ptr + a->len, n + 1 - a->len);
     a->len = n + 1;
   }
 
-  a->ptr[n] = val;
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)a, val);
+  mrb_ref_set(mrb, a->ptr[n], val);
 }
 
 static struct RArray*
@@ -641,9 +603,9 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
     if (len > a->aux.capa) {
       ary_expand_capa(mrb, a, head + argc);
     }
-    ary_fill_with_nil(a->ptr + a->len, head - a->len);
+    values_nil_init(a->ptr + a->len, head - a->len);
     if (argc > 0) {
-      array_copy(a->ptr + head, argv, argc);
+      values_copy(mrb, a->ptr + head, argv, argc);
     }
     a->len = len;
   }
@@ -657,17 +619,17 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
     if (alen > a->aux.capa) {
       ary_expand_capa(mrb, a, alen);
     }
+    values_nil_init(a->ptr + a->len, alen - a->len);
 
     if (len != argc) {
       tail = head + len;
-      value_move(a->ptr + head + argc, a->ptr + tail, a->len - tail);
+      values_copy(mrb, a->ptr + head + argc, a->ptr + tail, a->len - tail);
       a->len = alen;
     }
     if (argc > 0) {
-      value_move(a->ptr + head, argv, argc);
+      values_copy(mrb, a->ptr + head, argv, argc);
     }
   }
-  mrb_write_barrier(mrb, (struct RBasic*)a);
   return ary;
 }
 
@@ -676,6 +638,10 @@ mrb_ary_decref(mrb_state *mrb, mrb_shared_array *shared)
 {
   shared->refcnt--;
   if (shared->refcnt == 0) {
+    int i;
+    for (i = 0; i < shared->len; ++i) {
+      mrb_dec_ref(mrb, shared->ptr[i]);
+    }
     mrb_free(mrb, shared->ptr);
     mrb_free(mrb, shared);
   }

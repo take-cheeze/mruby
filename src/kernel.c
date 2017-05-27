@@ -204,10 +204,10 @@ mrb_singleton_class_clone(mrb_state *mrb, mrb_value obj)
     case MRB_TT_SCLASS:
       break;
     default:
-      clone->c = mrb_singleton_class_clone(mrb, mrb_obj_value(klass));
+      mrb_obj_ref_set(mrb, clone->c, mrb_singleton_class_clone(mrb, mrb_obj_value(klass)));
       break;
     }
-    clone->super = klass->super;
+    mrb_obj_ref_init(mrb, clone->super, klass->super);
     if (klass->iv) {
       mrb_iv_copy(mrb, mrb_obj_value(clone), mrb_obj_value(klass));
       mrb_obj_iv_set(mrb, (struct RObject*)clone, mrb_intern_lit(mrb, "__attached__"), obj);
@@ -236,11 +236,12 @@ copy_class(mrb_state *mrb, mrb_value dst, mrb_value src)
 
     /* copy prepended iclasses */
     while (!(c0->flags & MRB_FLAG_IS_ORIGIN)) {
-      c1->super = mrb_class_ptr(mrb_obj_dup(mrb, mrb_obj_value(c0)));
+      mrb_obj_ref_init(mrb, c1->super, mrb_class_ptr(mrb_obj_dup(mrb, mrb_obj_value(c0))));
       c1 = c1->super;
       c0 = c0->super;
     }
-    c1->super = mrb_class_ptr(mrb_obj_dup(mrb, mrb_obj_value(c0)));
+    mrb_obj_ref_init(mrb, c1->super, mrb_class_ptr(mrb_obj_dup(mrb, mrb_obj_value(c0))));
+
     c1->super->flags |= MRB_FLAG_IS_ORIGIN;
   }
   if (sc->mt) {
@@ -249,7 +250,7 @@ copy_class(mrb_state *mrb, mrb_value dst, mrb_value src)
   else {
     dc->mt = kh_init(mt, mrb);
   }
-  dc->super = sc->super;
+  mrb_obj_ref_init(mrb, dc->super, sc->super);
   MRB_SET_INSTANCE_TT(dc, MRB_INSTANCE_TT(sc));
 }
 
@@ -317,7 +318,7 @@ mrb_obj_clone(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_TYPE_ERROR, "can't clone singleton class");
   }
   p = (struct RObject*)mrb_obj_alloc(mrb, mrb_type(self), mrb_obj_class(mrb, self));
-  p->c = mrb_singleton_class_clone(mrb, self);
+  mrb_obj_ref_init(mrb, p->c, mrb_singleton_class_clone(mrb, self));
   clone = mrb_obj_value(p);
   init_copy(mrb, clone, self);
 
@@ -1114,7 +1115,7 @@ mod_define_singleton_method(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "no block given");
   }
   p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
-  mrb_proc_copy(p, mrb_proc_ptr(blk));
+  mrb_proc_copy(mrb, p, mrb_proc_ptr(blk));
   p->flags |= MRB_PROC_STRICT;
   mrb_define_method_raw(mrb, mrb_class_ptr(mrb_singleton_class(mrb, self)), mid, p);
   return mrb_symbol_value(mid);

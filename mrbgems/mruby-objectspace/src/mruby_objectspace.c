@@ -9,7 +9,7 @@ struct os_count_struct {
   mrb_int counts[MRB_TT_MAXDEFINE+1];
 };
 
-static int
+static MRB_EACH_OBJ_STATE
 os_count_object_type(mrb_state *mrb, struct RBasic *obj, void *data)
 {
   struct os_count_struct *obj_count;
@@ -110,7 +110,7 @@ struct os_each_object_data {
   mrb_int count;
 };
 
-static int
+static MRB_EACH_OBJ_STATE
 os_each_object_cb(mrb_state *mrb, struct RBasic *obj, void *ud)
 {
   struct os_each_object_data *d = (struct os_each_object_data*)ud;

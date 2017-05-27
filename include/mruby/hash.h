@@ -175,7 +175,7 @@ MRB_API struct kh_ht * mrb_hash_tbl(mrb_state *mrb, mrb_value hash);
 /* GC functions */
 void mrb_gc_mark_hash(mrb_state*, struct RHash*);
 size_t mrb_gc_mark_hash_size(mrb_state*, struct RHash*);
-void mrb_gc_free_hash(mrb_state*, struct RHash*);
+void mrb_gc_free_hash(mrb_state*, struct RHash*, mrb_bool end);
 
 MRB_END_DECL
 

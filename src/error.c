@@ -101,7 +101,7 @@ exc_to_s(mrb_state *mrb, mrb_value exc)
   }
   p = mrb_obj_ptr(mesg);
   if (!p->c) {
-    p->c = mrb->string_class;
+    mrb_obj_ref_init(mrb, p->c, mrb->string_class);
   }
   return mesg;
 }
@@ -224,10 +224,10 @@ void
 mrb_exc_set(mrb_state *mrb, mrb_value exc)
 {
   if (mrb_nil_p(exc)) {
-    mrb->exc = 0;
+    mrb_obj_ref_clear(mrb, mrb->exc);
   }
   else {
-    mrb->exc = mrb_obj_ptr(exc);
+    mrb_obj_ref_set(mrb, mrb->exc, mrb_obj_ptr(exc));
     if (!mrb->gc.out_of_memory) {
       exc_debug_info(mrb, mrb->exc);
       mrb_keep_backtrace(mrb, exc);
@@ -487,12 +487,12 @@ mrb_init_exception(mrb_state *mrb)
 
   mrb->eStandardError_class = mrb_define_class(mrb, "StandardError", mrb->eException_class); /* 15.2.23 */
   runtime_error = mrb_define_class(mrb, "RuntimeError", mrb->eStandardError_class);          /* 15.2.28 */
-  mrb->nomem_err = mrb_obj_ptr(mrb_exc_new_str_lit(mrb, runtime_error, "Out of memory"));
+  mrb_obj_ref_init(mrb, mrb->nomem_err, mrb_obj_ptr(mrb_exc_new_str_lit(mrb, runtime_error, "Out of memory")));
 #ifdef MRB_GC_FIXED_ARENA
-  mrb->arena_err = mrb_obj_ptr(mrb_exc_new_str_lit(mrb, runtime_error, "arena overflow error"));
+  mrb_obj_ref_init(mrb, mrb->arena_err, mrb_obj_ptr(mrb_exc_new_str_lit(mrb, runtime_error, "arena overflow error")));
 #endif
   script_error = mrb_define_class(mrb, "ScriptError", mrb->eException_class);                /* 15.2.37 */
   mrb_define_class(mrb, "SyntaxError", script_error);                                        /* 15.2.38 */
   stack_error = mrb_define_class(mrb, "SystemStackError", exception);
-  mrb->stack_err = mrb_obj_ptr(mrb_exc_new_str_lit(mrb, stack_error, "stack level too deep"));
+  mrb_obj_ref_init(mrb, mrb->stack_err, mrb_obj_ptr(mrb_exc_new_str_lit(mrb, stack_error, "stack level too deep")));
 }

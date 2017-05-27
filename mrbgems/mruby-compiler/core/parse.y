@@ -5813,9 +5813,9 @@ mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c)
       c->keep_lv = TRUE;
     }
   }
-  proc->target_class = target;
+  mrb_obj_ref_init(mrb, proc->target_class, target);
   if (mrb->c->ci) {
-    mrb->c->ci->target_class = target;
+    mrb_obj_ref_set(mrb, mrb->c->ci->target_class, target);
   }
   v = mrb_top_run(mrb, proc, mrb_top_self(mrb), keep);
   if (mrb->exc) return mrb_nil_value();

@@ -18,87 +18,14 @@
 #include <mruby/gc.h>
 #include <mruby/error.h>
 #include <mruby/throw.h>
-
-/*
-  = Tri-color Incremental Garbage Collection
-
-  mruby's GC is Tri-color Incremental GC with Mark & Sweep.
-  Algorithm details are omitted.
-  Instead, the implementation part is described below.
-
-  == Object's Color
-
-  Each object can be painted in three colors:
-
-    * White - Unmarked.
-    * Gray - Marked, But the child objects are unmarked.
-    * Black - Marked, the child objects are also marked.
-
-  == Two White Types
-
-  There're two white color types in a flip-flop fashion: White-A and White-B,
-  which respectively represent the Current White color (the newly allocated
-  objects in the current GC cycle) and the Sweep Target White color (the
-  dead objects to be swept).
-
-  A and B will be switched just at the beginning of the next GC cycle. At
-  that time, all the dead objects have been swept, while the newly created
-  objects in the current GC cycle which finally remains White are now
-  regarded as dead objects. Instead of traversing all the White-A objects and
-  painting them as White-B, just switch the meaning of White-A and White-B as
-  this will be much cheaper.
-
-  As a result, the objects we sweep in the current GC cycle are always
-  left from the previous GC cycle. This allows us to sweep objects
-  incrementally, without the disturbance of the newly created objects.
-
-  == Execution Timing
-
-  GC Execution Time and Each step interval are decided by live objects count.
-  List of Adjustment API:
-
-    * gc_interval_ratio_set
-    * gc_step_ratio_set
-
-  For details, see the comments for each function.
-
-  == Write Barrier
-
-  mruby implementer and C extension library writer must insert a write
-  barrier when updating a reference from a field of an object.
-  When updating a reference from a field of object A to object B,
-  two different types of write barrier are available:
-
-    * mrb_field_write_barrier - target B object for a mark.
-    * mrb_write_barrier       - target A object for a mark.
-
-  == Generational Mode
-
-  mruby's GC offers an Generational Mode while re-using the tri-color GC
-  infrastructure. It will treat the Black objects as Old objects after each
-  sweep phase, instead of painting them White. The key ideas are still the same
-  as traditional generational GC:
-
-    * Minor GC - just traverse the Young objects (Gray objects) in the mark
-                 phase, then only sweep the newly created objects, and leave
-                 the Old objects live.
-
-    * Major GC - same as a full regular GC cycle.
-
-  The difference from "traditional" generational GC is, that the major GC
-  in mruby is triggered incrementally in a tri-color manner.
-
-
-  For details, see the comments for each function.
-
-*/
+#include "value_array.h"
 
 struct free_obj {
   MRB_OBJECT_HEADER;
-  struct RBasic *next;
+  struct RVALUE *next;
 };
 
-typedef struct {
+typedef struct RVALUE {
   union {
     struct free_obj free;
     struct RBasic basic;
@@ -174,26 +101,9 @@ gettimeofday_time(void)
 
 #define GC_STEP_SIZE 1024
 
-/* white: 011, black: 100, gray: 000 */
-#define GC_GRAY 0
-#define GC_WHITE_A 1
-#define GC_WHITE_B (1 << 1)
-#define GC_BLACK (1 << 2)
-#define GC_WHITES (GC_WHITE_A | GC_WHITE_B)
-#define GC_COLOR_MASK 7
-
-#define paint_gray(o) ((o)->color = GC_GRAY)
-#define paint_black(o) ((o)->color = GC_BLACK)
-#define paint_white(o) ((o)->color = GC_WHITES)
-#define paint_partial_white(s, o) ((o)->color = (s)->current_white_part)
-#define is_gray(o) ((o)->color == GC_GRAY)
-#define is_white(o) ((o)->color & GC_WHITES)
-#define is_black(o) ((o)->color & GC_BLACK)
-#define flip_white_part(s) ((s)->current_white_part = other_white_part(s))
-#define other_white_part(s) ((s)->current_white_part ^ GC_WHITES)
-#define is_dead(s, o) (((o)->color & other_white_part(s) & GC_WHITES) || (o)->tt == MRB_TT_FREE)
-
 #define objects(p) ((RVALUE *)p->objects)
+
+enum { REF_COUNT_MAX = 7 };
 
 MRB_API void*
 mrb_realloc_simple(mrb_state *mrb, void *p,  size_t len)
@@ -273,7 +183,7 @@ mrb_free(mrb_state *mrb, void *p)
 
 MRB_API mrb_bool
 mrb_object_dead_p(mrb_state *mrb, struct RBasic *object) {
-  return is_dead(&mrb->gc, object);
+  return object->tt == MRB_TT_FREE;
 }
 
 static void
@@ -288,55 +198,28 @@ link_heap_page(mrb_gc *gc, mrb_heap_page *page)
 static void
 unlink_heap_page(mrb_gc *gc, mrb_heap_page *page)
 {
-  if (page->prev)
-    page->prev->next = page->next;
-  if (page->next)
-    page->next->prev = page->prev;
-  if (gc->heaps == page)
-    gc->heaps = page->next;
+  if (page->prev) page->prev->next = page->next;
+  if (page->next) page->next->prev = page->prev;
+  if (gc->heaps == page) gc->heaps = page->next;
   page->prev = NULL;
   page->next = NULL;
 }
 
 static void
-link_free_heap_page(mrb_gc *gc, mrb_heap_page *page)
-{
-  page->free_next = gc->free_heaps;
-  if (gc->free_heaps) {
-    gc->free_heaps->free_prev = page;
-  }
-  gc->free_heaps = page;
-}
-
-static void
-unlink_free_heap_page(mrb_gc *gc, mrb_heap_page *page)
-{
-  if (page->free_prev)
-    page->free_prev->free_next = page->free_next;
-  if (page->free_next)
-    page->free_next->free_prev = page->free_prev;
-  if (gc->free_heaps == page)
-    gc->free_heaps = page->free_next;
-  page->free_prev = NULL;
-  page->free_next = NULL;
-}
-
-static void
 add_heap(mrb_state *mrb, mrb_gc *gc)
 {
-  mrb_heap_page *page = (mrb_heap_page *)mrb_calloc(mrb, 1, sizeof(mrb_heap_page) + MRB_HEAP_PAGE_SIZE * sizeof(RVALUE));
+  mrb_heap_page *page = (mrb_heap_page *)mrb_malloc(
+      mrb, sizeof(mrb_heap_page) + MRB_HEAP_PAGE_SIZE * sizeof(RVALUE));
   RVALUE *p, *e;
-  struct RBasic *prev = NULL;
 
   for (p = objects(page), e=p+MRB_HEAP_PAGE_SIZE; p<e; p++) {
     p->as.free.tt = MRB_TT_FREE;
-    p->as.free.next = prev;
-    prev = &p->as.basic;
+    p->as.free.next = gc->freelist;
+    gc->freelist = p;
   }
-  page->freelist = prev;
+  page->mark_bits = NULL;
 
   link_heap_page(gc, page);
-  link_free_heap_page(gc, page);
 }
 
 #define DEFAULT_GC_INTERVAL_RATIO 200
@@ -354,16 +237,10 @@ mrb_gc_init(mrb_state *mrb, mrb_gc *gc)
   gc->arena_capa = MRB_GC_ARENA_SIZE;
 #endif
 
-  gc->current_white_part = GC_WHITE_A;
   gc->heaps = NULL;
-  gc->free_heaps = NULL;
+  gc->freelist = NULL;
+  gc->live = 0;
   add_heap(mrb, gc);
-  gc->interval_ratio = DEFAULT_GC_INTERVAL_RATIO;
-  gc->step_ratio = DEFAULT_GC_STEP_RATIO;
-#ifndef MRB_GC_TURN_OFF_GENERATIONAL
-  gc->generational = TRUE;
-  gc->full = TRUE;
-#endif
 
 #ifdef GC_PROFILE
   program_invoke_time = gettimeofday_time();
@@ -386,6 +263,7 @@ free_heap(mrb_state *mrb, mrb_gc *gc)
       if (p->as.free.tt != MRB_TT_FREE)
         obj_free(mrb, &p->as.basic, TRUE);
     }
+    mrb_free(mrb, tmp->mark_bits);
     mrb_free(mrb, tmp);
   }
 }
@@ -394,6 +272,7 @@ void
 mrb_gc_destroy(mrb_state *mrb, mrb_gc *gc)
 {
   free_heap(mrb, gc);
+  mrb_free(mrb, gc->heap_pages_table);
 #ifndef MRB_GC_FIXED_ARENA
   mrb_free(mrb, gc->arena);
 #endif
@@ -416,6 +295,7 @@ gc_protect(mrb_state *mrb, mrb_gc *gc, struct RBasic *p)
   }
 #endif
   gc->arena[gc->arena_idx++] = p;
+  mrb_obj_inc_ref(mrb, p);
 }
 
 /* mrb_gc_protect() leaves the object in the arena */
@@ -468,7 +348,7 @@ mrb_gc_unregister(mrb_state *mrb, mrb_value obj)
   for (i = 0; i < a->len; i++) {
     if (mrb_obj_eq(mrb, a->ptr[i], obj)) {
       a->len--;
-      memmove(&a->ptr[i], &a->ptr[i + 1], (a->len - i) * sizeof(a->ptr[i]));
+      values_move(&a->ptr[i], &a->ptr[i + 1], a->len - i);
       break;
     }
   }
@@ -506,39 +386,18 @@ mrb_obj_alloc(mrb_state *mrb, enum mrb_vtype ttype, struct RClass *cls)
 #ifdef MRB_GC_STRESS
   mrb_full_gc(mrb);
 #endif
-  if (gc->threshold < gc->live) {
-    mrb_incremental_gc(mrb);
-  }
-  if (gc->free_heaps == NULL) {
-    add_heap(mrb, gc);
-  }
+  if (!gc->freelist) { add_heap(mrb, gc); }
 
-  p = gc->free_heaps->freelist;
-  gc->free_heaps->freelist = ((struct free_obj*)p)->next;
-  if (gc->free_heaps->freelist == NULL) {
-    unlink_free_heap_page(gc, gc->free_heaps);
-  }
+  p = (struct RBasic*)gc->freelist;
+  gc->freelist = gc->freelist->as.free.next;
 
   gc->live++;
-  gc_protect(mrb, gc, p);
   *(RVALUE *)p = RVALUE_zero;
   p->tt = ttype;
-  p->c = cls;
-  paint_partial_white(gc, p);
+  gc_protect(mrb, gc, p);
+  mrb_obj_ref_init(mrb, p->c, cls);
+  p->ref_count = 0;
   return p;
-}
-
-static inline void
-add_gray_list(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
-{
-#ifdef MRB_GC_STRESS
-  if (obj->tt > MRB_TT_MAXDEFINE) {
-    abort();
-  }
-#endif
-  paint_gray(obj);
-  obj->gcnext = gc->gray_list;
-  gc->gray_list = obj;
 }
 
 static void
@@ -604,9 +463,6 @@ mark_context(mrb_state *mrb, struct mrb_context *c)
 static void
 gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
 {
-  mrb_assert(is_gray(obj));
-  paint_black(obj);
-  gc->gray_list = obj->gcnext;
   mrb_gc_mark(mrb, (struct RBasic*)obj->c);
   switch (obj->tt) {
   case MRB_TT_ICLASS:
@@ -708,16 +564,44 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
 MRB_API void
 mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
 {
-  if (obj == 0) return;
-  if (!is_white(obj)) return;
+  mrb_heap_page *page = NULL;
+  RVALUE const *rv = (RVALUE const*)obj;
+
+  if (!obj) return;
+
+  // should be binary search
+  for (int i = 0; i < mrb->gc.heap_pages_count; ++i ) {
+    RVALUE *region = objects(mrb->gc.heap_pages_table[i]);
+    if (region <= rv && rv < region + MRB_HEAP_PAGE_SIZE) {
+      page = mrb->gc.heap_pages_table[i];
+      break;
+    }
+  }
+
+  mrb_assert(page);
+
+  if (!page->mark_bits) {
+    page->mark_bits = (uint8_t*)mrb_malloc(mrb, MRB_HEAP_PAGE_SIZE / 8);
+  }
+
+  unsigned const page_offset = rv - objects(page);
+  if (page->mark_bits[page_offset / 8] & (1 << (page_offset % 8))) return;
   mrb_assert((obj)->tt != MRB_TT_FREE);
-  add_gray_list(mrb, &mrb->gc, obj);
+  page->mark_bits[page_offset / 8] |= (1 << (page_offset % 8));
+  gc_mark_children(mrb, &mrb->gc, obj);
 }
 
 static void
 obj_free(mrb_state *mrb, struct RBasic *obj, int end)
 {
   DEBUG(fprintf(stderr, "obj_free(%p,tt=%d)\n",obj,obj->tt));
+
+  if (!end) {
+    mrb_assert(obj->ref_count == 0 || obj->ref_count == REF_COUNT_MAX);
+  }
+
+  mrb_assert(obj->tt != MRB_TT_FREE);
+
   switch (obj->tt) {
     /* immediate - no mark */
   case MRB_TT_TRUE:
@@ -734,19 +618,21 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
 #endif
 
   case MRB_TT_OBJECT:
-    mrb_gc_free_iv(mrb, (struct RObject*)obj);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
     break;
 
   case MRB_TT_EXCEPTION:
-    mrb_gc_free_iv(mrb, (struct RObject*)obj);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
     break;
 
   case MRB_TT_CLASS:
   case MRB_TT_MODULE:
-  case MRB_TT_SCLASS:
-    mrb_gc_free_mt(mrb, (struct RClass*)obj);
-    mrb_gc_free_iv(mrb, (struct RObject*)obj);
-    break;
+  case MRB_TT_SCLASS: {
+    struct RClass *cls = (struct RClass*)obj;
+    if (!end) mrb_obj_ref_clear(mrb, cls->super);
+    mrb_gc_free_mt(mrb, cls);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
+  } break;
   case MRB_TT_ICLASS:
     if (MRB_FLAG_TEST(obj, MRB_FLAG_IS_ORIGIN))
       mrb_gc_free_mt(mrb, (struct RClass*)obj);
@@ -758,6 +644,12 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
       if (MRB_ENV_STACK_SHARED_P(e)) {
         /* cannot be freed */
         return;
+      }
+      if (!end) {
+        int i;
+        for (i = 0; i < MRB_ENV_STACK_LEN(e); ++i) {
+          mrb_dec_ref(mrb, e->stack[i]);
+        }
       }
       mrb_free(mrb, e->stack);
       e->stack = NULL;
@@ -774,7 +666,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
 
         while (ce <= ci) {
           struct REnv *e = ci->env;
-          if (e && !is_dead(&mrb->gc, e) &&
+          if (e && e->tt != MRB_TT_FREE &&
               e->tt == MRB_TT_ENV && MRB_ENV_STACK_SHARED_P(e)) {
             mrb_env_unshare(mrb, e);
           }
@@ -788,13 +680,20 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
   case MRB_TT_ARRAY:
     if (ARY_SHARED_P(obj))
       mrb_ary_decref(mrb, ((struct RArray*)obj)->aux.shared);
-    else
+    else {
+      mrb_int i;
+      if (!end) {
+        for (i = 0; i < ((struct RArray*)obj)->len; ++i) {
+          mrb_dec_ref(mrb, ((struct RArray*)obj)->ptr[i]);
+        }
+      }
       mrb_free(mrb, ((struct RArray*)obj)->ptr);
+    }
     break;
 
   case MRB_TT_HASH:
-    mrb_gc_free_iv(mrb, (struct RObject*)obj);
-    mrb_gc_free_hash(mrb, (struct RHash*)obj);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
+    mrb_gc_free_hash(mrb, (struct RHash*)obj, end);
     break;
 
   case MRB_TT_STRING:
@@ -805,6 +704,11 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
     {
       struct RProc *p = (struct RProc*)obj;
 
+      if (!end) {
+        if (p->env) mrb_obj_dec_ref(mrb, (struct RBasic*)p->env);
+        if (p->target_class) mrb_obj_dec_ref(mrb, (struct RBasic*)p->target_class);
+      }
+
       if (!MRB_PROC_CFUNC_P(p) && p->body.irep) {
         mrb_irep_decref(mrb, p->body.irep);
       }
@@ -812,7 +716,12 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
     break;
 
   case MRB_TT_RANGE:
-    mrb_free(mrb, ((struct RRange*)obj)->edges);
+    {
+      struct RRange *r = (struct RRange*)obj;
+      mrb_dec_ref(mrb, r->edges->beg);
+      mrb_dec_ref(mrb, r->edges->end);
+      mrb_free(mrb, r->edges);
+    }
     break;
 
   case MRB_TT_DATA:
@@ -821,25 +730,28 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
       if (d->type && d->type->dfree) {
         d->type->dfree(mrb, d->data);
       }
-      mrb_gc_free_iv(mrb, (struct RObject*)obj);
+      mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
     }
     break;
 
   default:
     break;
   }
+  if (!end && obj->c) {
+    mrb_obj_dec_ref(mrb, (struct RBasic*)obj->c);
+  }
+
   obj->tt = MRB_TT_FREE;
+  ((struct free_obj*)obj)->next = mrb->gc.freelist;
+  mrb->gc.freelist = (struct RVALUE*)obj;
+  mrb->gc.live--;
 }
 
 static void
-root_scan_phase(mrb_state *mrb, mrb_gc *gc)
+root_scan_phase(mrb_state *mrb)
 {
   size_t i, e;
-
-  if (!is_minor_gc(gc)) {
-    gc->gray_list = NULL;
-    gc->atomic_gray_list = NULL;
-  }
+  mrb_gc *gc = &mrb->gc;
 
   mrb_gc_mark_gv(mrb);
   /* mark arena */
@@ -885,342 +797,54 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
   }
 }
 
-static size_t
-gc_gray_mark(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
-{
-  size_t children = 0;
-
-  gc_mark_children(mrb, gc, obj);
-
-  switch (obj->tt) {
-  case MRB_TT_ICLASS:
-    children++;
-    break;
-
-  case MRB_TT_CLASS:
-  case MRB_TT_SCLASS:
-  case MRB_TT_MODULE:
-    {
-      struct RClass *c = (struct RClass*)obj;
-
-      children += mrb_gc_mark_iv_size(mrb, (struct RObject*)obj);
-      children += mrb_gc_mark_mt_size(mrb, c);
-      children++;
-    }
-    break;
-
-  case MRB_TT_OBJECT:
-  case MRB_TT_DATA:
-  case MRB_TT_EXCEPTION:
-    children += mrb_gc_mark_iv_size(mrb, (struct RObject*)obj);
-    break;
-
-  case MRB_TT_ENV:
-    children += (int)obj->flags;
-    break;
-
-  case MRB_TT_FIBER:
-    {
-      struct mrb_context *c = ((struct RFiber*)obj)->cxt;
-      size_t i;
-      mrb_callinfo *ci;
-
-      if (!c) break;
-      /* mark stack */
-      i = c->stack - c->stbase;
-      if (c->ci) i += c->ci->nregs;
-      if (c->stbase + i > c->stend) i = c->stend - c->stbase;
-      children += i;
-
-      /* mark ensure stack */
-      children += c->eidx;
-
-      /* mark closure */
-      if (c->cibase) {
-        for (i=0, ci = c->cibase; ci <= c->ci; i++, ci++)
-          ;
-      }
-      children += i;
-    }
-    break;
-
-  case MRB_TT_ARRAY:
-    {
-      struct RArray *a = (struct RArray*)obj;
-      children += a->len;
-    }
-    break;
-
-  case MRB_TT_HASH:
-    children += mrb_gc_mark_iv_size(mrb, (struct RObject*)obj);
-    children += mrb_gc_mark_hash_size(mrb, (struct RHash*)obj);
-    break;
-
-  case MRB_TT_PROC:
-  case MRB_TT_RANGE:
-    children+=2;
-    break;
-
-  default:
-    break;
-  }
-  return children;
-}
-
-
-static void
-gc_mark_gray_list(mrb_state *mrb, mrb_gc *gc) {
-  while (gc->gray_list) {
-    if (is_gray(gc->gray_list))
-      gc_mark_children(mrb, gc, gc->gray_list);
-    else
-      gc->gray_list = gc->gray_list->gcnext;
-  }
-}
-
-
-static size_t
-incremental_marking_phase(mrb_state *mrb, mrb_gc *gc, size_t limit)
-{
-  size_t tried_marks = 0;
-
-  while (gc->gray_list && tried_marks < limit) {
-    tried_marks += gc_gray_mark(mrb, gc, gc->gray_list);
-  }
-
-  return tried_marks;
-}
-
-static void
-final_marking_phase(mrb_state *mrb, mrb_gc *gc)
-{
-  mark_context(mrb, mrb->c);
-  gc_mark_gray_list(mrb, gc);
-  mrb_assert(gc->gray_list == NULL);
-  gc->gray_list = gc->atomic_gray_list;
-  gc->atomic_gray_list = NULL;
-  gc_mark_gray_list(mrb, gc);
-  mrb_assert(gc->gray_list == NULL);
-}
-
-static void
-prepare_incremental_sweep(mrb_state *mrb, mrb_gc *gc)
-{
-  gc->state = MRB_GC_STATE_SWEEP;
-  gc->sweeps = gc->heaps;
-  gc->live_after_mark = gc->live;
-}
-
-static size_t
-incremental_sweep_phase(mrb_state *mrb, mrb_gc *gc, size_t limit)
-{
-  mrb_heap_page *page = gc->sweeps;
-  size_t tried_sweep = 0;
-
-  while (page && (tried_sweep < limit)) {
-    RVALUE *p = objects(page);
-    RVALUE *e = p + MRB_HEAP_PAGE_SIZE;
-    size_t freed = 0;
-    mrb_bool dead_slot = TRUE;
-    mrb_bool full = (page->freelist == NULL);
-
-    if (is_minor_gc(gc) && page->old) {
-      /* skip a slot which doesn't contain any young object */
-      p = e;
-      dead_slot = FALSE;
-    }
-    while (p<e) {
-      if (is_dead(gc, &p->as.basic)) {
-        if (p->as.basic.tt != MRB_TT_FREE) {
-          obj_free(mrb, &p->as.basic, FALSE);
-          if (p->as.basic.tt == MRB_TT_FREE) {
-            p->as.free.next = page->freelist;
-            page->freelist = (struct RBasic*)p;
-            freed++;
-          }
-          else {
-            dead_slot = FALSE;
-          }
-        }
-      }
-      else {
-        if (!is_generational(gc))
-          paint_partial_white(gc, &p->as.basic); /* next gc target */
-        dead_slot = FALSE;
-      }
-      p++;
-    }
-
-    /* free dead slot */
-    if (dead_slot && freed < MRB_HEAP_PAGE_SIZE) {
-      mrb_heap_page *next = page->next;
-
-      unlink_heap_page(gc, page);
-      unlink_free_heap_page(gc, page);
-      mrb_free(mrb, page);
-      page = next;
-    }
-    else {
-      if (full && freed > 0) {
-        link_free_heap_page(gc, page);
-      }
-      if (page->freelist == NULL && is_minor_gc(gc))
-        page->old = TRUE;
-      else
-        page->old = FALSE;
-      page = page->next;
-    }
-    tried_sweep += MRB_HEAP_PAGE_SIZE;
-    gc->live -= freed;
-    gc->live_after_mark -= freed;
-  }
-  gc->sweeps = page;
-  return tried_sweep;
-}
-
-static size_t
-incremental_gc(mrb_state *mrb, mrb_gc *gc, size_t limit)
-{
-  switch (gc->state) {
-  case MRB_GC_STATE_ROOT:
-    root_scan_phase(mrb, gc);
-    gc->state = MRB_GC_STATE_MARK;
-    flip_white_part(gc);
-    return 0;
-  case MRB_GC_STATE_MARK:
-    if (gc->gray_list) {
-      return incremental_marking_phase(mrb, gc, limit);
-    }
-    else {
-      final_marking_phase(mrb, gc);
-      prepare_incremental_sweep(mrb, gc);
-      return 0;
-    }
-  case MRB_GC_STATE_SWEEP: {
-     size_t tried_sweep = 0;
-     tried_sweep = incremental_sweep_phase(mrb, gc, limit);
-     if (tried_sweep == 0)
-       gc->state = MRB_GC_STATE_ROOT;
-     return tried_sweep;
-  }
-  default:
-    /* unknown state */
-    mrb_assert(0);
-    return 0;
-  }
-}
-
-static void
-incremental_gc_until(mrb_state *mrb, mrb_gc *gc, mrb_gc_state to_state)
-{
-  do {
-    incremental_gc(mrb, gc, SIZE_MAX);
-  } while (gc->state != to_state);
-}
-
-static void
-incremental_gc_step(mrb_state *mrb, mrb_gc *gc)
-{
-  size_t limit = 0, result = 0;
-  limit = (GC_STEP_SIZE/100) * gc->step_ratio;
-  while (result < limit) {
-    result += incremental_gc(mrb, gc, limit);
-    if (gc->state == MRB_GC_STATE_ROOT)
-      break;
-  }
-
-  gc->threshold = gc->live + GC_STEP_SIZE;
-}
-
-static void
-clear_all_old(mrb_state *mrb, mrb_gc *gc)
-{
-  mrb_bool origin_mode = gc->generational;
-
-  mrb_assert(is_generational(gc));
-  if (is_major_gc(gc)) {
-    /* finish the half baked GC */
-    incremental_gc_until(mrb, gc, MRB_GC_STATE_ROOT);
-  }
-
-  /* Sweep the dead objects, then reset all the live objects
-   * (including all the old objects, of course) to white. */
-  gc->generational = FALSE;
-  prepare_incremental_sweep(mrb, gc);
-  incremental_gc_until(mrb, gc, MRB_GC_STATE_ROOT);
-  gc->generational = origin_mode;
-
-  /* The gray objects have already been painted as white */
-  gc->atomic_gray_list = gc->gray_list = NULL;
-}
-
-MRB_API void
-mrb_incremental_gc(mrb_state *mrb)
-{
-  mrb_gc *gc = &mrb->gc;
-
-  if (gc->disabled || gc->iterating) return;
-
-  GC_INVOKE_TIME_REPORT("mrb_incremental_gc()");
-  GC_TIME_START;
-
-  if (is_minor_gc(gc)) {
-    incremental_gc_until(mrb, gc, MRB_GC_STATE_ROOT);
-  }
-  else {
-    incremental_gc_step(mrb, gc);
-  }
-
-  if (gc->state == MRB_GC_STATE_ROOT) {
-    mrb_assert(gc->live >= gc->live_after_mark);
-    gc->threshold = (gc->live_after_mark/100) * gc->interval_ratio;
-    if (gc->threshold < GC_STEP_SIZE) {
-      gc->threshold = GC_STEP_SIZE;
-    }
-
-    if (is_major_gc(gc)) {
-      gc->majorgc_old_threshold = gc->live_after_mark/100 * DEFAULT_MAJOR_GC_INC_RATIO;
-      gc->full = FALSE;
-    }
-    else if (is_minor_gc(gc)) {
-      if (gc->live > gc->majorgc_old_threshold) {
-        clear_all_old(mrb, gc);
-        gc->full = TRUE;
-      }
-    }
-  }
-
-  GC_TIME_STOP_AND_REPORT;
-}
-
 /* Perform a full gc cycle */
 MRB_API void
 mrb_full_gc(mrb_state *mrb)
 {
   mrb_gc *gc = &mrb->gc;
 
-  if (gc->disabled || gc->iterating) return;
+  if (gc->disabled || gc->iterating || !gc->heaps) return;
 
   GC_INVOKE_TIME_REPORT("mrb_full_gc()");
   GC_TIME_START;
 
-  if (is_generational(gc)) {
-    /* clear all the old objects back to young */
-    clear_all_old(mrb, gc);
-    gc->full = TRUE;
-  }
-  else if (gc->state != MRB_GC_STATE_ROOT) {
-    /* finish half baked GC cycle */
-    incremental_gc_until(mrb, gc, MRB_GC_STATE_ROOT);
+  mrb_assert(!gc->heap_pages_table);
+
+  gc->heap_pages_count = 0;
+  for (mrb_heap_page const *p = gc->heaps; p; p = p->next) { ++gc->heap_pages_count; }
+
+  gc->heap_pages_table = (struct mrb_heap_page**)mrb_malloc(
+      mrb, sizeof(struct mrb_heap_page*) * gc->heap_pages_count);
+  int idx = 0;
+  for (mrb_heap_page *p = gc->heaps; p; p = p->next) {
+    gc->heap_pages_table[idx++] = p;
   }
 
-  incremental_gc_until(mrb, gc, MRB_GC_STATE_ROOT);
-  gc->threshold = (gc->live_after_mark/100) * gc->interval_ratio;
+  root_scan_phase(mrb);
 
-  if (is_generational(gc)) {
-    gc->majorgc_old_threshold = gc->live_after_mark/100 * DEFAULT_MAJOR_GC_INC_RATIO;
-    gc->full = FALSE;
+  for (mrb_heap_page* page = gc->heaps; page != NULL; ) {
+    int free_count = 0;
+    mrb_heap_page *need_free = NULL;
+
+    for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i) {
+      if (!page->mark_bits || !(page->mark_bits[i / 8] & (1 << (i % 8)))) {
+        obj_free(mrb, &objects(page)[i].as.basic, FALSE);
+      }
+      if (objects(page)[i].as.basic.tt == MRB_TT_FREE) free_count++;
+    }
+    if (page->mark_bits) { mrb_free(mrb, page->mark_bits); }
+    if (free_count == MRB_HEAP_PAGE_SIZE) { need_free = page; }
+
+    page = page->next;
+
+    if (need_free) {
+      unlink_heap_page(gc, need_free);
+      mrb_free(mrb, need_free);
+    }
   }
+
+  mrb_free(mrb, gc->heap_pages_table);
+  gc->heap_pages_table = NULL;
 
   GC_TIME_STOP_AND_REPORT;
 }
@@ -1242,6 +866,12 @@ mrb_gc_arena_restore(mrb_state *mrb, int idx)
 {
   mrb_gc *gc = &mrb->gc;
 
+  if (idx < gc->arena_idx) {
+    for (int i = gc->arena_idx; i > idx; --i) {
+      mrb_obj_dec_ref(mrb, gc->arena[i - 1]);
+    }
+  }
+
 #ifndef MRB_GC_FIXED_ARENA
   int capa = gc->arena_capa;
 
@@ -1257,54 +887,6 @@ mrb_gc_arena_restore(mrb_state *mrb, int idx)
   }
 #endif
   gc->arena_idx = idx;
-}
-
-/*
- * Field write barrier
- *   Paint obj(Black) -> value(White) to obj(Black) -> value(Gray).
- */
-
-MRB_API void
-mrb_field_write_barrier(mrb_state *mrb, struct RBasic *obj, struct RBasic *value)
-{
-  mrb_gc *gc = &mrb->gc;
-
-  if (!is_black(obj)) return;
-  if (!is_white(value)) return;
-
-  mrb_assert(gc->state == MRB_GC_STATE_MARK || (!is_dead(gc, value) && !is_dead(gc, obj)));
-  mrb_assert(is_generational(gc) || gc->state != MRB_GC_STATE_ROOT);
-
-  if (is_generational(gc) || gc->state == MRB_GC_STATE_MARK) {
-    add_gray_list(mrb, gc, value);
-  }
-  else {
-    mrb_assert(gc->state == MRB_GC_STATE_SWEEP);
-    paint_partial_white(gc, obj); /* for never write barriers */
-  }
-}
-
-/*
- * Write barrier
- *   Paint obj(Black) to obj(Gray).
- *
- *   The object that is painted gray will be traversed atomically in final
- *   mark phase. So you use this write barrier if it's frequency written spot.
- *   e.g. Set element on Array.
- */
-
-MRB_API void
-mrb_write_barrier(mrb_state *mrb, struct RBasic *obj)
-{
-  mrb_gc *gc = &mrb->gc;
-
-  if (!is_black(obj)) return;
-
-  mrb_assert(!is_dead(gc, obj));
-  mrb_assert(is_generational(gc) || gc->state != MRB_GC_STATE_ROOT);
-  paint_gray(obj);
-  obj->gcnext = gc->atomic_gray_list;
-  gc->atomic_gray_list = obj;
 }
 
 /*
@@ -1378,7 +960,7 @@ gc_disable(mrb_state *mrb, mrb_value obj)
 static mrb_value
 gc_interval_ratio_get(mrb_state *mrb, mrb_value obj)
 {
-  return mrb_fixnum_value(mrb->gc.interval_ratio);
+  return mrb_fixnum_value(-1);
 }
 
 /*
@@ -1396,7 +978,6 @@ gc_interval_ratio_set(mrb_state *mrb, mrb_value obj)
   mrb_int ratio;
 
   mrb_get_args(mrb, "i", &ratio);
-  mrb->gc.interval_ratio = ratio;
   return mrb_nil_value();
 }
 
@@ -1411,7 +992,7 @@ gc_interval_ratio_set(mrb_state *mrb, mrb_value obj)
 static mrb_value
 gc_step_ratio_get(mrb_state *mrb, mrb_value obj)
 {
-  return mrb_fixnum_value(mrb->gc.step_ratio);
+  return mrb_fixnum_value(-1);
 }
 
 /*
@@ -1429,28 +1010,7 @@ gc_step_ratio_set(mrb_state *mrb, mrb_value obj)
   mrb_int ratio;
 
   mrb_get_args(mrb, "i", &ratio);
-  mrb->gc.step_ratio = ratio;
   return mrb_nil_value();
-}
-
-static void
-change_gen_gc_mode(mrb_state *mrb, mrb_gc *gc, mrb_bool enable)
-{
-  if (gc->disabled || gc->iterating) {
-    mrb_raise(mrb, E_RUNTIME_ERROR, "generational mode changed when GC disabled");
-    return;
-  }
-  if (is_generational(gc) && !enable) {
-    clear_all_old(mrb, gc);
-    mrb_assert(gc->state == MRB_GC_STATE_ROOT);
-    gc->full = FALSE;
-  }
-  else if (!is_generational(gc) && enable) {
-    incremental_gc_until(mrb, gc, MRB_GC_STATE_ROOT);
-    gc->majorgc_old_threshold = gc->live_after_mark/100 * DEFAULT_MAJOR_GC_INC_RATIO;
-    gc->full = FALSE;
-  }
-  gc->generational = enable;
 }
 
 /*
@@ -1464,7 +1024,7 @@ change_gen_gc_mode(mrb_state *mrb, mrb_gc *gc, mrb_bool enable)
 static mrb_value
 gc_generational_mode_get(mrb_state *mrb, mrb_value self)
 {
-  return mrb_bool_value(mrb->gc.generational);
+  return mrb_false_value();
 }
 
 /*
@@ -1481,10 +1041,7 @@ gc_generational_mode_set(mrb_state *mrb, mrb_value self)
   mrb_bool enable;
 
   mrb_get_args(mrb, "b", &enable);
-  if (mrb->gc.generational != enable)
-    change_gen_gc_mode(mrb, &mrb->gc, enable);
-
-  return mrb_bool_value(enable);
+  return mrb_false_value();
 }
 
 
@@ -1537,11 +1094,46 @@ mrb_objspace_each_objects(mrb_state *mrb, mrb_each_object_callback *callback, vo
   }
 }
 
-#ifdef GC_TEST
-#ifdef GC_DEBUG
-static mrb_value gc_test(mrb_state *, mrb_value);
-#endif
-#endif
+MRB_API void
+mrb_obj_inc_ref(mrb_state *mrb, struct RBasic *obj)
+{
+  if (obj->ref_count == REF_COUNT_MAX) { return; }
+
+  mrb_assert(obj->tt != MRB_TT_FREE);
+
+  ++obj->ref_count;
+}
+
+MRB_API void
+mrb_obj_dec_ref(mrb_state *mrb, struct RBasic *obj)
+{
+  if (obj->ref_count == REF_COUNT_MAX) { return; }
+
+  mrb_assert(obj->tt != MRB_TT_FREE);
+
+  if (!obj->ref_count) {
+    obj_free(mrb, obj, FALSE);
+  }
+  else {
+    --obj->ref_count;
+  }
+}
+
+MRB_API void
+mrb_inc_ref(mrb_state* mrb, mrb_value v)
+{
+  if (!mrb_immediate_p(v)) {
+    mrb_obj_inc_ref(mrb, mrb_basic_ptr(v));
+  }
+}
+
+MRB_API void
+mrb_dec_ref(mrb_state* mrb, mrb_value v)
+{
+  if (!mrb_immediate_p(v)) {
+    mrb_obj_dec_ref(mrb, mrb_basic_ptr(v));
+  }
+}
 
 void
 mrb_init_gc(mrb_state *mrb)
@@ -1559,278 +1151,4 @@ mrb_init_gc(mrb_state *mrb)
   mrb_define_class_method(mrb, gc, "step_ratio=", gc_step_ratio_set, MRB_ARGS_REQ(1));
   mrb_define_class_method(mrb, gc, "generational_mode=", gc_generational_mode_set, MRB_ARGS_REQ(1));
   mrb_define_class_method(mrb, gc, "generational_mode", gc_generational_mode_get, MRB_ARGS_NONE());
-#ifdef GC_TEST
-#ifdef GC_DEBUG
-  mrb_define_class_method(mrb, gc, "test", gc_test, MRB_ARGS_NONE());
-#endif
-#endif
 }
-
-#ifdef GC_TEST
-#ifdef GC_DEBUG
-void
-test_mrb_field_write_barrier(void)
-{
-  mrb_state *mrb = mrb_open();
-  struct RBasic *obj, *value;
-  mrb_gc *gc = &mrb->gc;
-
-  puts("test_mrb_field_write_barrier");
-  gc->generational = FALSE;
-  obj = mrb_basic_ptr(mrb_ary_new(mrb));
-  value = mrb_basic_ptr(mrb_str_new_lit(mrb, "value"));
-  paint_black(obj);
-  paint_partial_white(gc, value);
-
-
-  puts("  in MRB_GC_STATE_MARK");
-  gc->state = MRB_GC_STATE_MARK;
-  mrb_field_write_barrier(mrb, obj, value);
-
-  mrb_assert(is_gray(value));
-
-
-  puts("  in MRB_GC_STATE_SWEEP");
-  paint_partial_white(gc, value);
-  gc->state = MRB_GC_STATE_SWEEP;
-  mrb_field_write_barrier(mrb, obj, value);
-
-  mrb_assert(obj->color & gc->current_white_part);
-  mrb_assert(value->color & gc->current_white_part);
-
-
-  puts("  fail with black");
-  gc->state = MRB_GC_STATE_MARK;
-  paint_white(obj);
-  paint_partial_white(gc, value);
-  mrb_field_write_barrier(mrb, obj, value);
-
-  mrb_assert(obj->color & gc->current_white_part);
-
-
-  puts("  fail with gray");
-  gc->state = MRB_GC_STATE_MARK;
-  paint_black(obj);
-  paint_gray(value);
-  mrb_field_write_barrier(mrb, obj, value);
-
-  mrb_assert(is_gray(value));
-
-
-  {
-    puts("test_mrb_field_write_barrier_value");
-    obj = mrb_basic_ptr(mrb_ary_new(mrb));
-    mrb_value value = mrb_str_new_lit(mrb, "value");
-    paint_black(obj);
-    paint_partial_white(gc, mrb_basic_ptr(value));
-
-    gc->state = MRB_GC_STATE_MARK;
-    mrb_field_write_barrier_value(mrb, obj, value);
-
-    mrb_assert(is_gray(mrb_basic_ptr(value)));
-  }
-
-  mrb_close(mrb);
-}
-
-void
-test_mrb_write_barrier(void)
-{
-  mrb_state *mrb = mrb_open();
-  struct RBasic *obj;
-  mrb_gc *gc = &mrb->gc;
-
-  puts("test_mrb_write_barrier");
-  obj = mrb_basic_ptr(mrb_ary_new(mrb));
-  paint_black(obj);
-
-  puts("  in MRB_GC_STATE_MARK");
-  gc->state = MRB_GC_STATE_MARK;
-  mrb_write_barrier(mrb, obj);
-
-  mrb_assert(is_gray(obj));
-  mrb_assert(gc->atomic_gray_list == obj);
-
-
-  puts("  fail with gray");
-  paint_gray(obj);
-  mrb_write_barrier(mrb, obj);
-
-  mrb_assert(is_gray(obj));
-
-  mrb_close(mrb);
-}
-
-void
-test_add_gray_list(void)
-{
-  mrb_state *mrb = mrb_open();
-  struct RBasic *obj1, *obj2;
-  mrb_gc *gc = &mrb->gc;
-
-  puts("test_add_gray_list");
-  change_gen_gc_mode(mrb, gc, FALSE);
-  mrb_assert(gc->gray_list == NULL);
-  obj1 = mrb_basic_ptr(mrb_str_new_lit(mrb, "test"));
-  add_gray_list(mrb, gc, obj1);
-  mrb_assert(gc->gray_list == obj1);
-  mrb_assert(is_gray(obj1));
-
-  obj2 = mrb_basic_ptr(mrb_str_new_lit(mrb, "test"));
-  add_gray_list(mrb, gc, obj2);
-  mrb_assert(gc->gray_list == obj2);
-  mrb_assert(gc->gray_list->gcnext == obj1);
-  mrb_assert(is_gray(obj2));
-
-  mrb_close(mrb);
-}
-
-void
-test_gc_gray_mark(void)
-{
-  mrb_state *mrb = mrb_open();
-  mrb_value obj_v, value_v;
-  struct RBasic *obj;
-  size_t gray_num = 0;
-  mrb_gc *gc = &mrb->gc;
-
-  puts("test_gc_gray_mark");
-
-  puts("  in MRB_TT_CLASS");
-  obj = (struct RBasic*)mrb->object_class;
-  paint_gray(obj);
-  gray_num = gc_gray_mark(mrb, gc, obj);
-  mrb_assert(is_black(obj));
-  mrb_assert(gray_num > 1);
-
-  puts("  in MRB_TT_ARRAY");
-  obj_v = mrb_ary_new(mrb);
-  value_v = mrb_str_new_lit(mrb, "test");
-  paint_gray(mrb_basic_ptr(obj_v));
-  paint_partial_white(gc, mrb_basic_ptr(value_v));
-  mrb_ary_push(mrb, obj_v, value_v);
-  gray_num = gc_gray_mark(mrb, gc, mrb_basic_ptr(obj_v));
-  mrb_assert(is_black(mrb_basic_ptr(obj_v)));
-  mrb_assert(is_gray(mrb_basic_ptr(value_v)));
-  mrb_assert(gray_num == 1);
-
-  mrb_close(mrb);
-}
-
-void
-test_incremental_gc(void)
-{
-  mrb_state *mrb = mrb_open();
-  size_t max = ~0, live = 0, total = 0, freed = 0;
-  RVALUE *free;
-  mrb_heap_page *page;
-  mrb_gc *gc = &mrb->gc;
-
-  puts("test_incremental_gc");
-  change_gen_gc_mode(mrb, gc, FALSE);
-
-  puts("  in mrb_full_gc");
-  mrb_full_gc(mrb);
-
-  mrb_assert(gc->state == MRB_GC_STATE_ROOT);
-  puts("  in MRB_GC_STATE_ROOT");
-  incremental_gc(mrb, gc, max);
-  mrb_assert(gc->state == MRB_GC_STATE_MARK);
-  puts("  in MRB_GC_STATE_MARK");
-  incremental_gc_until(mrb, gc, MRB_GC_STATE_SWEEP);
-  mrb_assert(gc->state == MRB_GC_STATE_SWEEP);
-
-  puts("  in MRB_GC_STATE_SWEEP");
-  page = gc->heaps;
-  while (page) {
-    RVALUE *p = objects(page);
-    RVALUE *e = p + MRB_HEAP_PAGE_SIZE;
-    while (p<e) {
-      if (is_black(&p->as.basic)) {
-        live++;
-      }
-      if (is_gray(&p->as.basic) && !is_dead(gc, &p->as.basic)) {
-        printf("%p\n", &p->as.basic);
-      }
-      p++;
-    }
-    page = page->next;
-    total += MRB_HEAP_PAGE_SIZE;
-  }
-
-  mrb_assert(gc->gray_list == NULL);
-
-  incremental_gc(mrb, gc, max);
-  mrb_assert(gc->state == MRB_GC_STATE_SWEEP);
-
-  incremental_gc(mrb, gc, max);
-  mrb_assert(gc->state == MRB_GC_STATE_ROOT);
-
-  free = (RVALUE*)gc->heaps->freelist;
-  while (free) {
-   freed++;
-   free = (RVALUE*)free->as.free.next;
-  }
-
-  mrb_assert(gc->live == live);
-  mrb_assert(gc->live == total-freed);
-
-  puts("test_incremental_gc(gen)");
-  incremental_gc_until(mrb, gc, MRB_GC_STATE_SWEEP);
-  change_gen_gc_mode(mrb, gc, TRUE);
-
-  mrb_assert(gc->full == FALSE);
-  mrb_assert(gc->state == MRB_GC_STATE_ROOT);
-
-  puts("  in minor");
-  mrb_assert(is_minor_gc(gc));
-  mrb_assert(gc->majorgc_old_threshold > 0);
-  gc->majorgc_old_threshold = 0;
-  mrb_incremental_gc(mrb);
-  mrb_assert(gc->full == TRUE);
-  mrb_assert(gc->state == MRB_GC_STATE_ROOT);
-
-  puts("  in major");
-  mrb_assert(is_major_gc(gc));
-  do {
-    mrb_incremental_gc(mrb);
-  } while (gc->state != MRB_GC_STATE_ROOT);
-  mrb_assert(gc->full == FALSE);
-
-  mrb_close(mrb);
-}
-
-void
-test_incremental_sweep_phase(void)
-{
-  mrb_state *mrb = mrb_open();
-  mrb_gc *gc = &mrb->gc;
-
-  puts("test_incremental_sweep_phase");
-
-  add_heap(mrb, gc);
-  gc->sweeps = gc->heaps;
-
-  mrb_assert(gc->heaps->next->next == NULL);
-  mrb_assert(gc->free_heaps->next->next == NULL);
-  incremental_sweep_phase(mrb, gc, MRB_HEAP_PAGE_SIZE * 3);
-
-  mrb_assert(gc->heaps->next == NULL);
-  mrb_assert(gc->heaps == gc->free_heaps);
-
-  mrb_close(mrb);
-}
-
-static mrb_value
-gc_test(mrb_state *mrb, mrb_value self)
-{
-  test_mrb_field_write_barrier();
-  test_mrb_write_barrier();
-  test_add_gray_list();
-  test_gc_gray_mark();
-  test_incremental_gc();
-  test_incremental_sweep_phase();
-  return mrb_nil_value();
-}
-#endif  /* GC_DEBUG */
-#endif  /* GC_TEST */

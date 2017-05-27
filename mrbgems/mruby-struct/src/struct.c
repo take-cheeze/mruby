@@ -91,7 +91,7 @@ mrb_struct_modify(mrb_state *mrb, mrb_value strct)
     mrb_raise(mrb, E_RUNTIME_ERROR, "can't modify frozen struct");
   }
 
-  mrb_write_barrier(mrb, mrb_basic_ptr(strct));
+  // mrb_write_barrier(mrb, mrb_basic_ptr(strct));
 }
 
 /* 15.2.18.4.6  */
@@ -459,7 +459,7 @@ mrb_struct_aset_sym(mrb_state *mrb, mrb_value s, mrb_sym id, mrb_value val)
   for (i=0; i<len; i++) {
     if (mrb_symbol(ptr_members[i]) == id) {
       mrb_struct_modify(mrb, s);
-      ptr[i] = val;
+      mrb_ref_set(mrb, ptr[i], val);
       return val;
     }
   }
@@ -523,6 +523,7 @@ mrb_struct_aset(mrb_state *mrb, mrb_value s)
                mrb_fixnum_value(i), mrb_fixnum_value(RSTRUCT_LEN(s)));
   }
   mrb_struct_modify(mrb, s);
+  mrb_ref_set(mrb, RSTRUCT_PTR(s)[i], val);
   return RSTRUCT_PTR(s)[i] = val;
 }
 

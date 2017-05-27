@@ -20,15 +20,15 @@ mrb_proc_new(mrb_state *mrb, mrb_irep *irep)
   mrb_callinfo *ci = mrb->c->ci;
 
   p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
-  p->target_class = 0;
+  p->target_class = NULL;
   if (ci) {
     if (ci->proc)
-      p->target_class = ci->proc->target_class;
+      mrb_obj_ref_init(mrb, p->target_class, ci->proc->target_class);
     if (!p->target_class)
-      p->target_class = ci->target_class;
+      mrb_obj_ref_init(mrb, p->target_class, ci->target_class);
   }
   p->body.irep = irep;
-  p->env = 0;
+  p->env = NULL;
   mrb_irep_incref(mrb, irep);
 
   return p;
@@ -55,13 +55,12 @@ closure_setup(mrb_state *mrb, struct RProc *p, int nlocals)
 
   if (!mrb->c->ci->env) {
     e = env_new(mrb, nlocals);
-    mrb->c->ci->env = e;
+    mrb_obj_ref_init(mrb, mrb->c->ci->env, e);
   }
   else {
     e = mrb->c->ci->env;
   }
-  p->env = e;
-  mrb_field_write_barrier(mrb, (struct RBasic *)p, (struct RBasic *)p->env);
+  mrb_obj_ref_init(mrb, p->env, e);
 }
 
 struct RProc *
@@ -81,7 +80,7 @@ mrb_proc_new_cfunc(mrb_state *mrb, mrb_func_t func)
   p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
   p->body.func = func;
   p->flags |= MRB_PROC_CFUNC;
-  p->env = 0;
+  p->env = NULL;
 
   return p;
 }
@@ -93,13 +92,13 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
   struct REnv *e;
   int i;
 
-  p->env = e = env_new(mrb, argc);
-  mrb_field_write_barrier(mrb, (struct RBasic *)p, (struct RBasic *)p->env);
+  e = env_new(mrb, argc);
+  mrb_obj_ref_init(mrb, p->env, e);
   MRB_ENV_UNSHARE_STACK(e);
   e->stack = (mrb_value*)mrb_malloc(mrb, sizeof(mrb_value) * argc);
   if (argv) {
     for (i = 0; i < argc; ++i) {
-      e->stack[i] = argv[i];
+      mrb_ref_init(mrb, e->stack[i], argv[i]);
     }
   }
   else {
@@ -137,15 +136,15 @@ mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
 }
 
 void
-mrb_proc_copy(struct RProc *a, struct RProc *b)
+mrb_proc_copy(mrb_state *mrb, struct RProc *a, struct RProc *b)
 {
   a->flags = b->flags;
   a->body = b->body;
   if (!MRB_PROC_CFUNC_P(a) && a->body.irep) {
     a->body.irep->refcnt++;
   }
-  a->target_class = b->target_class;
-  a->env = b->env;
+  mrb_obj_ref_set(mrb, a->target_class, b->target_class);
+  mrb_obj_ref_set(mrb, a->env, b->env);
 }
 
 static mrb_value
@@ -161,7 +160,7 @@ mrb_proc_s_new(mrb_state *mrb, mrb_value proc_class)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "tried to create Proc object without a block");
   }
   p = (struct RProc *)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb_class_ptr(proc_class));
-  mrb_proc_copy(p, mrb_proc_ptr(blk));
+  mrb_proc_copy(mrb, p, mrb_proc_ptr(blk));
   proc = mrb_obj_value(p);
   mrb_funcall_with_block(mrb, proc, mrb_intern_lit(mrb, "initialize"), 0, NULL, blk);
   return proc;
@@ -176,7 +175,7 @@ mrb_proc_init_copy(mrb_state *mrb, mrb_value self)
   if (mrb_type(proc) != MRB_TT_PROC) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "not a proc");
   }
-  mrb_proc_copy(mrb_proc_ptr(self), mrb_proc_ptr(proc));
+  mrb_proc_copy(mrb, mrb_proc_ptr(self), mrb_proc_ptr(proc));
   return self;
 }
 
@@ -253,7 +252,7 @@ proc_lambda(mrb_state *mrb, mrb_value self)
   p = mrb_proc_ptr(blk);
   if (!MRB_PROC_STRICT_P(p)) {
     struct RProc *p2 = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, p->c);
-    mrb_proc_copy(p2, p);
+    mrb_proc_copy(mrb, p2, p);
     p2->flags |= MRB_PROC_STRICT;
     return mrb_obj_value(p2);
   }

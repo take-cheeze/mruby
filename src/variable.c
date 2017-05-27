@@ -260,6 +260,7 @@ iv_copy(mrb_state *mrb, iv_tbl *t)
         return t2;
       }
       iv_put(mrb, t2, key, val);
+      mrb_inc_ref(mrb, val);
     }
     seg = seg->next;
   }
@@ -429,10 +430,18 @@ mrb_gc_mark_iv_size(mrb_state *mrb, struct RObject *obj)
   return iv_size(mrb, obj->iv);
 }
 
+static int
+free_iv_each(mrb_state *mrb, mrb_sym s, mrb_value v, void* ptr)
+{
+  mrb_dec_ref(mrb, v);
+  return 0;
+}
+
 void
-mrb_gc_free_iv(mrb_state *mrb, struct RObject *obj)
+mrb_gc_free_iv(mrb_state *mrb, struct RObject *obj, mrb_bool end)
 {
   if (obj->iv) {
+    if (!end) iv_foreach(mrb, obj->iv, free_iv_each, obj);
     iv_free(mrb, obj->iv);
   }
 }
@@ -488,15 +497,20 @@ MRB_API void
 mrb_obj_iv_set(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
 {
   iv_tbl *t = obj->iv;
-
+   mrb_value old = mrb_nil_value();
+ 
   if (MRB_FROZEN_P(obj)) {
     mrb_raisef(mrb, E_RUNTIME_ERROR, "can't modify frozen %S", mrb_obj_value(obj));
   }
   if (!t) {
     t = obj->iv = iv_new(mrb);
   }
-  mrb_write_barrier(mrb, (struct RBasic*)obj);
+  else {
+    iv_get(mrb, t, sym, &old);
+  }
   iv_put(mrb, t, sym, v);
+  mrb_inc_ref(mrb, v);
+  mrb_dec_ref(mrb, old);
 }
 
 MRB_API void
@@ -510,8 +524,8 @@ mrb_obj_iv_ifnone(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
   else if (iv_get(mrb, t, sym, &v)) {
     return;
   }
-  mrb_write_barrier(mrb, (struct RBasic*)obj);
   iv_put(mrb, t, sym, v);
+  mrb_inc_ref(mrb, v);
 }
 
 MRB_API void
@@ -576,13 +590,12 @@ mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
   struct RObject *d = mrb_obj_ptr(dest);
   struct RObject *s = mrb_obj_ptr(src);
 
-  if (d->iv) {
-    iv_free(mrb, d->iv);
-    d->iv = 0;
-  }
+  mrb_gc_free_iv(mrb, d, FALSE);
   if (s->iv) {
-    mrb_write_barrier(mrb, (struct RBasic*)d);
+    // mrb_write_barrier(mrb, (struct RBasic*)d);
     d->iv = iv_copy(mrb, s->iv);
+  } else {
+    d->iv = NULL;
   }
 }
 
@@ -646,6 +659,8 @@ mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym)
     mrb_value val;
 
     if (t && iv_del(mrb, t, sym, &val)) {
+      mrb_gc_protect(mrb, val);
+      mrb_dec_ref(mrb, val);
       return val;
     }
   }
@@ -809,10 +824,12 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
   while (c) {
     if (c->iv) {
       iv_tbl *t = c->iv;
+      mrb_value old_v;
 
-      if (iv_get(mrb, t, sym, NULL)) {
-        mrb_write_barrier(mrb, (struct RBasic*)c);
+      if (iv_get(mrb, t, sym, &old_v)) {
         iv_put(mrb, t, sym, v);
+        mrb_inc_ref(mrb, v);
+        mrb_dec_ref(mrb, old_v);
         return;
       }
     }
@@ -843,8 +860,8 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
     c->iv = iv_new(mrb);
   }
 
-  mrb_write_barrier(mrb, (struct RBasic*)c);
   iv_put(mrb, c->iv, sym, v);
+  mrb_inc_ref(mrb, v);
 }
 
 MRB_API void
@@ -1067,23 +1084,30 @@ MRB_API void
 mrb_gv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
   iv_tbl *t;
+  mrb_value old = mrb_nil_value();
 
   if (!mrb->globals) {
     t = mrb->globals = iv_new(mrb);
   }
   else {
     t = mrb->globals;
+    iv_get(mrb, t, sym, &old);
   }
   iv_put(mrb, t, sym, v);
+  mrb_inc_ref(mrb, v);
+  mrb_dec_ref(mrb, old);
 }
 
 MRB_API void
 mrb_gv_remove(mrb_state *mrb, mrb_sym sym)
 {
+  mrb_value v = mrb_nil_value();
+
   if (!mrb->globals) {
     return;
   }
-  iv_del(mrb, mrb->globals, sym, NULL);
+  iv_del(mrb, mrb->globals, sym, &v);
+  mrb_dec_ref(mrb, v);
 }
 
 static int

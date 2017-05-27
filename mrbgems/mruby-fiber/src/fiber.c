@@ -110,7 +110,7 @@ fiber_init(mrb_state *mrb, mrb_value self)
 #endif
 
   /* copy receiver from a block */
-  c->stack[0] = mrb->c->stack[0];
+  mrb_ref_init(mrb, c->stack[0], mrb->c->stack[0]);
 
   /* initialize callinfo stack */
   c->cibase = (mrb_callinfo *)mrb_calloc(mrb, FIBER_CI_INIT_SIZE, sizeof(mrb_callinfo));
@@ -120,8 +120,8 @@ fiber_init(mrb_state *mrb, mrb_value self)
 
   /* adjust return callinfo */
   ci = c->ci;
-  ci->target_class = p->target_class;
-  ci->proc = p;
+  mrb_obj_ref_init(mrb, ci->target_class, p->target_class);
+  mrb_obj_ref_init(mrb, ci->proc, p);
   ci->pc = p->body.irep->iseq;
   ci->nregs = p->body.irep->nregs;
   ci[1] = ci[0];
@@ -154,7 +154,7 @@ fiber_result(mrb_state *mrb, const mrb_value *a, mrb_int len)
 }
 
 /* mark return from context modifying method */
-#define MARK_CONTEXT_MODIFY(c) (c)->ci->target_class = NULL
+#define MARK_CONTEXT_MODIFY(c) mrb_obj_ref_clear(mrb, (c)->ci->target_class)
 
 static void
 fiber_check_cfunc(mrb_state *mrb, struct mrb_context *c)
@@ -199,12 +199,13 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr
       *b++ = *a++;
     }
     c->cibase->argc = len;
-    value = c->stack[0] = c->ci->proc->env->stack[0];
+    mrb_ref_set(mrb, c->stack[0], c->ci->proc->env->stack[0]);
+    value = c->stack[0];
   }
   else {
     value = fiber_result(mrb, a, len);
   }
-  mrb_write_barrier(mrb, (struct RBasic*)c->fib);
+  // mrb_write_barrier(mrb, (struct RBasic*)c->fib);
   c->status = MRB_FIBER_RUNNING;
   mrb->c = c;
 
@@ -308,7 +309,7 @@ fiber_transfer(mrb_state *mrb, mrb_value self)
     mrb->c = c;
     c->status = MRB_FIBER_RUNNING;
     MARK_CONTEXT_MODIFY(c);
-    mrb_write_barrier(mrb, (struct RBasic*)c->fib);
+    // mrb_write_barrier(mrb, (struct RBasic*)c->fib);
     return fiber_result(mrb, a, len);
   }
 
@@ -339,7 +340,7 @@ mrb_fiber_yield(mrb_state *mrb, mrb_int len, const mrb_value *a)
     c->vmexec = FALSE;
     mrb->c->ci->acc = CI_ACC_RESUMED;
   }
-  mrb_write_barrier(mrb, (struct RBasic*)c->fib);
+  // mrb_write_barrier(mrb, (struct RBasic*)c->fib);
   MARK_CONTEXT_MODIFY(mrb->c);
   return fiber_result(mrb, a, len);
 }
@@ -380,7 +381,7 @@ fiber_current(mrb_state *mrb, mrb_value self)
     struct RFiber *f = (struct RFiber*)mrb_obj_alloc(mrb, MRB_TT_FIBER, mrb_class_ptr(self));
 
     f->cxt = mrb->c;
-    mrb->c->fib = f;
+    mrb_obj_ref_init(mrb, mrb->c->fib, f);
   }
   return mrb_obj_value(mrb->c->fib);
 }

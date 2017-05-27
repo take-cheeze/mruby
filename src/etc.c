@@ -161,7 +161,7 @@ mrb_word_boxing_float_pool(mrb_state *mrb, mrb_float f)
 {
   struct RFloat *nf = (struct RFloat *)mrb_malloc(mrb, sizeof(struct RFloat));
   nf->tt = MRB_TT_FLOAT;
-  nf->c = mrb->float_class;
+  mrb_obj_ref_init(mrb, nf->c, mrb->float_class);
   nf->f = f;
   return mrb_obj_value(nf);
 }

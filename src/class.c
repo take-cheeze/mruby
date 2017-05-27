@@ -81,12 +81,7 @@ prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
   sc->iv = 0;
   if (o->tt == MRB_TT_CLASS) {
     c = (struct RClass*)o;
-    if (!c->super) {
-      sc->super = mrb->class_class;
-    }
-    else {
-      sc->super = c->super->c;
-    }
+    sc->super = c->super? c->super->c : mrb->class_class;
   }
   else if (o->tt == MRB_TT_SCLASS) {
     c = (struct RClass*)o;
@@ -99,9 +94,8 @@ prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
     sc->super = o->c;
     prepare_singleton_class(mrb, (struct RBasic*)sc);
   }
-  o->c = sc;
-  mrb_field_write_barrier(mrb, (struct RBasic*)o, (struct RBasic*)sc);
-  mrb_field_write_barrier(mrb, (struct RBasic*)sc, (struct RBasic*)o);
+  mrb_obj_ref_set(mrb, o->c, sc);
+  mrb_obj_inc_ref(mrb, (struct RBasic*)sc->super);
   mrb_obj_iv_set(mrb, (struct RObject*)sc, mrb_intern_lit(mrb, "__attached__"), mrb_obj_value(o));
 }
 
@@ -418,6 +412,7 @@ mrb_define_method_raw(mrb_state *mrb, struct RClass *c, mrb_sym mid, struct RPro
 {
   khash_t(mt) *h;
   khiter_t k;
+  int res;
   MRB_CLASS_ORIGIN(c);
   h = c->mt;
 
@@ -428,11 +423,15 @@ mrb_define_method_raw(mrb_state *mrb, struct RClass *c, mrb_sym mid, struct RPro
       mrb_raise(mrb, E_RUNTIME_ERROR, "can't modify frozen class");
   }
   if (!h) h = c->mt = kh_init(mt, mrb);
-  k = kh_put(mt, mrb, h, mid);
-  kh_value(h, k) = p;
+  k = kh_put2(mt, mrb, h, mid, &res);
+  if (res) {
+    mrb_obj_ref_init(mrb, kh_value(h, k), p);
+  }
+  else {
+    mrb_obj_ref_set(mrb, kh_value(h, k), p);
+  }
   if (p) {
-    p->c = NULL;
-    mrb_field_write_barrier(mrb, (struct RBasic *)c, (struct RBasic *)p);
+    mrb_obj_ref_clear(mrb, p->c);
   }
 }
 
@@ -443,7 +442,7 @@ mrb_define_method_id(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_func_t f
   int ai = mrb_gc_arena_save(mrb);
 
   p = mrb_proc_new_cfunc(mrb, func);
-  p->target_class = c;
+  mrb_obj_ref_init(mrb, p->target_class, c);
   mrb_define_method_raw(mrb, c, mid, p);
   mrb_gc_arena_restore(mrb, ai);
 }
@@ -934,13 +933,7 @@ boot_defclass(mrb_state *mrb, struct RClass *super)
   struct RClass *c;
 
   c = (struct RClass*)mrb_obj_alloc(mrb, MRB_TT_CLASS, mrb->class_class);
-  if (super) {
-    c->super = super;
-    mrb_field_write_barrier(mrb, (struct RBasic*)c, (struct RBasic*)super);
-  }
-  else {
-    c->super = mrb->object_class;
-  }
+  mrb_obj_ref_init(mrb, c->super, super? super : mrb->object_class);
   c->mt = kh_init(mt, mrb);
   return c;
 }
@@ -963,13 +956,8 @@ include_class_new(mrb_state *mrb, struct RClass *m, struct RClass *super)
   MRB_CLASS_ORIGIN(m);
   ic->iv = m->iv;
   ic->mt = m->mt;
-  ic->super = super;
-  if (m->tt == MRB_TT_ICLASS) {
-    ic->c = m->c;
-  }
-  else {
-    ic->c = m;
-  }
+  mrb_obj_ref_init(mrb, ic->super, super);
+  mrb_obj_ref_set(mrb, ic->c, m->tt == MRB_TT_ICLASS? m->c : m);
   return ic;
 }
 
@@ -1005,8 +993,7 @@ include_module_at(mrb_state *mrb, struct RClass *c, struct RClass *ins_pos, stru
     }
 
     ic = include_class_new(mrb, m, ins_pos->super);
-    ins_pos->super = ic;
-    mrb_field_write_barrier(mrb, (struct RBasic*)ins_pos, (struct RBasic*)ins_pos->super);
+    mrb_obj_ref_init(mrb, ins_pos->super, ic);
     ins_pos = ic;
   skip:
     m = m->super;
@@ -1036,8 +1023,8 @@ mrb_prepend_module(mrb_state *mrb, struct RClass *c, struct RClass *m)
     c->super = origin;
     origin->mt = c->mt;
     c->mt = kh_init(mt, mrb);
-    mrb_field_write_barrier(mrb, (struct RBasic*)c, (struct RBasic*)origin);
     c->flags |= MRB_FLAG_IS_PREPENDED;
+    mrb_obj_inc_ref(mrb, (struct RBasic*)origin);
   }
   changed = include_module_at(mrb, c, c, m, 0);
   if (changed < 0) {
@@ -1883,7 +1870,7 @@ mod_define_method(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "no block given");
   }
   p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
-  mrb_proc_copy(p, mrb_proc_ptr(blk));
+  mrb_proc_copy(mrb, p, mrb_proc_ptr(blk));
   p->flags |= MRB_PROC_STRICT;
   mrb_define_method_raw(mrb, c, mid, p);
   return mrb_symbol_value(mid);
@@ -2276,11 +2263,14 @@ mrb_init_class(mrb_state *mrb)
 
   /* boot class hierarchy */
   bob = boot_defclass(mrb, 0);
-  obj = boot_defclass(mrb, bob); mrb->object_class = obj;
+  obj = boot_defclass(mrb, bob); mrb_obj_ref_init(mrb, mrb->object_class, obj);
   mod = boot_defclass(mrb, obj); mrb->module_class = mod;/* obj -> mod */
   cls = boot_defclass(mrb, mod); mrb->class_class = cls; /* obj -> cls */
   /* fix-up loose ends */
-  bob->c = obj->c = mod->c = cls->c = cls;
+  mrb_obj_ref_set(mrb, bob->c, cls);
+  mrb_obj_ref_set(mrb, obj->c, cls);
+  mrb_obj_ref_set(mrb, mod->c, cls);
+  mrb_obj_ref_set(mrb, cls->c, cls);
   make_metaclass(mrb, bob);
   make_metaclass(mrb, obj);
   make_metaclass(mrb, mod);

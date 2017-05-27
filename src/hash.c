@@ -133,9 +133,21 @@ mrb_gc_mark_hash_size(mrb_state *mrb, struct RHash *hash)
 }
 
 void
-mrb_gc_free_hash(mrb_state *mrb, struct RHash *hash)
+mrb_gc_free_hash(mrb_state *mrb, struct RHash *hash, mrb_bool end)
 {
-  if (hash->ht) kh_destroy(ht, mrb, hash->ht);
+  if (hash->ht) {
+    khiter_t k;
+    khash_t(ht) *h = hash->ht;
+    if (!end) {
+      for (k = kh_begin(h); k != kh_end(h); ++k) {
+        if (kh_exist(h, k)) {
+          mrb_dec_ref(mrb, kh_key(h, k));
+          mrb_dec_ref(mrb, kh_value(h, k).v);
+        }
+      }
+    }
+    kh_destroy(ht, mrb, h);
+  }
 }
 
 
@@ -211,18 +223,19 @@ mrb_hash_set(mrb_state *mrb, mrb_value hash, mrb_value key, mrb_value val)
 
   if (!h) h = RHASH_TBL(hash) = kh_init(ht, mrb);
   k = kh_put2(ht, mrb, h, key, &r);
-  kh_value(h, k).v = val;
+  if (r == 0) {
+    mrb_dec_ref(mrb, kh_value(h, k).v);
+  }
+  mrb_ref_init(mrb, kh_value(h, k).v, val);
 
   if (r != 0) {
     /* expand */
     int ai = mrb_gc_arena_save(mrb);
-    key = kh_key(h, k) = KEY(key);
+    mrb_ref_init(mrb, key, kh_key(h, k) = KEY(key));
     mrb_gc_arena_restore(mrb, ai);
     kh_value(h, k).n = kh_size(h)-1;
   }
 
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)RHASH(hash), key);
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)RHASH(hash), val);
   return;
 }
 
@@ -246,7 +259,8 @@ mrb_hash_dup(mrb_state *mrb, mrb_value hash)
         int ai = mrb_gc_arena_save(mrb);
         ret_k = kh_put(ht, mrb, ret_h, KEY(kh_key(h, k)));
         mrb_gc_arena_restore(mrb, ai);
-        kh_val(ret_h, ret_k).v = kh_val(h, k).v;
+        mrb_ref_init(mrb, kh_val(ret_h, ret_k).v, kh_val(h, k).v);
+        mrb_inc_ref(mrb, kh_key(ret_h, ret_k));
         kh_val(ret_h, ret_k).n = kh_size(ret_h)-1;
       }
     }
@@ -544,6 +558,8 @@ mrb_hash_delete_key(mrb_state *mrb, mrb_value hash, mrb_value key)
         if (!kh_exist(h, k)) continue;
         if (kh_value(h, k).n > n) kh_value(h, k).n--;
       }
+      mrb_gc_protect(mrb, delVal);
+      mrb_dec_ref(mrb, delVal);
       return delVal;
     }
   }

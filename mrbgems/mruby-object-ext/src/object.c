@@ -87,7 +87,7 @@ mrb_obj_instance_exec(mrb_state *mrb, mrb_value self)
   }
   args = mrb_ary_new_from_values(mrb, argc, argv);
   argv = RARRAY_PTR(args);
-  mrb->c->ci->target_class = c;
+  mrb_obj_ref_init(mrb, mrb->c->ci->target_class, c);
   return mrb_yield_cont(mrb, blk, self, argc, argv);
 }
 

@@ -194,7 +194,7 @@ create_proc_from_string(mrb_state *mrb, char *s, int len, mrb_value binding, con
     mrb_raise(mrb, E_SCRIPT_ERROR, "codegen error");
   }
   if (c->ci[-1].proc->target_class) {
-    proc->target_class = c->ci[-1].proc->target_class;
+    mrb_obj_ref_set(mrb, proc->target_class, c->ci[-1].proc->target_class);
   }
   e = c->ci[-1].proc->env;
   if (!e) e = c->ci[-1].env;
@@ -203,9 +203,9 @@ create_proc_from_string(mrb_state *mrb, char *s, int len, mrb_value binding, con
   e->cioff = c->ci - c->cibase - 1;
   e->stack = c->ci->stackent;
   MRB_SET_ENV_STACK_LEN(e, c->ci[-1].proc->body.irep->nlocals);
-  c->ci->target_class = proc->target_class;
-  c->ci->env = 0;
-  proc->env = e;
+  mrb_obj_ref_set(mrb, c->ci->target_class, proc->target_class);
+  mrb_obj_ref_clear(mrb, c->ci->env);
+  mrb_obj_ref_set(mrb, proc->env, e);
   patch_irep(mrb, proc->body.irep, 0);
 
   mrb_parser_free(p);
@@ -263,8 +263,8 @@ f_instance_eval(mrb_state *mrb, mrb_value self)
     mrb_get_args(mrb, "s|zi", &s, &len, &file, &line);
     cv = mrb_singleton_class(mrb, self);
     proc = create_proc_from_string(mrb, s, len, mrb_nil_value(), file, line);
-    proc->target_class = mrb_class_ptr(cv);
-    mrb->c->ci->env = NULL;
+    mrb_obj_ref_init(mrb, proc->target_class, mrb_class_ptr(cv));
+    mrb_obj_ref_clear(mrb, mrb->c->ci->env);
     mrb_assert(!MRB_PROC_CFUNC_P(proc));
     return exec_irep(mrb, self, proc);
   }
