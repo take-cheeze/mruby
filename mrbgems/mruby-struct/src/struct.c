@@ -524,7 +524,7 @@ mrb_struct_aset(mrb_state *mrb, mrb_value s)
   }
   mrb_struct_modify(mrb, s);
   mrb_ref_set(mrb, RSTRUCT_PTR(s)[i], val);
-  return RSTRUCT_PTR(s)[i] = val;
+  return RSTRUCT_PTR(s)[i];
 }
 
 /* 15.2.18.4.1  */

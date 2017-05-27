@@ -8,6 +8,7 @@
 #include <mruby/class.h>
 #include <mruby/proc.h>
 #include <mruby/opcode.h>
+#include "value_array.h"
 
 static mrb_code call_iseq[] = {
   MKOP_A(OP_CALL, 0),
@@ -101,11 +102,7 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
       mrb_ref_init(mrb, e->stack[i], argv[i]);
     }
   }
-  else {
-    for (i = 0; i < argc; ++i) {
-      SET_NIL_VALUE(e->stack[i]);
-    }
-  }
+  else values_nil_init(e->stack, argc);
   return p;
 }
 
