@@ -436,8 +436,8 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
 
       ci->acc = CI_ACC_DIRECT;
       mrb_inc_ref(mrb, val = p->body.func(mrb, self));
-      cipop(mrb);
       stack_pop(mrb);
+      cipop(mrb);
       mrb_gc_arena_restore(mrb, ai);
       mrb_gc_protect(mrb, val);
       mrb_dec_ref(mrb, val);
@@ -1267,8 +1267,7 @@ RETRY_TRY_BLOCK:
             stack_extend(mrb, bidx+1);
             mrb->c->ci->nregs = bidx+1;
           }
-          result = mrb_convert_type(mrb, blk, MRB_TT_PROC, "Proc", "to_proc");
-          set_reg(bidx, result);
+          set_reg(bidx, mrb_convert_type(mrb, blk, MRB_TT_PROC, "Proc", "to_proc"));
         }
       }
       c = mrb_class(mrb, recv);
@@ -1514,14 +1513,11 @@ RETRY_TRY_BLOCK:
       }
       blk = regs[bidx];
       if (!mrb_nil_p(blk) && mrb_type(blk) != MRB_TT_PROC) {
-        mrb_value result;
-
         if (bidx >= ci->nregs) {
           stack_extend(mrb, bidx+1);
           ci->nregs = bidx+1;
         }
-        result = mrb_convert_type(mrb, blk, MRB_TT_PROC, "Proc", "to_proc");
-        set_reg(bidx, result);
+        set_reg(bidx, mrb_convert_type(mrb, blk, MRB_TT_PROC, "Proc", "to_proc"));
       }
 
       /* push callinfo */
@@ -2744,9 +2740,12 @@ RETRY_TRY_BLOCK:
     }
   }
   END_DISPATCH;
+
+#undef set_type
+#undef set_float_value
+#undef set_value
 #undef set_reg
 #undef regs
-#undef set_value
 
   }
   MRB_CATCH(&c_jmp) {
