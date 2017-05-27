@@ -34,7 +34,7 @@ values_clear(mrb_state *mrb, mrb_value *from, size_t count)
   }
 }
 
-static void
+static inline void
 values_nil_init(mrb_value *ptr, mrb_int size)
 {
   mrb_value nil = mrb_nil_value();
