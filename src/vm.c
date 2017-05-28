@@ -1794,8 +1794,8 @@ RETRY_TRY_BLOCK:
         }
         stk = mrb->c->stack;
         while (ci[0].ridx == ci[-1].ridx) {
-          cipop(mrb);
           stack_pop(mrb);
+          cipop(mrb);
           if (ci->acc == CI_ACC_SKIP && prev_jmp) {
             mrb->jmp = prev_jmp;
             MRB_THROW(prev_jmp);
