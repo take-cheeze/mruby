@@ -47,7 +47,7 @@ eval_test(mrb_state *mrb)
   /* did an exception occur? */
   if (mrb->exc) {
     mrb_print_error(mrb);
-    mrb->exc = 0;
+    mrb_obj_ref_clear(mrb, mrb->exc);
     return EXIT_FAILURE;
   }
   else if (!check_error(mrb)) {
