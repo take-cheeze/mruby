@@ -473,7 +473,7 @@ mrb_ary_unshift(mrb_state *mrb, mrb_value self, mrb_value item)
       ary_expand_capa(mrb, a, a->len + 1);
     values_move(a->ptr + 1, a->ptr, a->len);
   }
-  mrb_ref_set(mrb, a->ptr[0], item);
+  mrb_ref_init(mrb, a->ptr[0], item);
   a->len++;
 
   return self;
