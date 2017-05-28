@@ -619,7 +619,7 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
     if (alen > a->aux.capa) {
       ary_expand_capa(mrb, a, alen);
     }
-    values_nil_init(a->ptr + a->len, alen - a->len);
+    if (alen > a->len) values_nil_init(a->ptr + a->len, alen - a->len);
 
     if (len != argc) {
       tail = head + len;
