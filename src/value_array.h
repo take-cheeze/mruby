@@ -69,7 +69,7 @@ values_copy(mrb_state *mrb, mrb_value *dst, const mrb_value *src, size_t size)
 }
 
 static inline void
-values_copy_init(mrb_state *mrb, mrb_value *dst, const mrb_value *src, size_t size)
+values_init(mrb_state *mrb, mrb_value *dst, const mrb_value *src, size_t size)
 {
   while (size-- > 0) {
     mrb_inc_ref(mrb, *src);

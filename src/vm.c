@@ -257,7 +257,7 @@ mrb_env_unshare(mrb_state *mrb, struct REnv *e)
   e->cxt.mid = e->cxt.c->cibase[cioff].mid;
   p = (mrb_value *)mrb_malloc(mrb, sizeof(mrb_value)*len);
   if (len > 0) {
-    values_copy_init(mrb, p, e->stack, len);
+    values_init(mrb, p, e->stack, len);
   }
   e->stack = p;
 }

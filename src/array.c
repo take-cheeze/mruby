@@ -53,7 +53,7 @@ mrb_ary_new_from_values(mrb_state *mrb, mrb_int size, const mrb_value *vals)
 {
   struct RArray *a = ary_new_capa(mrb, size);
 
-  values_copy_init(mrb, a->ptr, vals, size);
+  values_init(mrb, a->ptr, vals, size);
   a->len = size;
 
   return mrb_obj_value(a);
@@ -94,7 +94,7 @@ ary_modify(mrb_state *mrb, struct RArray *a)
       len = a->len * sizeof(mrb_value);
       ptr = (mrb_value *)mrb_malloc(mrb, len);
       if (p) {
-        values_copy_init(mrb, ptr, p, a->len);
+        values_init(mrb, ptr, p, a->len);
       }
       a->ptr = ptr;
       a->aux.capa = a->len;
@@ -237,7 +237,7 @@ ary_concat(mrb_state *mrb, struct RArray *a, struct RArray *a2)
   if (a->aux.capa < len) {
     ary_expand_capa(mrb, a, len);
   }
-  values_copy_init(mrb, a->ptr+a->len, a2->ptr, a2->len);
+  values_init(mrb, a->ptr+a->len, a2->ptr, a2->len);
   a->len = len;
 }
 
@@ -272,8 +272,8 @@ mrb_ary_plus(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "array size too big");
   }
   a2 = ary_new_capa(mrb, a1->len + blen);
-  values_copy_init(mrb, a2->ptr, a1->ptr, a1->len);
-  values_copy_init(mrb, a2->ptr + a1->len, ptr, blen);
+  values_init(mrb, a2->ptr, a1->ptr, a1->len);
+  values_init(mrb, a2->ptr + a1->len, ptr, blen);
   a2->len = a1->len + blen;
 
   return mrb_obj_value(a2);
@@ -286,7 +286,7 @@ ary_replace(mrb_state *mrb, struct RArray *a, mrb_value *argv, mrb_int len)
   if (a->aux.capa < len)
     ary_expand_capa(mrb, a, len);
   values_copy(mrb, a->ptr, argv, a->len);
-  values_copy_init(mrb, a->ptr + a->len, argv + a->len, len - a->len);
+  values_init(mrb, a->ptr + a->len, argv + a->len, len - a->len);
   a->len = len;
 }
 
@@ -331,7 +331,7 @@ mrb_ary_times(mrb_state *mrb, mrb_value self)
   a2 = ary_new_capa(mrb, a1->len * times);
   ptr = a2->ptr;
   while (times--) {
-    values_copy_init(mrb, ptr, a1->ptr, a1->len);
+    values_init(mrb, ptr, a1->ptr, a1->len);
     ptr += a1->len;
     a2->len += a1->len;
   }
@@ -502,7 +502,7 @@ mrb_ary_unshift_m(mrb_state *mrb, mrb_value self)
       ary_expand_capa(mrb, a, a->len + len);
     values_move(a->ptr + len, a->ptr, a->len);
   }
-  values_copy_init(mrb, a->ptr, vals, len);
+  values_init(mrb, a->ptr, vals, len);
   a->len += len;
 
   return self;
