@@ -17,12 +17,11 @@ mrb_protect(mrb_state *mrb, mrb_func_t body, mrb_value data, mrb_bool *state)
     mrb->jmp = prev_jmp;
   } MRB_CATCH(&c_jmp) {
     mrb->jmp = prev_jmp;
-    result = mrb_obj_value(mrb->exc);
-    mrb->exc = NULL;
+    mrb_gc_protect(mrb, result = mrb_obj_value(mrb->exc));
+    mrb_obj_ref_clear(mrb, mrb->exc);
     if (state) { *state = TRUE; }
   } MRB_END_EXC(&c_jmp);
 
-  mrb_gc_protect(mrb, result);
   return result;
 }
 
@@ -81,7 +80,7 @@ mrb_rescue_exceptions(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_fun
 
     if (!error_matched) { MRB_THROW(mrb->jmp); }
 
-    mrb->exc = NULL;
+    mrb_obj_ref_clear(mrb, mrb->exc);
     result = rescue(mrb, r_data);
   } MRB_END_EXC(&c_jmp);
 
