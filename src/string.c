@@ -82,7 +82,7 @@ str_new(mrb_state *mrb, const char *p, size_t len)
 static inline void
 str_with_class(mrb_state *mrb, struct RString *s, mrb_value obj)
 {
-  s->c = mrb_str_ptr(obj)->c;
+  mrb_obj_ref_set(mrb, s->c, mrb_str_ptr(obj)->c);
 }
 
 static mrb_value
