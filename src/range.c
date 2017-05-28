@@ -116,8 +116,8 @@ range_init(mrb_state *mrb, mrb_value range, mrb_value beg, mrb_value end, mrb_bo
   if (!r->edges) {
     r->edges = (mrb_range_edges *)mrb_malloc(mrb, sizeof(mrb_range_edges));
   }
-  r->edges->beg = beg;
-  r->edges->end = end;
+  mrb_ref_init(mrb, r->edges->beg, beg);
+  mrb_ref_init(mrb, r->edges->end, end);
 }
 /*
  *  call-seq:
