@@ -5766,6 +5766,8 @@ mrb_parse_string(mrb_state *mrb, const char *s, mrbc_context *c)
   return mrb_parse_nstring(mrb, s, strlen(s), c);
 }
 
+void mrb_exc_set(mrb_state *mrb, mrb_value exc);
+
 MRB_API mrb_value
 mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c)
 {
@@ -5784,12 +5786,12 @@ mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c)
 
       n = snprintf(buf, sizeof(buf), "line %d: %s\n",
           p->error_buffer[0].lineno, p->error_buffer[0].message);
-      mrb->exc = mrb_obj_ptr(mrb_exc_new(mrb, E_SYNTAX_ERROR, buf, n));
+      mrb_exc_set(mrb, mrb_exc_new(mrb, E_SYNTAX_ERROR, buf, n));
       mrb_parser_free(p);
       return mrb_undef_value();
     }
     else {
-      mrb->exc = mrb_obj_ptr(mrb_exc_new_str_lit(mrb, E_SYNTAX_ERROR, "syntax error"));
+      mrb_exc_set(mrb, mrb_exc_new_str_lit(mrb, E_SYNTAX_ERROR, "syntax error"));
       mrb_parser_free(p);
       return mrb_undef_value();
     }
@@ -5797,7 +5799,7 @@ mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c)
   proc = mrb_generate_code(mrb, p);
   mrb_parser_free(p);
   if (proc == NULL) {
-    mrb->exc = mrb_obj_ptr(mrb_exc_new_str_lit(mrb, E_SCRIPT_ERROR, "codegen error"));
+    mrb_exc_set(mrb, mrb_exc_new_str_lit(mrb, E_SCRIPT_ERROR, "codegen error"));
     return mrb_undef_value();
   }
   if (c) {
