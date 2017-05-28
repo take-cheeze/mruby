@@ -405,7 +405,6 @@ mark_context_stack(mrb_state *mrb, struct mrb_context *c)
 {
   size_t i;
   size_t e;
-  mrb_value nil;
   int nregs;
 
   if (c->stack == NULL) return;
@@ -424,11 +423,7 @@ mark_context_stack(mrb_state *mrb, struct mrb_context *c)
       mrb_gc_mark(mrb, mrb_basic_ptr(v));
     }
   }
-  e = c->stend - c->stbase;
-  nil = mrb_nil_value();
-  for (; i<e; i++) {
-    c->stbase[i] = nil;
-  }
+  values_nil_init(c->stbase + i, c->stend - c->stbase - i);
 }
 
 static void
