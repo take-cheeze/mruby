@@ -1292,6 +1292,7 @@ RETRY_TRY_BLOCK:
         mid = missing;
         if (n != CALL_MAXARGS) {
           mrb_value blk = regs[bidx];
+          mrb_gc_protect(mrb, blk);
 
           if (a+2 > irep->nregs) {
             stack_extend(mrb, a+2);
