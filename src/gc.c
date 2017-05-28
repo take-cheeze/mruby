@@ -247,7 +247,7 @@ mrb_gc_init(mrb_state *mrb, mrb_gc *gc)
 #endif
 }
 
-static void obj_free(mrb_state *mrb, struct RBasic *obj, int end);
+static void obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool closing);
 
 void
 free_heap(mrb_state *mrb, mrb_gc *gc)
@@ -592,11 +592,11 @@ mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
 }
 
 static void
-obj_free(mrb_state *mrb, struct RBasic *obj, int end)
+obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool closing)
 {
   DEBUG(fprintf(stderr, "obj_free(%p,tt=%d)\n",obj,obj->tt));
 
-  if (!end) {
+  if (!closing) {
     mrb_assert(obj->ref_count == 0 || obj->ref_count == REF_COUNT_MAX);
   }
 
@@ -618,20 +618,20 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
 #endif
 
   case MRB_TT_OBJECT:
-    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, closing);
     break;
 
   case MRB_TT_EXCEPTION:
-    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, closing);
     break;
 
   case MRB_TT_CLASS:
   case MRB_TT_MODULE:
   case MRB_TT_SCLASS: {
     struct RClass *cls = (struct RClass*)obj;
-    if (!end) mrb_obj_ref_clear(mrb, cls->super);
+    if (!closing) mrb_obj_ref_clear(mrb, cls->super);
     mrb_gc_free_mt(mrb, cls);
-    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, closing);
   } break;
   case MRB_TT_ICLASS:
     if (MRB_FLAG_TEST(obj, MRB_FLAG_IS_ORIGIN))
@@ -645,7 +645,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
         /* cannot be freed */
         return;
       }
-      if (!end) {
+      if (!closing) {
         int i;
         for (i = 0; i < MRB_ENV_STACK_LEN(e); ++i) {
           mrb_dec_ref(mrb, e->stack[i]);
@@ -660,7 +660,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
     {
       struct mrb_context *c = ((struct RFiber*)obj)->cxt;
 
-      if (!end && c && c != mrb->root_c) {
+      if (!closing && c && c != mrb->root_c) {
         mrb_callinfo *ci = c->ci;
         mrb_callinfo *ce = c->cibase;
 
@@ -682,7 +682,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
       mrb_ary_decref(mrb, ((struct RArray*)obj)->aux.shared);
     else {
       mrb_int i;
-      if (!end) {
+      if (!closing) {
         for (i = 0; i < ((struct RArray*)obj)->len; ++i) {
           mrb_dec_ref(mrb, ((struct RArray*)obj)->ptr[i]);
         }
@@ -692,8 +692,8 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
     break;
 
   case MRB_TT_HASH:
-    mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
-    mrb_gc_free_hash(mrb, (struct RHash*)obj, end);
+    mrb_gc_free_iv(mrb, (struct RObject*)obj, closing);
+    mrb_gc_free_hash(mrb, (struct RHash*)obj, closing);
     break;
 
   case MRB_TT_STRING:
@@ -704,7 +704,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
     {
       struct RProc *p = (struct RProc*)obj;
 
-      if (!end) {
+      if (!closing) {
         if (p->env) mrb_obj_dec_ref(mrb, (struct RBasic*)p->env);
         if (p->target_class) mrb_obj_dec_ref(mrb, (struct RBasic*)p->target_class);
       }
@@ -730,14 +730,14 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
       if (d->type && d->type->dfree) {
         d->type->dfree(mrb, d->data);
       }
-      mrb_gc_free_iv(mrb, (struct RObject*)obj, end);
+      mrb_gc_free_iv(mrb, (struct RObject*)obj, closing);
     }
     break;
 
   default:
     break;
   }
-  if (!end && obj->c) {
+  if (!closing && obj->c) {
     mrb_obj_dec_ref(mrb, (struct RBasic*)obj->c);
   }
 
