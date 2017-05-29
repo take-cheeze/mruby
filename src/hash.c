@@ -782,10 +782,10 @@ mrb_hash_keys(mrb_state *mrb, mrb_value hash)
       mrb_hash_value hv = kh_value(h, k);
 
       if (hv.n <= end) {
-        p[hv.n] = kv;
+        mrb_ref_init(mrb, p[hv.n], kv);
       }
       else {
-        p[end] = kv;
+        mrb_ref_init(mrb, p[end], kv);
       }
     }
   }
