@@ -52,14 +52,11 @@ env_new(mrb_state *mrb, int nlocals)
 static void
 closure_setup(mrb_state *mrb, struct RProc *p, int nlocals)
 {
-  struct REnv *e;
+  struct REnv *e = mrb->c->ci->env;
 
-  if (!mrb->c->ci->env) {
+  if (!e) {
     e = env_new(mrb, nlocals);
     mrb_obj_ref_init(mrb, mrb->c->ci->env, e);
-  }
-  else {
-    e = mrb->c->ci->env;
   }
   mrb_obj_ref_init(mrb, p->env, e);
 }
