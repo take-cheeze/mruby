@@ -73,29 +73,30 @@ setup_class(mrb_state *mrb, struct RClass *outer, struct RClass *c, mrb_sym id)
 static void
 prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
 {
-  struct RClass *sc, *c;
+  struct RClass *sc;
 
   if (o->c->tt == MRB_TT_SCLASS) return;
   sc = (struct RClass*)mrb_obj_alloc(mrb, MRB_TT_SCLASS, mrb->class_class);
   sc->mt = kh_init(mt, mrb);
   sc->iv = 0;
+
   if (o->tt == MRB_TT_CLASS) {
-    c = (struct RClass*)o;
-    sc->super = c->super? c->super->c : mrb->class_class;
+    struct RClass *c = (struct RClass*)o;
+    mrb_obj_ref_init(mrb, sc->super, !c->super? mrb->class_class : c->super->c);
   }
   else if (o->tt == MRB_TT_SCLASS) {
-    c = (struct RClass*)o;
+    struct RClass *c = (struct RClass*)o;
     while (c->super->tt == MRB_TT_ICLASS)
       c = c->super;
     make_metaclass(mrb, c->super);
-    sc->super = c->super->c;
+    mrb_obj_ref_init(mrb, sc->super, c->super->c);
   }
   else {
-    sc->super = o->c;
+    mrb_obj_ref_init(mrb, sc->super, o->c);
     prepare_singleton_class(mrb, (struct RBasic*)sc);
   }
+
   mrb_obj_ref_set(mrb, o->c, sc);
-  mrb_obj_inc_ref(mrb, (struct RBasic*)sc->super);
   mrb_obj_iv_set(mrb, (struct RObject*)sc, mrb_intern_lit(mrb, "__attached__"), mrb_obj_value(o));
 }
 
@@ -1019,12 +1020,11 @@ mrb_prepend_module(mrb_state *mrb, struct RClass *c, struct RClass *m)
   if (!(c->flags & MRB_FLAG_IS_PREPENDED)) {
     origin = (struct RClass*)mrb_obj_alloc(mrb, MRB_TT_ICLASS, c);
     origin->flags |= MRB_FLAG_IS_ORIGIN;
-    origin->super = c->super;
-    c->super = origin;
+    mrb_obj_ref_init(mrb, origin->super, c->super);
+    mrb_obj_ref_set(mrb, c->super, origin);
     origin->mt = c->mt;
     c->mt = kh_init(mt, mrb);
     c->flags |= MRB_FLAG_IS_PREPENDED;
-    mrb_obj_inc_ref(mrb, (struct RBasic*)origin);
   }
   changed = include_module_at(mrb, c, c, m, 0);
   if (changed < 0) {
