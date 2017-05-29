@@ -73,7 +73,7 @@ setup_class(mrb_state *mrb, struct RClass *outer, struct RClass *c, mrb_sym id)
 static void
 prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
 {
-  struct RClass *sc;
+  struct RClass *sc, *c = (struct RClass*)o;
 
   if (o->c->tt == MRB_TT_SCLASS) return;
   sc = (struct RClass*)mrb_obj_alloc(mrb, MRB_TT_SCLASS, mrb->class_class);
@@ -81,11 +81,9 @@ prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
   sc->iv = 0;
 
   if (o->tt == MRB_TT_CLASS) {
-    struct RClass *c = (struct RClass*)o;
     mrb_obj_ref_init(mrb, sc->super, !c->super? mrb->class_class : c->super->c);
   }
   else if (o->tt == MRB_TT_SCLASS) {
-    struct RClass *c = (struct RClass*)o;
     while (c->super->tt == MRB_TT_ICLASS)
       c = c->super;
     make_metaclass(mrb, c->super);
