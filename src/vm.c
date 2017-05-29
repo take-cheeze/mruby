@@ -304,7 +304,7 @@ ecall(mrb_state *mrb, int i)
   ci->mid = ci[-1].mid;
   ci->acc = CI_ACC_SKIP;
   ci->argc = 0;
-  mrb_obj_ref_set(mrb, ci->proc, p);
+  mrb_obj_ref_init(mrb, ci->proc, p);
   mrb_obj_ref_clear(mrb, mrb->c->ensure[i]);
   ci->nregs = p->body.irep->nregs;
   mrb_obj_ref_set(mrb, ci->target_class, p->target_class);
