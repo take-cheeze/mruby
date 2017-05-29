@@ -1082,7 +1082,8 @@ mrb_objspace_each_objects(mrb_state *mrb, mrb_each_object_callback *callback, vo
       mrb->gc.iterating = iterating;
       if (mrb->exc) {
         mrb_value exc = mrb_obj_value(mrb->exc);
-        mrb->exc = NULL;
+        mrb_gc_protect(mrb, exc);
+        mrb_obj_ref_clear(mrb, mrb->exc);
         mrb_exc_raise(mrb, exc);
       }
     } MRB_END_EXC(&c_jmp);
