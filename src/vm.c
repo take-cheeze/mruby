@@ -309,10 +309,12 @@ ecall(mrb_state *mrb, int i)
   ci->nregs = p->body.irep->nregs;
   mrb_obj_ref_set(mrb, ci->target_class, p->target_class);
   mrb->c->stack += ci[-1].nregs;
-  exc = mrb->exc; mrb->exc = 0;
+  if (mrb->exc) mrb_gc_protect(mrb, mrb_obj_value(mrb->exc));
+  exc = mrb->exc;
+  mrb_obj_ref_clear(mrb, mrb->exc);
   mrb_run(mrb, p, *self);
   mrb->c->ci = mrb->c->cibase + cioff;
-  if (!mrb->exc) mrb->exc = exc;
+  if (!mrb->exc) mrb_obj_ref_init(mrb, mrb->exc, exc);
 }
 
 #ifndef MRB_FUNCALL_ARGC_MAX
