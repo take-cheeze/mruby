@@ -272,7 +272,6 @@ void
 mrb_gc_destroy(mrb_state *mrb, mrb_gc *gc)
 {
   free_heap(mrb, gc);
-  mrb_free(mrb, gc->heap_pages_table);
 #ifndef MRB_GC_FIXED_ARENA
   mrb_free(mrb, gc->arena);
 #endif
@@ -559,16 +558,15 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
 MRB_API void
 mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
 {
-  mrb_heap_page *page = NULL;
+  mrb_heap_page *page;
   RVALUE const *rv = (RVALUE const*)obj;
 
   if (!obj) return;
 
   // should be binary search
-  for (int i = 0; i < mrb->gc.heap_pages_count; ++i ) {
-    RVALUE *region = objects(mrb->gc.heap_pages_table[i]);
+  for (page = mrb->gc.heaps; page; page = page->next) {
+    RVALUE *region = objects(page);
     if (region <= rv && rv < region + MRB_HEAP_PAGE_SIZE) {
-      page = mrb->gc.heap_pages_table[i];
       break;
     }
   }
@@ -581,6 +579,7 @@ mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
 
   unsigned const page_offset = rv - objects(page);
   if (page->mark_bits[page_offset / 8] & (1 << (page_offset % 8))) return;
+
   mrb_assert((obj)->tt != MRB_TT_FREE);
   page->mark_bits[page_offset / 8] |= (1 << (page_offset % 8));
   gc_mark_children(mrb, &mrb->gc, obj);
@@ -803,18 +802,6 @@ mrb_full_gc(mrb_state *mrb)
   GC_INVOKE_TIME_REPORT("mrb_full_gc()");
   GC_TIME_START;
 
-  mrb_assert(!gc->heap_pages_table);
-
-  gc->heap_pages_count = 0;
-  for (mrb_heap_page const *p = gc->heaps; p; p = p->next) { ++gc->heap_pages_count; }
-
-  gc->heap_pages_table = (struct mrb_heap_page**)mrb_malloc(
-      mrb, sizeof(struct mrb_heap_page*) * gc->heap_pages_count);
-  int idx = 0;
-  for (mrb_heap_page *p = gc->heaps; p; p = p->next) {
-    gc->heap_pages_table[idx++] = p;
-  }
-
   root_scan_phase(mrb);
 
   for (mrb_heap_page* page = gc->heaps; page != NULL; ) {
@@ -822,13 +809,20 @@ mrb_full_gc(mrb_state *mrb)
     mrb_heap_page *need_free = NULL;
 
     for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i) {
-      if (!page->mark_bits || !(page->mark_bits[i / 8] & (1 << (i % 8)))) {
-        obj_free(mrb, &objects(page)[i].as.basic, FALSE);
-      }
-      if (objects(page)[i].as.basic.tt == MRB_TT_FREE) free_count++;
+      struct RBasic *b = &objects(page)[i].as.basic;
+      if (b->tt == MRB_TT_FREE ||
+          (page->mark_bits && (page->mark_bits[i / 8] & (1 << (i % 8))))) continue;
+
+      obj_free(mrb, b, FALSE);
     }
-    if (page->mark_bits) { mrb_free(mrb, page->mark_bits); }
-    if (free_count == MRB_HEAP_PAGE_SIZE) { need_free = page; }
+    if (page->mark_bits) {
+      mrb_free(mrb, page->mark_bits);
+      page->mark_bits = NULL;
+    }
+
+    for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i)
+      if (objects(page)[i].as.basic.tt == MRB_TT_FREE) ++free_count;
+    if (free_count == MRB_HEAP_PAGE_SIZE && page != gc->heaps) need_free = page;
 
     page = page->next;
 
@@ -837,9 +831,6 @@ mrb_full_gc(mrb_state *mrb)
       mrb_free(mrb, need_free);
     }
   }
-
-  mrb_free(mrb, gc->heap_pages_table);
-  gc->heap_pages_table = NULL;
 
   GC_TIME_STOP_AND_REPORT;
 }

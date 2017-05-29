@@ -47,8 +47,6 @@ typedef struct mrb_gc {
 #endif
   int arena_idx;
 
-  mrb_heap_page **heap_pages_table;
-  size_t heap_pages_count;
   struct RVALUE *freelist;
 
   mrb_bool iterating     :1;
