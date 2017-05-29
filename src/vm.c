@@ -536,7 +536,7 @@ mrb_f_send(mrb_state *mrb, mrb_value self)
     for (i=0,len=ci->argc; i<len; i++) {
       regs[i] = regs[i+1];
     }
-    mrb_dec_ref(mrb, regs[i + 1]); SET_NIL_VALUE(regs[i + 1]);
+    SET_NIL_VALUE(regs[ci->argc]); // clear block
     ci->argc--;
   }
   else {                     /* variable length arguments */
