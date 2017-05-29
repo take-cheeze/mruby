@@ -410,12 +410,13 @@ MRB_API mrb_value
 mrb_ary_pop(mrb_state *mrb, mrb_value ary)
 {
   struct RArray *a = mrb_ary_ptr(ary);
+  mrb_value ret;
 
   ary_modify(mrb, a);
   if (a->len == 0) return mrb_nil_value();
-  mrb_gc_protect(mrb, a->ptr[a->len - 1]);
-  mrb_ref_clear(mrb, a->ptr[a->len - 1]);
-  return a->ptr[--a->len];
+  mrb_gc_protect(mrb, ret = a->ptr[a->len - 1]);
+  mrb_dec_ref(mrb, a->ptr[--a->len]);
+  return ret;
 }
 
 #define ARY_SHIFT_SHARED_MIN 10
