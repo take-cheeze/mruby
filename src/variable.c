@@ -260,7 +260,6 @@ iv_copy(mrb_state *mrb, iv_tbl *t)
         return t2;
       }
       iv_put(mrb, t2, key, val);
-      mrb_inc_ref(mrb, val);
     }
     seg = seg->next;
   }
@@ -584,6 +583,13 @@ mrb_iv_check(mrb_state *mrb, mrb_sym iv_name)
   }
 }
 
+static int
+inc_ref_each(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
+{
+  mrb_inc_ref(mrb, v);
+  return 0;
+}
+
 MRB_API void
 mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
 {
@@ -594,6 +600,7 @@ mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
   if (s->iv) {
     // mrb_write_barrier(mrb, (struct RBasic*)d);
     d->iv = iv_copy(mrb, s->iv);
+    iv_foreach(mrb, s->iv, inc_ref_each, NULL);
   } else {
     d->iv = NULL;
   }
