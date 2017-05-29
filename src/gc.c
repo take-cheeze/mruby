@@ -673,7 +673,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool closing)
 
   case MRB_TT_ARRAY:
     if (ARY_SHARED_P(obj))
-      mrb_ary_decref(mrb, ((struct RArray*)obj)->aux.shared);
+      mrb_ary_decref(mrb, ((struct RArray*)obj)->aux.shared, closing);
     else {
       mrb_int i;
       if (!closing) {

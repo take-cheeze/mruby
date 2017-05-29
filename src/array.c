@@ -98,7 +98,7 @@ ary_modify(mrb_state *mrb, struct RArray *a)
       }
       a->ptr = ptr;
       a->aux.capa = a->len;
-      mrb_ary_decref(mrb, shared);
+      mrb_ary_decref(mrb, shared, FALSE);
     }
     ARY_UNSET_SHARED_FLAG(a);
   }
@@ -634,13 +634,15 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
 }
 
 void
-mrb_ary_decref(mrb_state *mrb, mrb_shared_array *shared)
+mrb_ary_decref(mrb_state *mrb, mrb_shared_array *shared, mrb_bool closing)
 {
   shared->refcnt--;
   if (shared->refcnt == 0) {
-    int i;
-    for (i = 0; i < shared->len; ++i) {
-      mrb_dec_ref(mrb, shared->ptr[i]);
+    if (!closing) {
+      int i;
+      for (i = 0; i < shared->len; ++i) {
+        mrb_dec_ref(mrb, shared->ptr[i]);
+      }
     }
     mrb_free(mrb, shared->ptr);
     mrb_free(mrb, shared);
@@ -953,7 +955,7 @@ mrb_ary_clear(mrb_state *mrb, mrb_value self)
 
   ary_modify(mrb, a);
   if (ARY_SHARED_P(a)) {
-    mrb_ary_decref(mrb, a->aux.shared);
+    mrb_ary_decref(mrb, a->aux.shared, FALSE);
     ARY_UNSET_SHARED_FLAG(a);
   }
   else {
