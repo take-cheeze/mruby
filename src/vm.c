@@ -308,7 +308,7 @@ ecall(mrb_state *mrb, int i)
   mrb_obj_ref_clear(mrb, mrb->c->ensure[i]);
   ci->nregs = p->body.irep->nregs;
   mrb_obj_ref_set(mrb, ci->target_class, p->target_class);
-  mrb->c->stack = mrb->c->stack + ci[-1].nregs;
+  mrb->c->stack += ci[-1].nregs;
   exc = mrb->exc; mrb->exc = 0;
   mrb_run(mrb, p, *self);
   mrb->c->ci = mrb->c->cibase + cioff;
@@ -402,7 +402,7 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
     ci->stackent = mrb->c->stack;
     ci->argc = argc;
     mrb_obj_ref_init(mrb, ci->target_class, c);
-    mrb->c->stack = mrb->c->stack + n;
+    mrb->c->stack += n;
     if (mrb->c->stbase <= argv && argv < mrb->c->stend) {
       voff = argv - mrb->c->stbase;
     }
@@ -677,7 +677,7 @@ mrb_yield_with_class(mrb_state *mrb, mrb_value b, mrb_int argc, const mrb_value 
   ci->argc = argc;
   mrb_obj_ref_init(mrb, ci->target_class, c);
   ci->acc = CI_ACC_SKIP;
-  mrb->c->stack = mrb->c->stack + n;
+  mrb->c->stack += n;
   if (MRB_PROC_CFUNC_P(p)) {
     ci->nregs = argc + 2;
     stack_extend(mrb, ci->nregs);
