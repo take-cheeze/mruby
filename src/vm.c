@@ -2505,17 +2505,16 @@ RETRY_TRY_BLOCK:
         v = mrb_ary_new_from_values(mrb, 1, &regs[a]);
       }
       ary = mrb_ary_ptr(v);
+      mrb_gc_protect(mrb, v);
       len = ary->len;
       if (len > pre + post) {
-        v = mrb_ary_new_from_values(mrb, len - pre - post, ary->ptr+pre);
-        set_reg(a, v); a++;
+        set_reg(a, mrb_ary_new_from_values(mrb, len - pre - post, ary->ptr+pre)); a++;
         while (post--) {
           set_reg(a, ary->ptr[len-post-1]); a++;
         }
       }
       else {
-        v = mrb_ary_new_capa(mrb, 0);
-        set_reg(a, v); a++;
+        set_reg(a, mrb_ary_new_capa(mrb, 0)); a++;
         for (idx=0; idx+pre<len; idx++) {
           set_reg(a+idx, ary->ptr[pre+idx]);
         }
