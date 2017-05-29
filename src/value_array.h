@@ -60,11 +60,25 @@ values_nil_init(mrb_value *ptr, mrb_int size)
  */
 
 static inline void
-values_copy(mrb_state *mrb, mrb_value *dst, const mrb_value *src, size_t size)
+values_copy(mrb_state *mrb, mrb_value *dst, const mrb_value *src, size_t n)
 {
-  while (size-- > 0) {
-    mrb_ref_set(mrb, *dst, *src);
-    dst++; src++;
+  if (dst > src && dst < src + n)
+  {
+    dst += n;
+    src += n;
+    while (n-- > 0) {
+      --dst; --src;
+      mrb_ref_set(mrb, *dst, *src);
+    }
+  }
+  else if (dst != src) {
+    while (n-- > 0) {
+      mrb_ref_set(mrb, *dst, *src);
+      dst++; src++;
+    }
+  }
+  else {
+    /* nothing to do. */
   }
 }
 
