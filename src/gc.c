@@ -635,10 +635,8 @@ obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool closing)
     {
       struct REnv *e = (struct REnv*)obj;
 
-      if (MRB_ENV_STACK_SHARED_P(e)) {
-        /* cannot be freed */
-        return;
-      }
+      if (MRB_ENV_STACK_SHARED_P(e)) { break; }
+
       if (!closing) {
         int i;
         for (i = 0; i < MRB_ENV_STACK_LEN(e); ++i) {
