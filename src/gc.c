@@ -101,7 +101,11 @@ gettimeofday_time(void)
 
 #define GC_STEP_SIZE 1024
 
+#ifdef SANITIZER_HEAP
+#define objects(p) ((RVALUE **)p->objects)
+#else
 #define objects(p) ((RVALUE *)p->objects)
+#endif
 
 enum { REF_COUNT_MAX = 7 };
 
@@ -208,6 +212,18 @@ unlink_heap_page(mrb_gc *gc, mrb_heap_page *page)
 static void
 add_heap(mrb_state *mrb, mrb_gc *gc)
 {
+#ifdef SANITIZER_HEAP
+  mrb_heap_page *page = (mrb_heap_page *)mrb_malloc(
+      mrb, sizeof(mrb_heap_page) + MRB_HEAP_PAGE_SIZE * sizeof(RVALUE*));
+  RVALUE **p, **e;
+
+  for (p = objects(page), e=p+MRB_HEAP_PAGE_SIZE; p<e; p++) {
+    *p = (RVALUE*)mrb_malloc(mrb, sizeof(RVALUE));
+    (*p)->as.free.tt = MRB_TT_FREE;
+    (*p)->as.free.next = gc->freelist;
+    gc->freelist = *p;
+  }
+#else
   mrb_heap_page *page = (mrb_heap_page *)mrb_malloc(
       mrb, sizeof(mrb_heap_page) + MRB_HEAP_PAGE_SIZE * sizeof(RVALUE));
   RVALUE *p, *e;
@@ -217,6 +233,8 @@ add_heap(mrb_state *mrb, mrb_gc *gc)
     p->as.free.next = gc->freelist;
     gc->freelist = p;
   }
+#endif
+
   page->mark_bits = NULL;
 
   link_heap_page(gc, page);
@@ -254,14 +272,23 @@ free_heap(mrb_state *mrb, mrb_gc *gc)
 {
   mrb_heap_page *page = gc->heaps;
   mrb_heap_page *tmp;
+#ifdef SANITIZER_HEAP
+  RVALUE **p, **e;
+#else
   RVALUE *p, *e;
+#endif
 
   while (page) {
     tmp = page;
     page = page->next;
     for (p = objects(tmp), e=p+MRB_HEAP_PAGE_SIZE; p<e; p++) {
+#ifdef SANITIZER_HEAP
+      if ((*p)->as.free.tt != MRB_TT_FREE)
+        obj_free(mrb, &(*p)->as.basic, TRUE);
+#else
       if (p->as.free.tt != MRB_TT_FREE)
         obj_free(mrb, &p->as.basic, TRUE);
+#endif
     }
     mrb_free(mrb, tmp->mark_bits);
     mrb_free(mrb, tmp);
@@ -560,25 +587,38 @@ mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
 {
   mrb_heap_page *page;
   RVALUE const *rv = (RVALUE const*)obj;
+  int page_offset = -1;
 
   if (!obj) return;
 
-  // should be binary search
   for (page = mrb->gc.heaps; page; page = page->next) {
+#ifdef SANITIZER_HEAP
+    RVALUE **region = objects(page);
+    RVALUE **p;
+    for (p = region; p < region + MRB_HEAP_PAGE_SIZE; ++p) {
+      if (*p == rv) {
+        page_offset = p - region;
+        break;
+      }
+    }
+    if (*p == rv) break;
+#else
     RVALUE *region = objects(page);
     if (region <= rv && rv < region + MRB_HEAP_PAGE_SIZE) {
+      page_offset = rv - region;
       break;
     }
+#endif
   }
 
   mrb_assert(page);
+  mrb_assert(page_offset != -1);
 
   if (!page->mark_bits) {
     page->mark_bits = (uint8_t*)mrb_malloc(mrb, MRB_HEAP_PAGE_SIZE / 8);
     memset(page->mark_bits, 0, MRB_HEAP_PAGE_SIZE / 8);
   }
 
-  unsigned const page_offset = rv - objects(page);
   if (page->mark_bits[page_offset / 8] & (1 << (page_offset % 8))) return;
 
   mrb_assert((obj)->tt != MRB_TT_FREE);
@@ -598,19 +638,18 @@ obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool closing)
   mrb_assert(obj->tt != MRB_TT_FREE);
 
   switch (obj->tt) {
-    /* immediate - no mark */
+  case MRB_TT_FLOAT:
+#ifdef MRB_WORD_BOXING
+    break;
+#endif
+
+  /* immediate - no mark */
   case MRB_TT_TRUE:
   case MRB_TT_FIXNUM:
   case MRB_TT_SYMBOL:
     /* cannot happen */
+    mrb_assert(FALSE);
     return;
-
-  case MRB_TT_FLOAT:
-#ifdef MRB_WORD_BOXING
-    break;
-#else
-    return;
-#endif
 
   case MRB_TT_OBJECT:
     mrb_gc_free_iv(mrb, (struct RObject*)obj, closing);
@@ -734,10 +773,35 @@ obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool closing)
     mrb_obj_dec_ref(mrb, (struct RBasic*)obj->c);
   }
 
-  obj->tt = MRB_TT_FREE;
-  ((struct free_obj*)obj)->next = mrb->gc.freelist;
-  mrb->gc.freelist = (struct RVALUE*)obj;
-  mrb->gc.live--;
+  if (!closing) {
+#ifdef SANITIZER_HEAP
+    mrb_heap_page *page;
+    RVALUE *rv = (RVALUE*)obj;
+    for (page = mrb->gc.heaps; page; page = page->next) {
+      RVALUE **region = objects(page);
+      RVALUE **p;
+      for (p = region; p < region + MRB_HEAP_PAGE_SIZE; ++p) {
+        if (*p == rv) {
+          mrb_free(mrb, rv);
+          *p = (struct RVALUE*)mrb_malloc(mrb, sizeof(RVALUE));
+          (*p)->as.free.tt = MRB_TT_FREE;
+          (*p)->as.free.next = mrb->gc.freelist;
+          mrb->gc.freelist = *p;
+          mrb->gc.live--;
+          return;
+        }
+      }
+    }
+
+    mrb_assert(FALSE); // should not reach
+#else
+    RVALUE *rv = (RVALUE*)obj;
+    rv->as.free.tt = MRB_TT_FREE;
+    rv->as.free.next = mrb->gc.freelist;
+    mrb->gc.freelist = rv;
+    mrb->gc.live--;
+#endif
+  }
 }
 
 static void
@@ -803,24 +867,43 @@ mrb_full_gc(mrb_state *mrb)
 
   root_scan_phase(mrb);
 
+  //mrb_bool freed = FALSE;
   for (mrb_heap_page* page = gc->heaps; page != NULL; ) {
     int free_count = 0;
     mrb_heap_page *need_free = NULL;
 
     for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i) {
+#ifdef SANITIZER_HEAP
+      struct RBasic *b = &objects(page)[i]->as.basic;
+#else
       struct RBasic *b = &objects(page)[i].as.basic;
+#endif
       if (b->tt == MRB_TT_FREE ||
           (page->mark_bits && (page->mark_bits[i / 8] & (1 << (i % 8))))) continue;
 
-      obj_free(mrb, b, FALSE);
+      /*
+      if (!freed) {
+        fprintf(stderr, "\n");
+        freed = TRUE;
+      }
+      fprintf(stderr, "%p: tt:%d ref_count:%d\n", b, b->tt, b->ref_count);
+      */
+      //mrb_assert(FALSE);
+      //b->ref_count = 0;
+      //obj_free(mrb, b, FALSE);
     }
     if (page->mark_bits) {
       mrb_free(mrb, page->mark_bits);
       page->mark_bits = NULL;
     }
 
+#ifdef SANITIZER_HEAP
+    for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i)
+      if (objects(page)[i]->as.basic.tt == MRB_TT_FREE) ++free_count;
+#else
     for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i)
       if (objects(page)[i].as.basic.tt == MRB_TT_FREE) ++free_count;
+#endif
     if (free_count == MRB_HEAP_PAGE_SIZE && page != gc->heaps) need_free = page;
 
     page = page->next;
@@ -1035,17 +1118,22 @@ gc_each_objects(mrb_state *mrb, mrb_gc *gc, mrb_each_object_callback *callback, 
 {
   mrb_heap_page* page;
 
-  page = gc->heaps;
-  while (page != NULL) {
+  for (page = gc->heaps; page != NULL; page = page->next) {
+#ifdef SANITIZER_HEAP
+    RVALUE **p;
+#else
     RVALUE *p;
+#endif
     int i;
 
     p = objects(page);
     for (i=0; i < MRB_HEAP_PAGE_SIZE; i++) {
-      if ((*callback)(mrb, &p[i].as.basic, data) == MRB_EACH_OBJ_BREAK)
-        return;
+#ifdef SANITIZER_HEAP
+      if ((*callback)(mrb, &p[i]->as.basic, data) == MRB_EACH_OBJ_BREAK) return;
+#else
+      if ((*callback)(mrb, &p[i].as.basic, data) == MRB_EACH_OBJ_BREAK) return;
+#endif
     }
-    page = page->next;
   }
 }
 
