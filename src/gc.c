@@ -575,6 +575,7 @@ mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
 
   if (!page->mark_bits) {
     page->mark_bits = (uint8_t*)mrb_malloc(mrb, MRB_HEAP_PAGE_SIZE / 8);
+    memset(page->mark_bits, 0, MRB_HEAP_PAGE_SIZE / 8);
   }
 
   unsigned const page_offset = rv - objects(page);
