@@ -2376,7 +2376,6 @@ RETRY_TRY_BLOCK:
 #endif
         break;
       default:
-        mrb_dec_ref(mrb, regs_a[1]);
         set_value(INT, a + 1, GETARG_C(i));
         i = MKOP_ABC(OP_SEND, a, GETARG_B(i), 1);
         goto L_SEND;
