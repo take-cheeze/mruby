@@ -267,6 +267,7 @@ cipop(mrb_state *mrb)
 {
   struct mrb_context *c = mrb->c;
   struct REnv *env = c->ci->env;
+  mrb_bool const free_env = env && env->ref_count == 0;
 
   mrb_obj_ref_clear(mrb, c->ci->env);
   mrb_obj_ref_clear(mrb, c->ci->proc);
@@ -274,7 +275,7 @@ cipop(mrb_state *mrb)
 
   c->ci--;
 
-  if (env) {
+  if (env && !free_env) {
     mrb_env_unshare(mrb, env);
   }
 }
