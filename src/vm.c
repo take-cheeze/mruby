@@ -307,7 +307,7 @@ ecall(mrb_state *mrb, int i)
   mrb_obj_ref_init(mrb, ci->proc, p);
   mrb_obj_ref_clear(mrb, mrb->c->ensure[i]);
   ci->nregs = p->body.irep->nregs;
-  mrb_obj_ref_set(mrb, ci->target_class, p->target_class);
+  mrb_obj_ref_init(mrb, ci->target_class, p->target_class);
   mrb->c->stack += ci[-1].nregs;
   if (mrb->exc) mrb_gc_protect(mrb, mrb_obj_value(mrb->exc));
   exc = mrb->exc;
