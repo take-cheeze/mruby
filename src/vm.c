@@ -296,9 +296,12 @@ ecall(mrb_state *mrb, int i)
     mrb_exc_raise(mrb, mrb_obj_value(mrb->stack_err));
   }
   p = mrb->c->ensure[i];
+  mrb_gc_protect(mrb, mrb_obj_value(p));
   if (!p) return;
-  if (ci->epos > i)
-    ci->epos = i;
+  while (ci->epos > i) {
+    mrb_obj_ref_clear(mrb, mrb->c->ensure[ci->epos - 1]);
+    --ci->epos;
+  }
   cioff = ci - mrb->c->cibase;
   ci = cipush(mrb);
   ci->stackent = mrb->c->stack;
