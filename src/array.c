@@ -557,8 +557,8 @@ MRB_API mrb_value
 mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_value rpl)
 {
   struct RArray *a = mrb_ary_ptr(ary);
-  const mrb_value *argv;
-  mrb_int argc;
+  const mrb_value *argv = &rpl;
+  mrb_int argc = 1;
   size_t tail;
 
   ary_modify(mrb, a);
@@ -592,19 +592,15 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
       argv = r->ptr;
     }
   }
-  else {
-    argc = 1;
-    argv = &rpl;
-  }
   if (head >= a->len) {
     if (head > ARY_MAX_SIZE - argc) {
       mrb_raisef(mrb, E_INDEX_ERROR, "index %S too big", mrb_fixnum_value(head));
     }
     len = head + argc;
     if (len > a->aux.capa) {
-      ary_expand_capa(mrb, a, head + argc);
+      ary_expand_capa(mrb, a, len);
     }
-    values_nil_init(a->ptr + a->len, head - a->len);
+    values_nil_init(a->ptr + a->len, len - a->len);
     if (argc > 0) {
       values_copy(mrb, a->ptr + head, argv, argc);
     }
