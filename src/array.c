@@ -283,10 +283,10 @@ static void
 ary_replace(mrb_state *mrb, struct RArray *a, mrb_value *argv, mrb_int len)
 {
   ary_modify(mrb, a);
+  for (int i = 0; i < a->len; ++i) { mrb_dec_ref(mrb, a->ptr[i]); }
   if (a->aux.capa < len)
     ary_expand_capa(mrb, a, len);
-  values_copy(mrb, a->ptr, argv, a->len);
-  values_init(mrb, a->ptr + a->len, argv + a->len, len - a->len);
+  values_init(mrb, a->ptr, argv, len);
   a->len = len;
 }
 
