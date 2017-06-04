@@ -95,7 +95,7 @@ stack_pop(mrb_state *mrb)
 
   if (env) { mrb_env_unshare(mrb, env); }
 
-  if (c->ci > c->cibase) {
+  if (c->ci > c->cibase && c->stack == c->ci->stackent) {
     mrb_value *i = c->stack + c->ci->nregs,
               *e = c->ci->stackent + c->ci[-1].nregs;
     for (; e < i; --i) {
