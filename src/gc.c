@@ -601,7 +601,7 @@ mrb_gc_mark(mrb_state *mrb, struct RBasic *obj)
         break;
       }
     }
-    if (*p == rv) break;
+    if (page_offset != -1) break;
 #else
     RVALUE *region = objects(page);
     if (region <= rv && rv < region + MRB_HEAP_PAGE_SIZE) {
