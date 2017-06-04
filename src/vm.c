@@ -306,10 +306,7 @@ ecall(mrb_state *mrb, int i)
   p = mrb->c->ensure[i];
   mrb_gc_protect(mrb, mrb_obj_value(p));
   if (!p) return;
-  while (ci->epos > i) {
-    mrb_obj_ref_clear(mrb, mrb->c->ensure[ci->epos - 1]);
-    --ci->epos;
-  }
+  mrb_obj_ref_clear(mrb, mrb->c->ensure[i]);
   cioff = ci - mrb->c->cibase;
   ci = cipush(mrb);
   ci->stackent = mrb->c->stack;
@@ -1219,8 +1216,8 @@ RETRY_TRY_BLOCK:
         else mrb->c->esize *= 2;
         mrb->c->ensure = (struct RProc **)mrb_realloc(mrb, mrb->c->ensure, sizeof(struct RProc*) * mrb->c->esize);
       }
-      mrb_obj_ref_init(mrb, mrb->c->ensure[mrb->c->ci->epos], p);
-      mrb->c->ensure[++mrb->c->ci->epos] = NULL;
+      mrb_obj_ref_init(mrb, mrb->c->ensure[mrb->c->eidx], p);
+      mrb->c->ensure[++mrb->c->eidx] = NULL;
       mrb_gc_arena_restore(mrb, ai);
       NEXT;
     }
@@ -1870,7 +1867,7 @@ RETRY_TRY_BLOCK:
               localjump_error(mrb, LOCALJUMP_ERROR_RETURN);
               goto L_RAISE;
             }
-            
+
             ce = mrb->c->cibase + e->cioff;
             while (--ci > ce) {
               if (ci->env) {
@@ -1976,7 +1973,10 @@ RETRY_TRY_BLOCK:
         stack_pop(mrb);
         cipop(mrb);
         if (acc == CI_ACC_SKIP || acc == CI_ACC_DIRECT) {
+          mrb_inc_ref(mrb, v);
           mrb_gc_arena_restore(mrb, ai);
+          mrb_gc_protect(mrb, v);
+          mrb_dec_ref(mrb, v);
           mrb->jmp = prev_jmp;
           return v;
         }
