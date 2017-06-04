@@ -3,6 +3,8 @@
 #include <mruby/class.h>
 #include <mruby/proc.h>
 
+#include "value_array.h"
+
 #define fiber_ptr(o) ((struct RFiber*)mrb_ptr(o))
 
 #define FIBER_STACK_INIT_SIZE 64
@@ -127,6 +129,9 @@ fiber_init(mrb_state *mrb, mrb_value self)
   ci[1] = ci[0];
   c->ci++;                      /* push dummy callinfo */
 
+  mrb_obj_ref_init(mrb, ci->target_class, p->target_class);
+  mrb_obj_ref_init(mrb, ci->proc, p);
+
   c->fib = f;
   c->status = MRB_FIBER_CREATED;
 
@@ -188,16 +193,10 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr
   mrb->c->status = resume ? MRB_FIBER_RESUMED : MRB_FIBER_TRANSFERRED;
   c->prev = resume ? mrb->c : (c->prev ? c->prev : mrb->root_c);
   if (c->status == MRB_FIBER_CREATED) {
-    mrb_value *b, *e;
-
     if (len >= c->stend - c->stack) {
       mrb_raise(mrb, E_FIBER_ERROR, "too many arguments to fiber");
     }
-    b = c->stack+1;
-    e = b + len;
-    while (b<e) {
-      *b++ = *a++;
-    }
+    values_init(mrb, c->stack+1, a, len);
     c->cibase->argc = len;
     mrb_ref_set(mrb, c->stack[0], c->ci->proc->env->stack[0]);
     value = c->stack[0];
@@ -205,7 +204,6 @@ fiber_switch(mrb_state *mrb, mrb_value self, mrb_int len, const mrb_value *a, mr
   else {
     value = fiber_result(mrb, a, len);
   }
-  // mrb_write_barrier(mrb, (struct RBasic*)c->fib);
   c->status = MRB_FIBER_RUNNING;
   mrb->c = c;
 
