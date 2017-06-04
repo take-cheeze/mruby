@@ -742,6 +742,7 @@ mrb_yield_cont(mrb_state *mrb, mrb_value b, mrb_value self, mrb_int argc, const 
   }
 
   p = mrb_proc_ptr(b);
+  mrb_gc_protect(mrb, b);
   ci = mrb->c->ci;
 
   stack_extend(mrb, 3);
