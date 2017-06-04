@@ -114,6 +114,7 @@ static MRB_EACH_OBJ_STATE
 os_each_object_cb(mrb_state *mrb, struct RBasic *obj, void *ud)
 {
   struct os_each_object_data *d = (struct os_each_object_data*)ud;
+  int const ai = mrb_gc_arena_save(mrb);
 
   /* filter dead objects */
   if (mrb_object_dead_p(mrb, obj)) {
@@ -138,6 +139,7 @@ os_each_object_cb(mrb_state *mrb, struct RBasic *obj, void *ud)
   }
 
   mrb_yield(mrb, d->block, mrb_obj_value(obj));
+  mrb_gc_arena_restore(mrb, ai);
   ++d->count;
   return MRB_EACH_OBJ_OK;
 }
