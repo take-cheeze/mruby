@@ -90,12 +90,26 @@ stack_init(mrb_state *mrb)
 static inline void
 stack_pop(mrb_state *mrb)
 {
-  int i;
+  struct mrb_context *c = mrb->c;
+  struct REnv *env = c->ci->env;
 
-  for (i = 1; i < mrb->c->ci->nregs; ++i) {
-    mrb_ref_clear(mrb, mrb->c->stack[i]);
+  if (env) { mrb_env_unshare(mrb, env); }
+
+  if (c->ci > c->cibase) {
+    mrb_value *i = c->stack + c->ci->nregs,
+              *e = c->ci->stackent + c->ci[-1].nregs;
+    for (; e < i; --i) {
+      mrb_ref_clear(mrb, *i);
+    }
   }
-  mrb->c->stack = mrb->c->ci->stackent;
+  else {
+    int i;
+
+    for (i = 1; i < c->ci->nregs; ++i) {
+      mrb_ref_clear(mrb, c->stack[i]);
+    }
+  }
+  c->stack = c->ci->stackent;
 }
 
 static inline void
@@ -266,18 +280,12 @@ static void
 cipop(mrb_state *mrb)
 {
   struct mrb_context *c = mrb->c;
-  struct REnv *env = c->ci->env;
-  mrb_bool const free_env = env && env->ref_count == 0;
 
   mrb_obj_ref_clear(mrb, c->ci->env);
   mrb_obj_ref_clear(mrb, c->ci->proc);
   mrb_obj_ref_clear(mrb, c->ci->target_class);
 
   c->ci--;
-
-  if (env && !free_env) {
-    mrb_env_unshare(mrb, env);
-  }
 }
 
 void mrb_exc_set(mrb_state *mrb, mrb_value exc);
