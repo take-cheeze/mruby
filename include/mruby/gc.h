@@ -49,6 +49,10 @@ typedef struct mrb_gc {
 
   struct RVALUE *freelist;
 
+#ifndef MRB_REF_COUNT_AUTO_PERMANENT
+  struct kh_rc *strict_counts;
+#endif
+
   mrb_bool iterating     :1;
   mrb_bool disabled      :1;
   mrb_bool out_of_memory :1;

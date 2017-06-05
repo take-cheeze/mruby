@@ -18,6 +18,7 @@
 #include <mruby/gc.h>
 #include <mruby/error.h>
 #include <mruby/throw.h>
+#include <mruby/khash.h>
 #include "value_array.h"
 
 struct free_obj {
@@ -45,6 +46,14 @@ typedef struct RVALUE {
 #endif
   } as;
 } RVALUE;
+
+static khint_t rbasic_hash_func(mrb_state *mrb, struct RBasic *ptr)
+{
+  return (ptrdiff_t)((uint8_t*)ptr) / sizeof(RVALUE);
+}
+
+KHASH_DECLARE(rc, struct RBasic*, mrb_int, TRUE);
+KHASH_DEFINE(rc, struct RBasic*, mrb_int, TRUE, rbasic_hash_func, kh_int_hash_equal)
 
 #ifdef GC_PROFILE
 #include <stdio.h>
@@ -298,6 +307,7 @@ free_heap(mrb_state *mrb, mrb_gc *gc)
 void
 mrb_gc_destroy(mrb_state *mrb, mrb_gc *gc)
 {
+  kh_destroy(rc, mrb, gc->strict_counts);
   free_heap(mrb, gc);
 #ifndef MRB_GC_FIXED_ARENA
   mrb_free(mrb, gc->arena);
@@ -1171,7 +1181,22 @@ mrb_objspace_each_objects(mrb_state *mrb, mrb_each_object_callback *callback, vo
 MRB_API void
 mrb_obj_inc_ref(mrb_state *mrb, struct RBasic *obj)
 {
-  if (obj->ref_count == REF_COUNT_MAX) { return; }
+  if (obj->ref_count == REF_COUNT_MAX) {
+#ifndef MRB_REF_COUNT_AUTO_PERMANENT
+    khash_t(rc) *h;
+    int res;
+    khint_t k;
+
+    if (!mrb->gc.strict_counts) mrb->gc.strict_counts = kh_init(rc, mrb);
+
+    h = mrb->gc.strict_counts;
+    k = kh_put2(rc, mrb, h, obj, &res);
+
+    if (res) { kh_value(h, k) = 1; }
+    else { kh_value(h, k)++; }
+#endif
+    return;
+  }
 
   mrb_assert(obj->tt != MRB_TT_FREE);
 
@@ -1181,7 +1206,26 @@ mrb_obj_inc_ref(mrb_state *mrb, struct RBasic *obj)
 MRB_API void
 mrb_obj_dec_ref(mrb_state *mrb, struct RBasic *obj)
 {
-  if (obj->ref_count == REF_COUNT_MAX) { return; }
+  if (obj->ref_count == REF_COUNT_MAX) {
+#ifndef MRB_REF_COUNT_AUTO_PERMANENT
+    khash_t(rc) *h;
+    khint_t k;
+
+    if (!mrb->gc.strict_counts) mrb->gc.strict_counts = kh_init(rc, mrb);
+
+    h = mrb->gc.strict_counts;
+    k = kh_get(rc, mrb, h, obj);
+
+    if (k != kh_end(h)) {
+      if (kh_value(h, k)) { kh_value(h, k)--; }
+      else { kh_del(rc, mrb, h, k); }
+    }
+    else {
+      obj->ref_count--;
+    }
+#endif
+    return;
+  }
 
   mrb_assert(obj->tt != MRB_TT_FREE);
 
