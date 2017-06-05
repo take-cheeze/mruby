@@ -877,7 +877,11 @@ mrb_full_gc(mrb_state *mrb)
 
   root_scan_phase(mrb);
 
-  //mrb_bool freed = FALSE;
+#ifdef SANITIZER_HEAP
+  int tt_counts[MRB_TT_MAXDEFINE] = {0};
+  mrb_bool leaked = FALSE;
+#endif
+
   for (mrb_heap_page* page = gc->heaps; page != NULL; ) {
     int free_count = 0;
     mrb_heap_page *need_free = NULL;
@@ -891,13 +895,11 @@ mrb_full_gc(mrb_state *mrb)
       if (b->tt == MRB_TT_FREE ||
           (page->mark_bits && (page->mark_bits[i / 8] & (1 << (i % 8))))) continue;
 
-      /*
-      if (!freed) {
-        fprintf(stderr, "\n");
-        freed = TRUE;
-      }
-      fprintf(stderr, "%p: tt:%d ref_count:%d\n", b, b->tt, b->ref_count);
-      */
+#ifdef SANITIZER_HEAP
+      tt_counts[b->tt]++;
+      leaked = TRUE;
+#endif
+
       //mrb_assert(FALSE);
       //b->ref_count = 0;
       //obj_free(mrb, b, FALSE);
@@ -906,6 +908,17 @@ mrb_full_gc(mrb_state *mrb)
       mrb_free(mrb, page->mark_bits);
       page->mark_bits = NULL;
     }
+
+#ifdef SANITIZER_HEAP
+    if (leaked) {
+      fprintf(stderr, "\n");
+      for (int i = MRB_TT_HAS_BASIC; i < MRB_TT_MAXDEFINE; ++i) {
+        if (tt_counts[i]) {
+          fprintf(stderr, "tt:%d: %d\n", i, tt_counts[i]);
+        }
+      }
+    }
+#endif
 
 #ifdef SANITIZER_HEAP
     for (int i = 0; i < MRB_HEAP_PAGE_SIZE; ++i)
