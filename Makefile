@@ -88,7 +88,7 @@ all : $(MINIRAKE)
 .PHONY : all
 
 
-test : | $(BIN_MRUBY)
+test : | all $(BIN_MRUBY)
 	$(MINIRAKE) $(MINIRAKE_FLAGS) test
 .PHONY : test
 
