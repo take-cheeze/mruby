@@ -61,8 +61,8 @@ LIBMRUBY := $(BUILD_DIR)/lib/libmruby.a
 
 ONIGMO_VERSION := 6.1.1
 ONIGMO_URL := https://github.com/k-takata/Onigmo/releases/download/Onigmo-$(ONIGMO_VERSION)/onigmo-$(ONIGMO_VERSION).tar.gz
-ONIGMO_ARCHIVE := $(abspath $(BUILD_DIR)/Onigmo-$(ONIGMO_VERSION).tar.gz)
-ONIGMO_DIR := $(abspath $(BUILD_DIR)/Onigmo-$(ONIGMO_VERSION))
+ONIGMO_ARCHIVE := $(abspath $(BUILD_DIR)/onigmo-$(ONIGMO_VERSION).tar.gz)
+ONIGMO_DIR := $(abspath $(BUILD_DIR)/onigmo-$(ONIGMO_VERSION))
 ONIGMO_HEADER := $(ONIGMO_DIR)/build/include/onigmo.h
 ONIGMO_LIB := $(ONIGMO_DIR)/build/lib/libonigmo.a
 
