@@ -2,6 +2,9 @@
 # We provide a minimalistic version called minirake inside of our
 # codebase.
 
+LDFLAGS += -lm
+CFLAGS += -fexceptions
+
 BUILD_DIR = $(abspath ./build/minirake)
 SRC_DIR = $(abspath .)
 
@@ -138,10 +141,10 @@ $(BUILD_DIR)/core/y.tab.o : CPPFLAGS += -I$(SRC_DIR)/mrbgems/mruby-compiler/core
 $(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-require/src/require.o : CPPFLAGS += -I$(SRC_DIR)/src
 $(NON_CORE_MRBGEMS_BUILD_DIR)/mruby-pack/src/pack.o : CPPFLAGS += -I$(SRC_DIR)/src
 
-# build `mruby` command
+# build `minirake` command
 $(MINIRAKE) : $(BUILD_DIR)/minirake.o $(CLI_MAIN_OBJS) $(LIBMRUBY) $(CLI_LIBS)
 	@$(MKDIR_P) $(dir $@)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BUILD_DIR)/minirake.c : $(MINIRAKE_SRCS) | $(MRBC)
 	@$(MKDIR_P) $(dir $@)
@@ -291,9 +294,9 @@ endef
 $(foreach gem,$(MRBGEM_DIRS),$(eval $(call GEM_INIT,$(gem))))
 
 # build `mrbc` command
-$(MRBC) : $(LIBMRUBY_CORE) $(MRBC_OBJS)
+$(MRBC) : $(MRBC_OBJS) $(LIBMRUBY_CORE)
 	@$(MKDIR_P) $(dir $@)
-	$(CC) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(LIBMRUBY_CORE) : $(CORE_OBJS)
 	@$(MKDIR_P) $(dir $@)
@@ -302,7 +305,7 @@ $(LIBMRUBY_CORE) : $(CORE_OBJS)
 # build `mruby` command
 $(BIN_MRUBY) : $(BIN_MRUBY_OBJS) $(LIBMRUBY) $(CLI_LIBS)
 	@$(MKDIR_P) $(dir $@)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BUILD_DIR)/core/y.tab.c : $(SRC_DIR)/mrbgems/mruby-compiler/core/parse.y
 	@$(MKDIR_P) $(dir $@)
