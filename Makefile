@@ -48,8 +48,8 @@ MRBGEM_OBJS := \
   $(BUILD_DIR)/mrbgems/mruby-rbconfig/rbconfig.o \
 
 CORE_SRCS := $(wildcard src/*.c) $(wildcard $(SRC_DIR)/mrbgems/mruby-compiler/core/*.c)
-MRBLIB_SRCS := $(wildcard $(SRC_DIR)/mrblib/*.rb)
-MINIRAKE_SRCS := $(wildcard $(SRC_DIR)/mrbgems/mruby-bin-minirake/tools/minirake/*.rb)
+MRBLIB_SRCS := $(sort $(wildcard $(SRC_DIR)/mrblib/*.rb))
+MINIRAKE_SRCS := $(sort $(wildcard $(SRC_DIR)/mrbgems/mruby-bin-minirake/tools/minirake/*.rb))
 
 CORE_OBJS := $(subst $(SRC_DIR),$(BUILD_DIR),$(patsubst %.c,%.o,$(CORE_SRCS))) $(BUILD_DIR)/core/y.tab.o
 CLI_MAIN_OBJS := $(BUILD_DIR)/tasks/cli_main.o
@@ -275,7 +275,7 @@ void GENERATED_TMP_mrb_$(sym)_gem_final(mrb_state *mrb) {
 endef
 export GEM_INIT_SOURCE_$(sym)
 
-$(sym)_RBFILES := $(wildcard $(1)/mrblib/*.rb)
+$(sym)_RBFILES := $(sort $(wildcard $(1)/mrblib/*.rb))
 $(sym)_SRCS := $(wildcard $(1)/src/*.c $(1)/src/*.cxx $(1)/src/*.cpp)
 
 $(BUILD_DIR)/mrbgems/$(notdir $(1))/gem_init.c : $$($(sym)_RBFILES) | $(SRC_DIR)/Makefile $(MRBC)
