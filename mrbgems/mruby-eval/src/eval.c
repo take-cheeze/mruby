@@ -6,13 +6,13 @@
 #include <mruby/opcode.h>
 #include <mruby/error.h>
 
-mrb_value mrb_exec_irep(mrb_state *mrb, mrb_value self, struct RProc *p);
+mrb_value mrb_exec_irep(mrb_state *mrb, mrb_value self, RProc *p);
 mrb_value mrb_obj_instance_eval(mrb_state *mrb, mrb_value self);
 
 static struct mrb_irep *
 get_closure_irep(mrb_state *mrb, int level)
 {
-  struct RProc *proc = mrb->c->ci[-1].proc;
+  RProc *proc = mrb->c->ci[-1].proc;
 
   while (level--) {
     if (!proc) return NULL;
@@ -180,17 +180,17 @@ patch_irep(mrb_state *mrb, mrb_irep *irep, int bnest, mrb_irep *top)
   }
 }
 
-void mrb_codedump_all(mrb_state*, struct RProc*);
+void mrb_codedump_all(mrb_state*, RProc*);
 
-static struct RProc*
+static RProc*
 create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding, const char *file, mrb_int line)
 {
   mrbc_context *cxt;
   struct mrb_parser_state *p;
-  struct RProc *proc;
-  struct REnv *e;
+  RProc *proc;
+  REnv *e;
   mrb_callinfo *ci = &mrb->c->ci[-1]; /* callinfo of eval caller */
-  struct RClass *target_class = NULL;
+  RClass *target_class = NULL;
   int bidx;
 
   if (!mrb_nil_p(binding)) {
@@ -244,8 +244,8 @@ create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding,
       e = ci->env;
     }
     else {
-      e = (struct REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV,
-                                      (struct RClass*)target_class);
+      e = (REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV,
+                                      (RClass*)target_class);
       e->mid = ci->mid;
       e->stack = ci[1].stackent;
       e->cxt = mrb->c;
@@ -257,7 +257,7 @@ create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding,
     }
     proc->e.env = e;
     proc->flags |= MRB_PROC_ENVSET;
-    mrb_field_write_barrier(mrb, (struct RBasic*)proc, (struct RBasic*)e);
+    mrb_field_write_barrier(mrb, (RBasic*)proc, (RBasic*)e);
   }
   proc->upper = ci->proc;
   mrb->c->ci->target_class = target_class;
@@ -271,7 +271,7 @@ create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding,
 }
 
 static mrb_value
-exec_irep(mrb_state *mrb, mrb_value self, struct RProc *proc)
+exec_irep(mrb_state *mrb, mrb_value self, RProc *proc)
 {
   /* no argument passed from eval() */
   mrb->c->ci->argc = 0;
@@ -295,7 +295,7 @@ f_eval(mrb_state *mrb, mrb_value self)
   mrb_value binding = mrb_nil_value();
   char *file = NULL;
   mrb_int line = 1;
-  struct RProc *proc;
+  RProc *proc;
 
   mrb_get_args(mrb, "s|ozi", &s, &len, &binding, &file, &line);
 
@@ -318,7 +318,7 @@ f_instance_eval(mrb_state *mrb, mrb_value self)
     char *file = NULL;
     mrb_int line = 1;
     mrb_value cv;
-    struct RProc *proc;
+    RProc *proc;
 
     mrb_get_args(mrb, "s|zi", &s, &len, &file, &line);
     cv = mrb_singleton_class(mrb, self);

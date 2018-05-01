@@ -52,7 +52,7 @@ mrb_sym_length(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_symbol_ext_gem_init(mrb_state* mrb)
 {
-  struct RClass *s = mrb->symbol_class;
+  RClass *s = mrb->symbol_class;
   mrb_define_class_method(mrb, s, "all_symbols", mrb_sym_all_symbols, MRB_ARGS_NONE());
   mrb_define_method(mrb, s, "length", mrb_sym_length, MRB_ARGS_NONE());
   mrb_define_method(mrb, s, "size", mrb_sym_length, MRB_ARGS_NONE());

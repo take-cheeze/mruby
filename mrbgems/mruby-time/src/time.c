@@ -229,7 +229,7 @@ time_update_datetime(mrb_state *mrb, struct mrb_time *self)
 }
 
 static mrb_value
-mrb_time_wrap(mrb_state *mrb, struct RClass *tc, struct mrb_time *tm)
+mrb_time_wrap(mrb_state *mrb, RClass *tc, struct mrb_time *tm)
 {
   return mrb_obj_value(Data_Wrap_Struct(mrb, tc, &mrb_time_type, tm));
 }
@@ -285,7 +285,7 @@ time_alloc(mrb_state *mrb, double sec, double usec, enum mrb_timezone timezone)
 }
 
 static mrb_value
-mrb_time_make(mrb_state *mrb, struct RClass *c, double sec, double usec, enum mrb_timezone timezone)
+mrb_time_make(mrb_state *mrb, RClass *c, double sec, double usec, enum mrb_timezone timezone)
 {
   return mrb_time_wrap(mrb, c, time_alloc(mrb, sec, usec, timezone));
 }
@@ -825,7 +825,7 @@ mrb_time_utc_p(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_time_gem_init(mrb_state* mrb)
 {
-  struct RClass *tc;
+  RClass *tc;
   /* ISO 15.2.19.2 */
   tc = mrb_define_class(mrb, "Time", mrb->object_class);
   MRB_SET_INSTANCE_TT(tc, MRB_TT_DATA);

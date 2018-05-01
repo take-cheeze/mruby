@@ -479,7 +479,7 @@ sym_cmp(mrb_state *mrb, mrb_value s1)
 void
 mrb_init_symbol(mrb_state *mrb)
 {
-  struct RClass *sym;
+  RClass *sym;
 
   mrb->symbol_class = sym = mrb_define_class(mrb, "Symbol", mrb->object_class);                 /* 15.2.11 */
   MRB_SET_INSTANCE_TT(sym, MRB_TT_SYMBOL);

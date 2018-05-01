@@ -17,7 +17,7 @@ dbgcmd_run(mrb_state *mrb, mrdb_state *mrdb)
   else {
     dbg->xm = DBG_QUIT;
     if (dbg->xphase == DBG_PHASE_RUNNING){
-      struct RClass *exc;
+      RClass *exc;
       puts("Start it from the beginning.");
       exc = mrb_define_class(mrb, "DebuggerRestart", mrb_class_get(mrb, "Exception"));
       mrb_raise(mrb, exc, "Restart mrdb.");

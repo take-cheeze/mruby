@@ -113,12 +113,12 @@ check_file_lineno(struct mrb_irep *irep, const char *file, uint16_t lineno)
 }
 
 static int32_t
-compare_break_method(mrb_state *mrb, mrb_debug_breakpoint *bp, struct RClass *class_obj, mrb_sym method_sym, mrb_bool* isCfunc)
+compare_break_method(mrb_state *mrb, mrb_debug_breakpoint *bp, RClass *class_obj, mrb_sym method_sym, mrb_bool* isCfunc)
 {
   const char* class_name;
   const char* method_name;
   mrb_method_t m;
-  struct RClass* sc;
+  RClass* sc;
   const char* sn;
   mrb_sym ssym;
   mrb_debug_methodpoint *method_p;
@@ -475,7 +475,7 @@ mrb_debug_check_breakpoint_line(mrb_state *mrb, mrb_debug_context *dbg, const ch
 
 
 int32_t
-mrb_debug_check_breakpoint_method(mrb_state *mrb, mrb_debug_context *dbg, struct RClass *class_obj, mrb_sym method_sym, mrb_bool* isCfunc)
+mrb_debug_check_breakpoint_method(mrb_state *mrb, mrb_debug_context *dbg, RClass *class_obj, mrb_sym method_sym, mrb_bool* isCfunc)
 {
   mrb_debug_breakpoint *bp;
   int32_t bpno;

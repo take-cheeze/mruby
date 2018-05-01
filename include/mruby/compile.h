@@ -27,7 +27,7 @@ typedef struct mrbc_context {
   short lineno;
   int (*partial_hook)(struct mrb_parser_state*);
   void *partial_data;
-  struct RClass *target_class;
+  RClass *target_class;
   mrb_bool capture_errors:1;
   mrb_bool dump_result:1;
   mrb_bool no_exec:1;
@@ -175,7 +175,7 @@ MRB_API struct mrb_parser_state* mrb_parse_file(mrb_state*,FILE*,mrbc_context*);
 #endif
 MRB_API struct mrb_parser_state* mrb_parse_string(mrb_state*,const char*,mrbc_context*);
 MRB_API struct mrb_parser_state* mrb_parse_nstring(mrb_state*,const char*,size_t,mrbc_context*);
-MRB_API struct RProc* mrb_generate_code(mrb_state*, struct mrb_parser_state*);
+MRB_API RProc* mrb_generate_code(mrb_state*, struct mrb_parser_state*);
 MRB_API mrb_value mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c);
 
 /* program load functions */

@@ -15,6 +15,7 @@
  */
 MRB_BEGIN_DECL
 
+/*
 enum irep_pool_type {
   IREP_TT_STRING,
   IREP_TT_FIXNUM,
@@ -26,10 +27,10 @@ struct mrb_locals {
   uint16_t r;
 };
 
-/* Program data array struct */
+// Program data array struct
 typedef struct mrb_irep {
-  uint16_t nlocals;        /* Number of local variables */
-  uint16_t nregs;          /* Number of register variables */
+  uint16_t nlocals;        // Number of local variables
+  uint16_t nregs;          // Number of register variables
   uint8_t flags;
 
   mrb_code *iseq;
@@ -38,7 +39,7 @@ typedef struct mrb_irep {
   struct mrb_irep **reps;
 
   struct mrb_locals *lv;
-  /* debug info */
+  // debug info
   mrb_bool own_filename;
   const char *filename;
   uint16_t *lines;
@@ -56,6 +57,8 @@ void mrb_irep_free(mrb_state*, struct mrb_irep*);
 void mrb_irep_incref(mrb_state*, struct mrb_irep*);
 void mrb_irep_decref(mrb_state*, struct mrb_irep*);
 void mrb_irep_cutref(mrb_state*, struct mrb_irep*);
+
+*/
 
 MRB_END_DECL
 

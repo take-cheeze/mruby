@@ -324,7 +324,7 @@ print_cmdline(int code_block_open)
 }
 #endif
 
-void mrb_codedump_all(mrb_state*, struct RProc*);
+void mrb_codedump_all(mrb_state*, RProc*);
 
 static int
 check_keyword(const char *buf, const char *word)
@@ -552,7 +552,7 @@ done:
       }
       else {
         /* generate bytecode */
-        struct RProc *proc = mrb_generate_code(mrb, parser);
+        RProc *proc = mrb_generate_code(mrb, parser);
         if (proc == NULL) {
           fputs("codegen error\n", stderr);
           mrb_parser_free(parser);
@@ -564,7 +564,7 @@ done:
         }
         /* adjust stack length of toplevel environment */
         if (mrb->c->cibase->env) {
-          struct REnv *e = mrb->c->cibase->env;
+          REnv *e = mrb->c->cibase->env;
           if (e && MRB_ENV_STACK_LEN(e) < proc->body.irep->nlocals) {
             MRB_ENV_SET_STACK_LEN(e, proc->body.irep->nlocals);
           }

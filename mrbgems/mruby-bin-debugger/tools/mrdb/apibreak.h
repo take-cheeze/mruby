@@ -21,6 +21,6 @@ int32_t mrb_debug_enable_break_all(mrb_state *, mrb_debug_context *);
 int32_t mrb_debug_disable_break(mrb_state *, mrb_debug_context *, uint32_t);
 int32_t mrb_debug_disable_break_all(mrb_state *, mrb_debug_context *);
 int32_t mrb_debug_check_breakpoint_line(mrb_state *, mrb_debug_context *, const char *, uint16_t);
-int32_t mrb_debug_check_breakpoint_method(mrb_state *, mrb_debug_context *, struct RClass *, mrb_sym, mrb_bool*);
+int32_t mrb_debug_check_breakpoint_method(mrb_state *, mrb_debug_context *, RClass *, mrb_sym, mrb_bool*);
 
 #endif /* APIBREAK_H_ */

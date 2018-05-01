@@ -10,7 +10,7 @@ struct os_count_struct {
 };
 
 static int
-os_count_object_type(mrb_state *mrb, struct RBasic *obj, void *data)
+os_count_object_type(mrb_state *mrb, RBasic *obj, void *data)
 {
   struct os_count_struct *obj_count;
   obj_count = (struct os_count_struct*)data;
@@ -106,12 +106,12 @@ os_count_objects(mrb_state *mrb, mrb_value self)
 
 struct os_each_object_data {
   mrb_value block;
-  struct RClass *target_module;
+  RClass *target_module;
   mrb_int count;
 };
 
 static int
-os_each_object_cb(mrb_state *mrb, struct RBasic *obj, void *ud)
+os_each_object_cb(mrb_state *mrb, RBasic *obj, void *ud)
 {
   struct os_each_object_data *d = (struct os_each_object_data*)ud;
 
@@ -176,7 +176,7 @@ os_each_object(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_objectspace_gem_init(mrb_state *mrb)
 {
-  struct RClass *os = mrb_define_module(mrb, "ObjectSpace");
+  RClass *os = mrb_define_module(mrb, "ObjectSpace");
   mrb_define_class_method(mrb, os, "count_objects", os_count_objects, MRB_ARGS_OPT(1));
   mrb_define_class_method(mrb, os, "each_object", os_each_object, MRB_ARGS_OPT(1));
 }

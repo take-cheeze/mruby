@@ -8,14 +8,14 @@
 static mrb_value
 mrb_proc_lambda(mrb_state *mrb, mrb_value self)
 {
-  struct RProc *p = mrb_proc_ptr(self);
+  RProc *p = mrb_proc_ptr(self);
   return mrb_bool_value(MRB_PROC_STRICT_P(p));
 }
 
 static mrb_value
 mrb_proc_source_location(mrb_state *mrb, mrb_value self)
 {
-  struct RProc *p = mrb_proc_ptr(self);
+  RProc *p = mrb_proc_ptr(self);
 
   if (MRB_PROC_CFUNC_P(p)) {
     return mrb_nil_value();
@@ -36,7 +36,7 @@ mrb_proc_source_location(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_proc_inspect(mrb_state *mrb, mrb_value self)
 {
-  struct RProc *p = mrb_proc_ptr(self);
+  RProc *p = mrb_proc_ptr(self);
   mrb_value str = mrb_str_new_lit(mrb, "#<Proc:");
   mrb_str_concat(mrb, str, mrb_ptr_to_str(mrb, mrb_cptr(self)));
 
@@ -104,7 +104,7 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     {0, "block"},
     {0, NULL}
   };
-  const struct RProc *proc = mrb_proc_ptr(self);
+  const RProc *proc = mrb_proc_ptr(self);
   const struct mrb_irep *irep = proc->body.irep;
   mrb_aspec aspec;
   mrb_value sname, parameters;
@@ -156,7 +156,7 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_proc_ext_gem_init(mrb_state* mrb)
 {
-  struct RClass *p = mrb->proc_class;
+  RClass *p = mrb->proc_class;
   mrb_define_method(mrb, p, "lambda?",         mrb_proc_lambda,          MRB_ARGS_NONE());
   mrb_define_method(mrb, p, "source_location", mrb_proc_source_location, MRB_ARGS_NONE());
   mrb_define_method(mrb, p, "to_s",            mrb_proc_inspect,         MRB_ARGS_NONE());

@@ -17,7 +17,7 @@
 #define RSTRUCT_LEN(st) RARRAY_LEN(st)
 #define RSTRUCT_PTR(st) RARRAY_PTR(st)
 
-static struct RClass *
+static RClass *
 struct_class(mrb_state *mrb)
 {
   return mrb_class_get(mrb, "Struct");
@@ -26,8 +26,8 @@ struct_class(mrb_state *mrb)
 static inline mrb_value
 struct_ivar_get(mrb_state *mrb, mrb_value c, mrb_sym id)
 {
-  struct RClass* kclass;
-  struct RClass* sclass = struct_class(mrb);
+  RClass* kclass;
+  RClass* sclass = struct_class(mrb);
   mrb_value ans;
 
   for (;;) {
@@ -41,7 +41,7 @@ struct_ivar_get(mrb_state *mrb, mrb_value c, mrb_sym id)
 }
 
 static mrb_value
-struct_s_members(mrb_state *mrb, struct RClass *klass)
+struct_s_members(mrb_state *mrb, RClass *klass)
 {
   mrb_value members = struct_ivar_get(mrb, mrb_obj_value(klass), mrb_intern_lit(mrb, "__members__"));
 
@@ -177,7 +177,7 @@ is_const_id(mrb_state *mrb, const char *name)
 }
 
 static void
-make_struct_define_accessors(mrb_state *mrb, mrb_value members, struct RClass *c)
+make_struct_define_accessors(mrb_state *mrb, mrb_value members, RClass *c)
 {
   const mrb_value *ptr_members = RARRAY_PTR(members);
   mrb_int i;
@@ -191,8 +191,8 @@ make_struct_define_accessors(mrb_state *mrb, mrb_value members, struct RClass *c
     if (is_local_id(mrb, name) || is_const_id(mrb, name)) {
       mrb_method_t m;
       mrb_value at = mrb_fixnum_value(i);
-      struct RProc *aref = mrb_proc_new_cfunc_with_env(mrb, mrb_struct_ref, 1, &at);
-      struct RProc *aset = mrb_proc_new_cfunc_with_env(mrb, mrb_struct_set_m, 1, &at);
+      RProc *aref = mrb_proc_new_cfunc_with_env(mrb, mrb_struct_ref, 1, &at);
+      RProc *aset = mrb_proc_new_cfunc_with_env(mrb, mrb_struct_set_m, 1, &at);
       MRB_METHOD_FROM_PROC(m, aref);
       mrb_define_method_raw(mrb, c, id, m);
       MRB_METHOD_FROM_PROC(m, aset);
@@ -203,11 +203,11 @@ make_struct_define_accessors(mrb_state *mrb, mrb_value members, struct RClass *c
 }
 
 static mrb_value
-make_struct(mrb_state *mrb, mrb_value name, mrb_value members, struct RClass *klass)
+make_struct(mrb_state *mrb, mrb_value name, mrb_value members, RClass *klass)
 {
   mrb_value nstr;
   mrb_sym id;
-  struct RClass *c;
+  RClass *c;
 
   if (mrb_nil_p(name)) {
     c = mrb_class_new(mrb, klass);
@@ -317,7 +317,7 @@ mrb_struct_s_def(mrb_state *mrb, mrb_value klass)
 }
 
 static mrb_int
-num_members(mrb_state *mrb, struct RClass *klass)
+num_members(mrb_state *mrb, RClass *klass)
 {
   mrb_value members;
 
@@ -334,7 +334,7 @@ num_members(mrb_state *mrb, struct RClass *klass)
 static mrb_value
 mrb_struct_initialize_withArg(mrb_state *mrb, mrb_int argc, mrb_value *argv, mrb_value self)
 {
-  struct RClass *klass = mrb_obj_class(mrb, self);
+  RClass *klass = mrb_obj_class(mrb, self);
   mrb_int i, n;
 
   n = num_members(mrb, klass);
@@ -698,7 +698,7 @@ mrb_struct_values_at(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_struct_gem_init(mrb_state* mrb)
 {
-  struct RClass *st;
+  RClass *st;
   st = mrb_define_class(mrb, "Struct",  mrb->object_class);
   MRB_SET_INSTANCE_TT(st, MRB_TT_ARRAY);
 

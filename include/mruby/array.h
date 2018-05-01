@@ -14,6 +14,7 @@
  */
 MRB_BEGIN_DECL
 
+/*
 
 typedef struct mrb_shared_array {
   int refcnt;
@@ -22,7 +23,7 @@ typedef struct mrb_shared_array {
 } mrb_shared_array;
 
 #define MRB_ARY_EMBED_LEN_MAX ((mrb_int)(sizeof(void*)*3/sizeof(mrb_value)))
-struct RArray {
+RArray {
   MRB_OBJECT_HEADER;
   union {
     struct {
@@ -37,9 +38,9 @@ struct RArray {
   } as;
 };
 
-#define mrb_ary_ptr(v)    ((struct RArray*)(mrb_ptr(v)))
+#define mrb_ary_ptr(v)    ((RArray*)(mrb_ptr(v)))
 #define mrb_ary_value(p)  mrb_obj_value((void*)(p))
-#define RARRAY(v)  ((struct RArray*)(mrb_ptr(v)))
+#define RARRAY(v)  ((RArray*)(mrb_ptr(v)))
 
 #define MRB_ARY_EMBED_MASK  7
 #define ARY_EMBED_P(a) ((a)->flags & MRB_ARY_EMBED_MASK)
@@ -67,7 +68,8 @@ struct RArray {
 #define ARY_UNSET_SHARED_FLAG(a) ((a)->flags &= ~MRB_ARY_SHARED)
 
 void mrb_ary_decref(mrb_state*, mrb_shared_array*);
-MRB_API void mrb_ary_modify(mrb_state*, struct RArray*);
+*/
+MRB_API void mrb_ary_modify(mrb_state*, RArray*);
 MRB_API mrb_value mrb_ary_new_capa(mrb_state*, mrb_int);
 
 /*
@@ -273,6 +275,12 @@ MRB_API mrb_value mrb_ary_join(mrb_state *mrb, mrb_value ary, mrb_value sep);
  * @param new_len The new capacity of the array
  */
 MRB_API mrb_value mrb_ary_resize(mrb_state *mrb, mrb_value ary, mrb_int new_len);
+
+static inline RArray* mrb_ary_ptr(mrb_value v) {
+  return tabV(&v);
+}
+
+#define RARRAY_LEN(a) lj_tab_len(mrb_ary_ptr(a))
 
 MRB_END_DECL
 

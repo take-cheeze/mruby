@@ -471,7 +471,7 @@ codedump_recur(mrb_state *mrb, mrb_irep *irep)
 }
 
 void
-mrb_codedump_all(mrb_state *mrb, struct RProc *proc)
+mrb_codedump_all(mrb_state *mrb, RProc *proc)
 {
   codedump_recur(mrb, proc->body.irep);
 }

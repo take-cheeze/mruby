@@ -27,14 +27,16 @@ typedef struct mrb_data_type {
   void (*dfree)(mrb_state *mrb, void*);
 } mrb_data_type;
 
-struct RData {
+/*
+RData {
   MRB_OBJECT_HEADER;
   struct iv_tbl *iv;
   const mrb_data_type *type;
   void *data;
 };
+*/
 
-MRB_API struct RData *mrb_data_object_alloc(mrb_state *mrb, struct RClass* klass, void *datap, const mrb_data_type *type);
+MRB_API RData *mrb_data_object_alloc(mrb_state *mrb, RClass* klass, void *datap, const mrb_data_type *type);
 
 #define Data_Wrap_Struct(mrb,klass,type,ptr)\
   mrb_data_object_alloc(mrb,klass,ptr,type)
@@ -45,7 +47,13 @@ MRB_API struct RData *mrb_data_object_alloc(mrb_state *mrb, struct RClass* klass
   data = Data_Wrap_Struct(mrb,klass,type,sval);\
 } while (0)
 
-#define RDATA(obj)         ((struct RData *)(mrb_ptr(obj)))
+typedef struct rdata_t {
+  void *data;
+  mrb_data_type const *type;
+} rdata_t;
+
+#define RDATA(o) ((rdata_t*)uddata(udataV(&o)))
+// #define RDATA(obj)         ((RData *)(mrb_ptr(obj)))
 #define DATA_PTR(d)        (RDATA(d)->data)
 #define DATA_TYPE(d)       (RDATA(d)->type)
 MRB_API void mrb_data_check_type(mrb_state *mrb, mrb_value, const mrb_data_type*);

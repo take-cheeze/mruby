@@ -11,7 +11,7 @@ mrb_value mrb_f_sprintf(mrb_state *mrb, mrb_value obj); /* in sprintf.c */
 void
 mrb_mruby_sprintf_gem_init(mrb_state* mrb)
 {
-  struct RClass *krn;
+  RClass *krn;
 
   if (mrb->kernel_module == NULL) {
     mrb->kernel_module = mrb_define_module(mrb, "Kernel"); /* Might be PARANOID. */

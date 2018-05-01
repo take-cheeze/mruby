@@ -12,8 +12,8 @@
 static void
 domain_error(mrb_state *mrb, const char *func)
 {
-  struct RClass *math = mrb_module_get(mrb, "Math");
-  struct RClass *domainerror = mrb_class_get_under(mrb, math, "DomainError");
+  RClass *math = mrb_module_get(mrb, "Math");
+  RClass *domainerror = mrb_class_get_under(mrb, math, "DomainError");
   mrb_value str = mrb_str_new_cstr(mrb, func);
   mrb_raisef(mrb, domainerror, "Numerical argument is out of domain - %S", str);
 }
@@ -721,7 +721,7 @@ math_erfc(mrb_state *mrb, mrb_value obj)
 void
 mrb_mruby_math_gem_init(mrb_state* mrb)
 {
-  struct RClass *mrb_math;
+  RClass *mrb_math;
   mrb_math = mrb_define_module(mrb, "Math");
 
   mrb_define_class_under(mrb, mrb_math, "DomainError", mrb->eStandardError_class);

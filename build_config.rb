@@ -5,10 +5,32 @@ MRuby::Build.new do |conf|
   if ENV['VisualStudioVersion'] || ENV['VSINSTALLDIR']
     toolchain :visualcpp
   else
-    toolchain :gcc
+    toolchain :clang # :gcc
   end
 
   enable_debug
+  enable_test
+  enable_bintest
+
+  # enable_sanitizer :address, :undefined, :leak
+  [conf.cc, conf.cxx, conf.linker].each do |c|
+    c.flags <<
+      '-fsanitize=address,leak,undefined' <<
+      # '-fsanitize=thread' <<
+      '-Wall' << '-Wextra' << '-Wno-unused-parameter' << '-ferror-limit=0'
+    c.defines << 'MRB_GC_STRESS' if c.respond_to? :defines
+  end
+
+  conf.cxx.flags << '-std=c++11'
+
+  # gem "#{MRUBY_ROOT}/mruby-aws-sigv4"
+
+  # gem "#{MRUBY_ROOT}/mruby-io-copy_stream"
+  # gem "#{MRUBY_ROOT}/mruby-cfunc"
+  # gem "#{MRUBY_ROOT}/mruby-process"
+  # gem "#{MRUBY_ROOT}/mruby-hibari"
+  # gem "#{MRUBY_ROOT}/mruby-cfunc"
+  # gem "#{MRUBY_ROOT}/mruby-gobject-introspection"
 
   # Use mrbgems
   # conf.gem 'examples/mrbgems/ruby_extension_example'
@@ -22,7 +44,7 @@ MRuby::Build.new do |conf|
   # conf.gem :git => 'git@github.com:iij/mruby-io.git', :branch => 'master', :options => '-v'
 
   # include the default GEMs
-  conf.gembox 'default'
+  # conf.gembox 'default'
   # C compiler settings
   # conf.cc do |cc|
   #   cc.command = ENV['CC'] || 'gcc'
@@ -84,6 +106,7 @@ MRuby::Build.new do |conf|
   # conf.enable_bintest
 end
 
+=begin
 MRuby::Build.new('host-debug') do |conf|
   # load specific toolchain settings
 
@@ -149,3 +172,4 @@ end
 #
 #   conf.test_runner.command = 'env'
 # end
+=end

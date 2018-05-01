@@ -15,13 +15,13 @@
  */
 MRB_BEGIN_DECL
 
-struct RHash {
+RHash {
   MRB_OBJECT_HEADER;
   struct iv_tbl *iv;
   struct kh_ht *ht;
 };
 
-#define mrb_hash_ptr(v)    ((struct RHash*)(mrb_ptr(v)))
+#define mrb_hash_ptr(v)    ((RHash*)(mrb_ptr(v)))
 #define mrb_hash_value(p)  mrb_obj_value((void*)(p))
 
 MRB_API mrb_value mrb_hash_new_capa(mrb_state*, mrb_int);
@@ -161,7 +161,7 @@ typedef struct {
 KHASH_DECLARE(ht, mrb_value, mrb_hash_value, TRUE)
 
 /* RHASH_TBL allocates st_table if not available. */
-#define RHASH(obj)   ((struct RHash*)(mrb_ptr(obj)))
+#define RHASH(obj)   ((RHash*)(mrb_ptr(obj)))
 #define RHASH_TBL(h)          (RHASH(h)->ht)
 #define RHASH_IFNONE(h)       mrb_iv_get(mrb, (h), mrb_intern_lit(mrb, "ifnone"))
 #define RHASH_PROCDEFAULT(h)  RHASH_IFNONE(h)
@@ -173,9 +173,9 @@ MRB_API struct kh_ht * mrb_hash_tbl(mrb_state *mrb, mrb_value hash);
 #define MRB_RHASH_PROCDEFAULT_P(h) (RHASH(h)->flags & MRB_HASH_PROC_DEFAULT)
 
 /* GC functions */
-void mrb_gc_mark_hash(mrb_state*, struct RHash*);
-size_t mrb_gc_mark_hash_size(mrb_state*, struct RHash*);
-void mrb_gc_free_hash(mrb_state*, struct RHash*);
+void mrb_gc_mark_hash(mrb_state*, RHash*);
+size_t mrb_gc_mark_hash_size(mrb_state*, RHash*);
+void mrb_gc_free_hash(mrb_state*, RHash*);
 
 MRB_END_DECL
 

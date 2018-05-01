@@ -68,7 +68,7 @@ mrb_obj_instance_exec(mrb_state *mrb, mrb_value self)
   const mrb_value *argv;
   mrb_int argc;
   mrb_value blk;
-  struct RClass *c;
+  RClass *c;
 
   mrb_get_args(mrb, "*&", &argv, &argc, &blk);
 
@@ -95,7 +95,7 @@ mrb_obj_instance_exec(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_object_ext_gem_init(mrb_state* mrb)
 {
-  struct RClass * n = mrb->nil_class;
+  RClass * n = mrb->nil_class;
 
   mrb_define_method(mrb, n, "to_a", nil_to_a,       MRB_ARGS_NONE());
 #ifndef MRB_WITHOUT_FLOAT

@@ -184,6 +184,7 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
       end
       f.puts %Q[void mrbgemtest_init(mrb_state* mrb) {]
       build.gems.each do |g|
+        next if g.name == spec.name
         f.puts %Q[    GENERATED_TMP_mrb_#{g.funcname}_gem_test(mrb);]
       end
       f.puts %Q[}]

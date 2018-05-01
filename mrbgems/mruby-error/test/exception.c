@@ -40,7 +40,7 @@ static mrb_value
 run_rescue_exceptions(mrb_state *mrb, mrb_value self)
 {
   mrb_value b, r;
-  struct RClass *cls[1];
+  RClass *cls[1];
   mrb_get_args(mrb, "oo", &b, &r);
   cls[0] = E_TYPE_ERROR;
   return mrb_rescue_exceptions(mrb, protect_cb, b, protect_cb, r, 1, cls);
@@ -49,7 +49,7 @@ run_rescue_exceptions(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_error_gem_test(mrb_state *mrb)
 {
-  struct RClass *cls;
+  RClass *cls;
 
   cls = mrb_define_class(mrb, "ExceptionTest", mrb->object_class);
   mrb_define_module_function(mrb, cls, "mrb_protect", run_protect, MRB_ARGS_NONE() | MRB_ARGS_BLOCK());

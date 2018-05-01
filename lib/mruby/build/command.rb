@@ -48,7 +48,7 @@ module MRuby
       @command = ENV['CC'] || 'cc'
       @flags = [ENV['CFLAGS'] || []]
       @source_exts = source_exts
-      @include_paths = ["#{MRUBY_ROOT}/include"]
+      @include_paths = ["#{MRUBY_ROOT}/include", "#{MRUBY_ROOT}/LuaJIT/src"]
       @defines = %w()
       @option_include_path = '-I%s'
       @option_define = '-D%s'

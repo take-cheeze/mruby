@@ -263,9 +263,9 @@ false_to_s(mrb_state *mrb, mrb_value obj)
 void
 mrb_init_object(mrb_state *mrb)
 {
-  struct RClass *n;
-  struct RClass *t;
-  struct RClass *f;
+  RClass *n;
+  RClass *t;
+  RClass *f;
 
   mrb->nil_class   = n = mrb_define_class(mrb, "NilClass",   mrb->object_class);
   MRB_SET_INSTANCE_TT(n, MRB_TT_TRUE);
@@ -481,9 +481,9 @@ mrb_any_to_s(mrb_state *mrb, mrb_value obj)
  */
 
 MRB_API mrb_bool
-mrb_obj_is_kind_of(mrb_state *mrb, mrb_value obj, struct RClass *c)
+mrb_obj_is_kind_of(mrb_state *mrb, mrb_value obj, RClass *c)
 {
-  struct RClass *cl = mrb_class(mrb, obj);
+  RClass *cl = mrb_class(mrb, obj);
 
   switch (c->tt) {
     case MRB_TT_MODULE:

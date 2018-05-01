@@ -465,7 +465,7 @@ mrb_file_s_readlink(mrb_state *mrb, mrb_value klass) {
 void
 mrb_init_file(mrb_state *mrb)
 {
-  struct RClass *io, *file, *cnst;
+  RClass *io, *file, *cnst;
 
   io   = mrb_class_get(mrb, "IO");
   file = mrb_define_class(mrb, "File", io);

@@ -243,7 +243,7 @@ mrb_f_itself(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_kernel_ext_gem_init(mrb_state *mrb)
 {
-  struct RClass *krn = mrb->kernel_module;
+  RClass *krn = mrb->kernel_module;
 
   mrb_define_module_function(mrb, krn, "fail", mrb_f_raise, MRB_ARGS_OPT(2));
   mrb_define_module_function(mrb, krn, "caller", mrb_f_caller, MRB_ARGS_OPT(2));

@@ -106,7 +106,7 @@ mrb_hash_ht_key(mrb_state *mrb, mrb_value key)
 #define KEY(key) mrb_hash_ht_key(mrb, key)
 
 void
-mrb_gc_mark_hash(mrb_state *mrb, struct RHash *hash)
+mrb_gc_mark_hash(mrb_state *mrb, RHash *hash)
 {
   khiter_t k;
   khash_t(ht) *h = hash->ht;
@@ -124,14 +124,14 @@ mrb_gc_mark_hash(mrb_state *mrb, struct RHash *hash)
 }
 
 size_t
-mrb_gc_mark_hash_size(mrb_state *mrb, struct RHash *hash)
+mrb_gc_mark_hash_size(mrb_state *mrb, RHash *hash)
 {
   if (!hash->ht) return 0;
   return kh_size(hash->ht)*2;
 }
 
 void
-mrb_gc_free_hash(mrb_state *mrb, struct RHash *hash)
+mrb_gc_free_hash(mrb_state *mrb, RHash *hash)
 {
   if (hash->ht) kh_destroy(ht, mrb, hash->ht);
 }
@@ -140,9 +140,9 @@ mrb_gc_free_hash(mrb_state *mrb, struct RHash *hash)
 MRB_API mrb_value
 mrb_hash_new_capa(mrb_state *mrb, mrb_int capa)
 {
-  struct RHash *h;
+  RHash *h;
 
-  h = (struct RHash*)mrb_obj_alloc(mrb, MRB_TT_HASH, mrb->hash_class);
+  h = (RHash*)mrb_obj_alloc(mrb, MRB_TT_HASH, mrb->hash_class);
   /* khash needs 1/4 empty space so it is not resized immediately */
   if (capa == 0)
     h->ht = 0;
@@ -220,21 +220,21 @@ mrb_hash_set(mrb_state *mrb, mrb_value hash, mrb_value key, mrb_value val)
     kh_value(h, k).n = kh_size(h)-1;
   }
 
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)RHASH(hash), key);
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)RHASH(hash), val);
+  mrb_field_write_barrier_value(mrb, (RBasic*)RHASH(hash), key);
+  mrb_field_write_barrier_value(mrb, (RBasic*)RHASH(hash), val);
   return;
 }
 
 static mrb_value
 mrb_hash_dup(mrb_state *mrb, mrb_value hash)
 {
-  struct RHash* ret;
+  RHash* ret;
   khash_t(ht) *h, *ret_h;
   khiter_t k, ret_k;
   mrb_value ifnone, vret;
 
   h = RHASH_TBL(hash);
-  ret = (struct RHash*)mrb_obj_alloc(mrb, MRB_TT_HASH, mrb->hash_class);
+  ret = (RHash*)mrb_obj_alloc(mrb, MRB_TT_HASH, mrb->hash_class);
   ret->ht = kh_init(ht, mrb);
 
   if (h && kh_size(h) > 0) {
@@ -883,7 +883,7 @@ mrb_hash_has_value(mrb_state *mrb, mrb_value hash)
 void
 mrb_init_hash(mrb_state *mrb)
 {
-  struct RClass *h;
+  RClass *h;
 
   mrb->hash_class = h = mrb_define_class(mrb, "Hash", mrb->object_class);              /* 15.2.13 */
   MRB_SET_INSTANCE_TT(h, MRB_TT_HASH);

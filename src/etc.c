@@ -11,14 +11,19 @@
 #include <mruby/re.h>
 #include <mruby/irep.h>
 
-MRB_API struct RData*
-mrb_data_object_alloc(mrb_state *mrb, struct RClass *klass, void *ptr, const mrb_data_type *type)
-{
-  struct RData *data;
+#include "lj_udata.h"
+#include "lj_tab.h"
 
-  data = (struct RData*)mrb_obj_alloc(mrb, MRB_TT_DATA, klass);
-  data->data = ptr;
-  data->type = type;
+MRB_API RData*
+mrb_data_object_alloc(mrb_state *mrb, RClass *klass, void *ptr, const mrb_data_type *type)
+{
+  RData *data;
+  rdata_t *impl;
+
+  data = lj_udata_new(mrb->L, sizeof(rdata_t), lj_tab_new(mrb->L, 0, 0));
+  impl = uddata(data);
+  impl->data = ptr;
+  impl->type = type;
 
   return data;
 }
@@ -37,7 +42,7 @@ mrb_data_check_type(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
                  mrb_str_new_cstr(mrb, t2->struct_name), mrb_str_new_cstr(mrb, type->struct_name));
     }
     else {
-      struct RClass *c = mrb_class(mrb, obj);
+      RClass *c = mrb_class(mrb, obj);
 
       mrb_raisef(mrb, E_TYPE_ERROR, "uninitialized %S (expected %S)",
                  mrb_obj_value(c), mrb_str_new_cstr(mrb, type->struct_name));
@@ -172,7 +177,7 @@ mrb_word_boxing_float_value(mrb_state *mrb, mrb_float f)
 MRB_API mrb_value
 mrb_word_boxing_float_pool(mrb_state *mrb, mrb_float f)
 {
-  struct RFloat *nf = (struct RFloat *)mrb_malloc(mrb, sizeof(struct RFloat));
+  RFloat *nf = (RFloat *)mrb_malloc(mrb, sizeof(RFloat));
   nf->tt = MRB_TT_FLOAT;
   nf->c = mrb->float_class;
   nf->f = f;
@@ -191,6 +196,7 @@ mrb_word_boxing_cptr_value(mrb_state *mrb, void *p)
 }
 #endif  /* MRB_WORD_BOXING */
 
+/*
 MRB_API mrb_bool
 mrb_regexp_p(mrb_state *mrb, mrb_value v)
 {
@@ -207,6 +213,7 @@ mrb_regexp_p(mrb_state *mrb, mrb_value v)
   }
   return FALSE;
 }
+*/
 
 #if defined _MSC_VER && _MSC_VER < 1900
 

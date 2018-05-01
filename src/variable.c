@@ -10,8 +10,11 @@
 #include <mruby/proc.h>
 #include <mruby/string.h>
 
+#include "lj_tab.h"
+
 typedef int (iv_foreach_func)(mrb_state*,mrb_sym,mrb_value,void*);
 
+/*
 #include <mruby/khash.h>
 
 #ifndef MRB_IVHASH_INIT_SIZE
@@ -21,10 +24,12 @@ typedef int (iv_foreach_func)(mrb_state*,mrb_sym,mrb_value,void*);
 KHASH_DECLARE(iv, mrb_sym, mrb_value, TRUE)
 KHASH_DEFINE(iv, mrb_sym, mrb_value, TRUE, kh_int_hash_func, kh_int_hash_equal)
 
-/* Instance variable table structure */
+// Instance variable table structure
 typedef struct iv_tbl {
   khash_t(iv) h;
 } iv_tbl;
+*/
+typedef GCtab iv_tbl;
 
 /*
  * Creates the instance variable table.
@@ -34,11 +39,13 @@ typedef struct iv_tbl {
  * Returns
  *   the instance variable table.
  */
+/*
 static iv_tbl*
 iv_new(mrb_state *mrb)
 {
   return (iv_tbl*)kh_init_size(iv, mrb, MRB_IVHASH_INIT_SIZE);
 }
+*/
 
 /*
  * Set the value for the symbol in the instance variable table.
@@ -52,11 +59,7 @@ iv_new(mrb_state *mrb)
 static void
 iv_put(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value val)
 {
-  khash_t(iv) *h = &t->h;
-  khiter_t k;
-
-  k = kh_put(iv, mrb, h, sym);
-  kh_value(h, k) = val;
+  setgcV(mrb->L, lj_tab_setstr(mrb->L, t, sym), gcV(&val), itype(&val));
 }
 
 /*
@@ -74,15 +77,9 @@ iv_put(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value val)
 static mrb_bool
 iv_get(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 {
-  khash_t(iv) *h = &t->h;
-  khiter_t k;
-
-  k = kh_get(iv, mrb, h, sym);
-  if (k != kh_end(h)) {
-    if (vp) *vp = kh_value(h, k);
-    return TRUE;
-  }
-  return FALSE;
+  cTValue *v = lj_tab_getstr(t, sym);
+  *vp = *v;
+  return v;
 }
 
 /*
@@ -99,41 +96,27 @@ iv_get(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 static mrb_bool
 iv_del(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 {
-  if (t == NULL) return FALSE;
-  else {
-    khash_t(iv) *h = &t->h;
-    khiter_t k;
+  cTValue *v = lj_tab_getstr(t, sym);
+  if (!v) { return FALSE; }
 
-    k = kh_get(iv, mrb, h, sym);
-    if (k != kh_end(h)) {
-      mrb_value val = kh_value(h, k);
-      kh_del(iv, mrb, h, k);
-      if (vp) *vp = val;
-      return TRUE;
-    }
-  }
-  return FALSE;
+  if (vp) { *vp = *v; }
+  setnilV(lj_tab_setstr(mrb->L, t, sym));
+  return TRUE;
 }
 
 static mrb_bool
 iv_foreach(mrb_state *mrb, iv_tbl *t, iv_foreach_func *func, void *p)
 {
-  if (t == NULL) {
-    return TRUE;
-  }
-  else {
-    khash_t(iv) *h = &t->h;
-    khiter_t k;
-    int n;
+  mrb_value i[2];
 
-    for (k = kh_begin(h); k != kh_end(h); k++) {
-      if (kh_exist(h, k)) {
-        n = (*func)(mrb, kh_key(h, k), kh_value(h, k), p);
-        if (n > 0) return FALSE;
-        if (n < 0) {
-          kh_del(iv, mrb, h, k);
-        }
-      }
+  if (t == NULL) { return TRUE; }
+
+  setnilV(i);
+  while (lj_tab_next(mrb->L, t, i)) {
+    int n = (*func)(mrb, strV(i + 0), i[1], p);
+    if (n > 0) return FALSE;
+    if (n < 0) {
+      iv_del(mrb, t, strV(i + 1), NULL);
     }
   }
   return TRUE;
@@ -143,7 +126,7 @@ static size_t
 iv_size(mrb_state *mrb, iv_tbl *t)
 {
   if (t) {
-    return kh_size(&t->h);
+    return lj_tab_len(t);
   }
   return 0;
 }
@@ -151,61 +134,7 @@ iv_size(mrb_state *mrb, iv_tbl *t)
 static iv_tbl*
 iv_copy(mrb_state *mrb, iv_tbl *t)
 {
-  return (iv_tbl*)kh_copy(iv, mrb, &t->h);
-}
-
-static void
-iv_free(mrb_state *mrb, iv_tbl *t)
-{
-  kh_destroy(iv, mrb, &t->h);
-}
-
-static int
-iv_mark_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
-{
-  mrb_gc_mark_value(mrb, v);
-  return 0;
-}
-
-static void
-mark_tbl(mrb_state *mrb, iv_tbl *t)
-{
-  if (t) {
-    iv_foreach(mrb, t, iv_mark_i, 0);
-  }
-}
-
-void
-mrb_gc_mark_gv(mrb_state *mrb)
-{
-  mark_tbl(mrb, mrb->globals);
-}
-
-void
-mrb_gc_free_gv(mrb_state *mrb)
-{
-  if (mrb->globals)
-    iv_free(mrb, mrb->globals);
-}
-
-void
-mrb_gc_mark_iv(mrb_state *mrb, struct RObject *obj)
-{
-  mark_tbl(mrb, obj->iv);
-}
-
-size_t
-mrb_gc_mark_iv_size(mrb_state *mrb, struct RObject *obj)
-{
-  return iv_size(mrb, obj->iv);
-}
-
-void
-mrb_gc_free_iv(mrb_state *mrb, struct RObject *obj)
-{
-  if (obj->iv) {
-    iv_free(mrb, obj->iv);
-  }
+  return lj_tab_dup(mrb->L, t);
 }
 
 mrb_value
@@ -237,11 +166,11 @@ obj_iv_p(mrb_value obj)
 }
 
 MRB_API mrb_value
-mrb_obj_iv_get(mrb_state *mrb, struct RObject *obj, mrb_sym sym)
+mrb_obj_iv_get(mrb_state *mrb, RObject *obj, mrb_sym sym)
 {
   mrb_value v;
 
-  if (obj->iv && iv_get(mrb, obj->iv, sym, &v))
+  if (iv_get(mrb, obj, sym, &v))
     return v;
   return mrb_nil_value();
 }
@@ -256,18 +185,10 @@ mrb_iv_get(mrb_state *mrb, mrb_value obj, mrb_sym sym)
 }
 
 MRB_API void
-mrb_obj_iv_set(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
+mrb_obj_iv_set(mrb_state *mrb, RObject *obj, mrb_sym sym, mrb_value v)
 {
-  iv_tbl *t = obj->iv;
-
-  if (MRB_FROZEN_P(obj)) {
-    mrb_raisef(mrb, E_FROZEN_ERROR, "can't modify frozen %S", mrb_obj_value(obj));
-  }
-  if (!t) {
-    t = obj->iv = iv_new(mrb);
-  }
-  mrb_write_barrier(mrb, (struct RBasic*)obj);
-  iv_put(mrb, t, sym, v);
+  mrb_write_barrier(mrb, (RBasic*)obj);
+  iv_put(mrb, obj, sym, v);
 }
 
 MRB_API void
@@ -282,15 +203,9 @@ mrb_iv_set(mrb_state *mrb, mrb_value obj, mrb_sym sym, mrb_value v)
 }
 
 MRB_API mrb_bool
-mrb_obj_iv_defined(mrb_state *mrb, struct RObject *obj, mrb_sym sym)
+mrb_obj_iv_defined(mrb_state *mrb, RObject *obj, mrb_sym sym)
 {
-  iv_tbl *t;
-
-  t = obj->iv;
-  if (t) {
-    return iv_get(mrb, t, sym, NULL);
-  }
-  return FALSE;
+  return iv_get(mrb, obj, sym, NULL);
 }
 
 MRB_API mrb_bool
@@ -329,17 +244,11 @@ mrb_iv_check(mrb_state *mrb, mrb_sym iv_name)
 MRB_API void
 mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
 {
-  struct RObject *d = mrb_obj_ptr(dest);
-  struct RObject *s = mrb_obj_ptr(src);
+  RObject *d = mrb_obj_ptr(dest);
+  RObject *s = mrb_obj_ptr(src);
 
-  if (d->iv) {
-    iv_free(mrb, d->iv);
-    d->iv = 0;
-  }
-  if (s->iv) {
-    mrb_write_barrier(mrb, (struct RBasic*)d);
-    d->iv = iv_copy(mrb, s->iv);
-  }
+  mrb_write_barrier(mrb, (RBasic*)d);
+  // d->iv = iv_copy(mrb, s);
 }
 
 static int
@@ -373,9 +282,9 @@ inspect_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
 }
 
 mrb_value
-mrb_obj_iv_inspect(mrb_state *mrb, struct RObject *obj)
+mrb_obj_iv_inspect(mrb_state *mrb, RObject *obj)
 {
-  iv_tbl *t = obj->iv;
+  iv_tbl *t = obj;
   size_t len = iv_size(mrb, t);
 
   if (len > 0) {
@@ -398,29 +307,31 @@ MRB_API mrb_value
 mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym)
 {
   if (obj_iv_p(obj)) {
-    iv_tbl *t = mrb_obj_ptr(obj)->iv;
+    iv_tbl *t = mrb_obj_ptr(obj);
     mrb_value val;
 
     if (t && iv_del(mrb, t, sym, &val)) {
       return val;
     }
   }
-  return mrb_undef_value();
+  return mrb_nil_value();
 }
 
+/*
 mrb_value
 mrb_vm_iv_get(mrb_state *mrb, mrb_sym sym)
 {
-  /* get self */
+  // get self
   return mrb_iv_get(mrb, mrb->c->stack[0], sym);
 }
 
 void
 mrb_vm_iv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  /* get self */
+  // get self
   mrb_iv_set(mrb, mrb->c->stack[0], sym, v);
 }
+*/
 
 static int
 iv_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
@@ -460,8 +371,8 @@ mrb_obj_instance_variables(mrb_state *mrb, mrb_value self)
   mrb_value ary;
 
   ary = mrb_ary_new(mrb);
-  if (obj_iv_p(self) && mrb_obj_ptr(self)->iv) {
-    iv_foreach(mrb, mrb_obj_ptr(self)->iv, iv_i, &ary);
+  if (obj_iv_p(self) && mrb_obj_ptr(self)) {
+    iv_foreach(mrb, mrb_obj_ptr(self), iv_i, &ary);
   }
   return ary;
 }
@@ -501,49 +412,48 @@ mrb_value
 mrb_mod_class_variables(mrb_state *mrb, mrb_value mod)
 {
   mrb_value ary;
-  struct RClass *c;
+  RClass *c;
 
   ary = mrb_ary_new(mrb);
   c = mrb_class_ptr(mod);
   while (c) {
-    if (c->iv) {
-      iv_foreach(mrb, c->iv, cv_i, &ary);
+    if (c) {
+      iv_foreach(mrb, c, cv_i, &ary);
     }
-    c = c->super;
+    c = mrb_cls_super(mrb, c);
   }
   return ary;
 }
 
 MRB_API mrb_value
-mrb_mod_cv_get(mrb_state *mrb, struct RClass *c, mrb_sym sym)
+mrb_mod_cv_get(mrb_state *mrb, RClass *c, mrb_sym sym)
 {
-  struct RClass * cls = c;
+  RClass * cls = c;
   mrb_value v;
   int given = FALSE;
 
   while (c) {
-    if (c->iv && iv_get(mrb, c->iv, sym, &v)) {
+    if (iv_get(mrb, c, sym, &v)) {
       given = TRUE;
     }
-    c = c->super;
+    c = mrb_cls_super(mrb, c);
   }
   if (given) return v;
-  if (cls && cls->tt == MRB_TT_SCLASS) {
+  if (cls /* && cls->tt == MRB_TT_SCLASS */) {
     mrb_value klass;
 
-    klass = mrb_obj_iv_get(mrb, (struct RObject *)cls,
+    klass = mrb_obj_iv_get(mrb, (RObject *)cls,
                            mrb_intern_lit(mrb, "__attached__"));
     c = mrb_class_ptr(klass);
-    if (c->tt == MRB_TT_CLASS || c->tt == MRB_TT_MODULE) {
-      given = FALSE;
-      while (c) {
-        if (c->iv && iv_get(mrb, c->iv, sym, &v)) {
-          given = TRUE;
-        }
-        c = c->super;
+
+    given = FALSE;
+    while (c) {
+      if (iv_get(mrb, c, sym, &v)) {
+        given = TRUE;
       }
-      if (given) return v;
+      c = mrb_cls_super(mrb, c);
     }
+    if (given) return v;
   }
   mrb_name_error(mrb, sym, "uninitialized class variable %S in %S",
                  mrb_sym2str(mrb, sym), mrb_obj_value(cls));
@@ -558,27 +468,25 @@ mrb_cv_get(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 }
 
 MRB_API void
-mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
+mrb_mod_cv_set(mrb_state *mrb, RClass *c, mrb_sym sym, mrb_value v)
 {
-  struct RClass * cls = c;
+  RClass * cls = c;
 
   while (c) {
-    if (c->iv) {
-      iv_tbl *t = c->iv;
+    iv_tbl *t = c;
 
-      if (iv_get(mrb, t, sym, NULL)) {
-        mrb_write_barrier(mrb, (struct RBasic*)c);
-        iv_put(mrb, t, sym, v);
-        return;
-      }
+    if (iv_get(mrb, t, sym, NULL)) {
+      mrb_write_barrier(mrb, (RBasic*)c);
+      iv_put(mrb, t, sym, v);
+      return;
     }
-    c = c->super;
+    c = mrb_cls_super(mrb, c);
   }
 
-  if (cls && cls->tt == MRB_TT_SCLASS) {
+  if (cls /* && cls->tt == MRB_TT_SCLASS */) {
     mrb_value klass;
 
-    klass = mrb_obj_iv_get(mrb, (struct RObject*)cls,
+    klass = mrb_obj_iv_get(mrb, (RObject*)cls,
                            mrb_intern_lit(mrb, "__attached__"));
     switch (mrb_type(klass)) {
     case MRB_TT_CLASS:
@@ -595,12 +503,8 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
     c = cls;
   }
 
-  if (!c->iv) {
-    c->iv = iv_new(mrb);
-  }
-
-  mrb_write_barrier(mrb, (struct RBasic*)c);
-  iv_put(mrb, c->iv, sym, v);
+  mrb_write_barrier(mrb, (RBasic*)c);
+  iv_put(mrb, c, sym, v);
 }
 
 MRB_API void
@@ -610,14 +514,12 @@ mrb_cv_set(mrb_state *mrb, mrb_value mod, mrb_sym sym, mrb_value v)
 }
 
 MRB_API mrb_bool
-mrb_mod_cv_defined(mrb_state *mrb, struct RClass * c, mrb_sym sym)
+mrb_mod_cv_defined(mrb_state *mrb, RClass * c, mrb_sym sym)
 {
   while (c) {
-    if (c->iv) {
-      iv_tbl *t = c->iv;
-      if (iv_get(mrb, t, sym, NULL)) return TRUE;
-    }
-    c = c->super;
+    iv_tbl *t = c;
+    if (iv_get(mrb, t, sym, NULL)) return TRUE;
+    c = mrb_cls_super(mrb, c);
   }
 
   return FALSE;
@@ -632,18 +534,18 @@ mrb_cv_defined(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 mrb_value
 mrb_vm_cv_get(mrb_state *mrb, mrb_sym sym)
 {
-  struct RClass *c;
+  RClass *c;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
+  c = mrb_class(mrb, mrb->L->base[0]);
   return mrb_mod_cv_get(mrb, c, sym);
 }
 
 void
 mrb_vm_cv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  struct RClass *c;
+  RClass *c;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
+  c = mrb_class(mrb, mrb->L->base[0]);
   mrb_mod_cv_set(mrb, c, sym, v);
 }
 
@@ -662,23 +564,23 @@ mod_const_check(mrb_state *mrb, mrb_value mod)
 }
 
 static mrb_value
-const_get(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool top)
+const_get(mrb_state *mrb, RClass *base, mrb_sym sym, mrb_bool top)
 {
-  struct RClass *c = base;
+  RClass *c = base;
   mrb_value v;
   mrb_bool retry = FALSE;
   mrb_value name;
-  struct RClass *oclass = mrb->object_class;
+  RClass *oclass = mrb->object_class;
 
 L_RETRY:
   while (c) {
-    if (c->iv && (top || c != oclass || base == oclass)) {
-      if (iv_get(mrb, c->iv, sym, &v))
+    if ((top || c != oclass || base == oclass)) {
+      if (iv_get(mrb, c, sym, &v))
         return v;
     }
-    c = c->super;
+    c = mrb_cls_super(mrb, c);
   }
-  if (!retry && base->tt == MRB_TT_MODULE) {
+  if (!retry /* && base->tt == MRB_TT_MODULE */) {
     c = oclass;
     retry = TRUE;
     goto L_RETRY;
@@ -697,32 +599,35 @@ mrb_const_get(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 mrb_value
 mrb_vm_const_get(mrb_state *mrb, mrb_sym sym)
 {
-  struct RClass *c;
-  struct RClass *c2;
+  RClass *c;
+  RClass *c2;
   mrb_value v;
-  struct RProc *proc;
+  RProc *proc;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
-  if (c->iv && iv_get(mrb, c->iv, sym, &v)) {
+  c = mrb_class(mrb, mrb->L->base[0]);
+  if (iv_get(mrb, c, sym, &v)) {
     return v;
   }
   c2 = c;
-  while (c2 && c2->tt == MRB_TT_SCLASS) {
+  while (c2 /* && c2->tt == MRB_TT_SCLASS */) {
     mrb_value klass;
-    klass = mrb_obj_iv_get(mrb, (struct RObject *)c2,
+    klass = mrb_obj_iv_get(mrb, (RObject *)c2,
                            mrb_intern_lit(mrb, "__attached__"));
     c2 = mrb_class_ptr(klass);
   }
-  if (c2->tt == MRB_TT_CLASS || c2->tt == MRB_TT_MODULE) c = c2;
-  mrb_assert(!MRB_PROC_CFUNC_P(mrb->c->ci->proc));
+  // if (c2->tt == MRB_TT_CLASS || c2->tt == MRB_TT_MODULE) c = c2;
+  c = c2;
+  // mrb_assert(!MRB_PROC_CFUNC_P(mrb->c->ci->proc));
+  /*
   proc = mrb->c->ci->proc;
   while (proc) {
     c2 = MRB_PROC_TARGET_CLASS(proc);
-    if (c2 && c2->iv && iv_get(mrb, c2->iv, sym, &v)) { 
+    if (c2 && iv_get(mrb, c2, sym, &v)) {
       return v;
     }
     proc = proc->upper;
   }
+  */
   return const_get(mrb, c, sym, TRUE);
 }
 
@@ -739,10 +644,10 @@ mrb_const_set(mrb_state *mrb, mrb_value mod, mrb_sym sym, mrb_value v)
 void
 mrb_vm_const_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  struct RClass *c;
+  RClass *c;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
-  mrb_obj_iv_set(mrb, (struct RObject*)c, sym, v);
+  c = mrb_class(mrb, mrb->L->base[0]);
+  mrb_obj_iv_set(mrb, (RObject*)c, sym, v);
 }
 
 MRB_API void
@@ -753,9 +658,9 @@ mrb_const_remove(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 }
 
 MRB_API void
-mrb_define_const(mrb_state *mrb, struct RClass *mod, const char *name, mrb_value v)
+mrb_define_const(mrb_state *mrb, RClass *mod, const char *name, mrb_value v)
 {
-  mrb_obj_iv_set(mrb, (struct RObject*)mod, mrb_intern_cstr(mrb, name), v);
+  mrb_obj_iv_set(mrb, (RObject*)mod, mrb_intern_cstr(mrb, name), v);
 }
 
 MRB_API void
@@ -791,16 +696,14 @@ mrb_mod_constants(mrb_state *mrb, mrb_value mod)
 {
   mrb_value ary;
   mrb_bool inherit = TRUE;
-  struct RClass *c = mrb_class_ptr(mod);
+  RClass *c = mrb_class_ptr(mod);
 
   mrb_get_args(mrb, "|b", &inherit);
   ary = mrb_ary_new(mrb);
   while (c) {
-    if (c->iv) {
-      iv_foreach(mrb, c->iv, const_i, &ary);
-    }
+    iv_foreach(mrb, c, const_i, &ary);
     if (!inherit) break;
-    c = c->super;
+    c = mrb_cls_super(mrb, c);
     if (c == mrb->object_class) break;
   }
   return ary;
@@ -811,10 +714,7 @@ mrb_gv_get(mrb_state *mrb, mrb_sym sym)
 {
   mrb_value v;
 
-  if (!mrb->globals) {
-    return mrb_nil_value();
-  }
-  if (iv_get(mrb, mrb->globals, sym, &v))
+  if (iv_get(mrb, mrb_globals(mrb), sym, &v))
     return v;
   return mrb_nil_value();
 }
@@ -822,24 +722,13 @@ mrb_gv_get(mrb_state *mrb, mrb_sym sym)
 MRB_API void
 mrb_gv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  iv_tbl *t;
-
-  if (!mrb->globals) {
-    t = mrb->globals = iv_new(mrb);
-  }
-  else {
-    t = mrb->globals;
-  }
-  iv_put(mrb, t, sym, v);
+  iv_put(mrb, mrb_globals(mrb), sym, v);
 }
 
 MRB_API void
 mrb_gv_remove(mrb_state *mrb, mrb_sym sym)
 {
-  if (!mrb->globals) {
-    return;
-  }
-  iv_del(mrb, mrb->globals, sym, NULL);
+  iv_del(mrb, mrb_globals(mrb), sym, NULL);
 }
 
 static int
@@ -865,7 +754,7 @@ gv_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
 mrb_value
 mrb_f_global_variables(mrb_state *mrb, mrb_value self)
 {
-  iv_tbl *t = mrb->globals;
+  iv_tbl *t = mrb_globals(mrb);
   mrb_value ary = mrb_ary_new(mrb);
   size_t i;
   char buf[3];
@@ -885,20 +774,20 @@ mrb_f_global_variables(mrb_state *mrb, mrb_value self)
 static mrb_bool
 mrb_const_defined_0(mrb_state *mrb, mrb_value mod, mrb_sym id, mrb_bool exclude, mrb_bool recurse)
 {
-  struct RClass *klass = mrb_class_ptr(mod);
-  struct RClass *tmp;
+  RClass *klass = mrb_class_ptr(mod);
+  RClass *tmp;
   mrb_bool mod_retry = FALSE;
 
   tmp = klass;
 retry:
   while (tmp) {
-    if (tmp->iv && iv_get(mrb, tmp->iv, id, NULL)) {
+    if (tmp && iv_get(mrb, tmp, id, NULL)) {
       return TRUE;
     }
     if (!recurse && (klass != mrb->object_class)) break;
-    tmp = tmp->super;
+    tmp = mrb_cls_super(mrb, tmp);
   }
-  if (!exclude && !mod_retry && (klass->tt == MRB_TT_MODULE)) {
+  if (!exclude && !mod_retry /* && (klass->tt == MRB_TT_MODULE) */) {
     mod_retry = TRUE;
     tmp = mrb->object_class;
     goto retry;
@@ -925,7 +814,7 @@ mrb_attr_get(mrb_state *mrb, mrb_value obj, mrb_sym id)
 }
 
 struct csym_arg {
-  struct RClass *c;
+  RClass *c;
   mrb_sym sym;
 };
  
@@ -933,9 +822,9 @@ static int
 csym_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
 {
   struct csym_arg *a = (struct csym_arg*)p;
-  struct RClass *c = a->c;
+  RClass *c = a->c;
  
-  if (mrb_type(v) == c->tt && mrb_class_ptr(v) == c) {
+  if (mrb_class_ptr(v) == c) {
     a->sym = sym;
     return 1;     /* stop iteration */
   }
@@ -943,7 +832,7 @@ csym_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
 }
  
 static mrb_sym
-find_class_sym(mrb_state *mrb, struct RClass *outer, struct RClass *c)
+find_class_sym(mrb_state *mrb, RClass *outer, RClass *c)
 {
   struct csym_arg arg;
  
@@ -951,16 +840,16 @@ find_class_sym(mrb_state *mrb, struct RClass *outer, struct RClass *c)
   if (outer == c) return 0;
   arg.c = c;
   arg.sym = 0;
-  iv_foreach(mrb, outer->iv, csym_i, &arg);
+  iv_foreach(mrb, outer, csym_i, &arg);
   return arg.sym;
 }
 
-static struct RClass*
-outer_class(mrb_state *mrb, struct RClass *c)
+static RClass*
+outer_class(mrb_state *mrb, RClass *c)
 {
   mrb_value ov;
 
-  ov = mrb_obj_iv_get(mrb, (struct RObject*)c, mrb_intern_lit(mrb, "__outer__"));
+  ov = mrb_obj_iv_get(mrb, (RObject*)c, mrb_intern_lit(mrb, "__outer__"));
   if (mrb_nil_p(ov)) return NULL;
   switch (mrb_type(ov)) {
   case MRB_TT_CLASS:
@@ -973,10 +862,10 @@ outer_class(mrb_state *mrb, struct RClass *c)
 }
 
 static mrb_bool
-detect_outer_loop(mrb_state *mrb, struct RClass *c)
+detect_outer_loop(mrb_state *mrb, RClass *c)
 {
-  struct RClass *t = c;         /* tortoise */
-  struct RClass *h = c;         /* hare */
+  RClass *t = c;         /* tortoise */
+  RClass *h = c;         /* hare */
 
   for (;;) {
     if (h == NULL) return FALSE;
@@ -989,9 +878,9 @@ detect_outer_loop(mrb_state *mrb, struct RClass *c)
 }
 
 mrb_value
-mrb_class_find_path(mrb_state *mrb, struct RClass *c)
+mrb_class_find_path(mrb_state *mrb, RClass *c)
 {
-  struct RClass *outer;
+  RClass *outer;
   mrb_value path;
   mrb_sym name;
   const char *str;
@@ -1009,8 +898,8 @@ mrb_class_find_path(mrb_state *mrb, struct RClass *c)
 
   str = mrb_sym2name_len(mrb, name, &len);
   mrb_str_cat(mrb, path, str, len);
-  iv_del(mrb, c->iv, mrb_intern_lit(mrb, "__outer__"), NULL);
-  iv_put(mrb, c->iv, mrb_intern_lit(mrb, "__classname__"), path);
-  mrb_field_write_barrier_value(mrb, (struct RBasic*)c, path);
+  iv_del(mrb, c, mrb_intern_lit(mrb, "__outer__"), NULL);
+  iv_put(mrb, c, mrb_intern_lit(mrb, "__classname__"), path);
+  // mrb_field_write_barrier_value(mrb, (RBasic*)c, path);
   return path;
 }

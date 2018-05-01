@@ -88,7 +88,7 @@ mrb_int_nobits(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_numeric_ext_gem_init(mrb_state* mrb)
 {
-  struct RClass *i = mrb_module_get(mrb, "Integral");
+  RClass *i = mrb_module_get(mrb, "Integral");
 
   mrb_define_method(mrb, i, "chr", mrb_int_chr, MRB_ARGS_NONE());
   mrb_define_method(mrb, i, "allbits?", mrb_int_allbits, MRB_ARGS_REQ(1));

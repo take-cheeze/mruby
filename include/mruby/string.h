@@ -16,9 +16,10 @@ MRB_BEGIN_DECL
 
 extern const char mrb_digitmap[];
 
+/*
 #define RSTRING_EMBED_LEN_MAX ((mrb_int)(sizeof(void*) * 3 - 1))
 
-struct RString {
+RString {
   MRB_OBJECT_HEADER;
   union {
     struct {
@@ -26,7 +27,7 @@ struct RString {
       union {
         mrb_int capa;
         struct mrb_shared_string *shared;
-        struct RString *fshared;
+        RString *fshared;
       } aux;
       char *ptr;
     } heap;
@@ -70,18 +71,24 @@ struct RString {
 
 #define RSTR_POOL_P(s) ((s)->flags & MRB_STR_POOL)
 #define RSTR_SET_POOL_FLAG(s) ((s)->flags |= MRB_STR_POOL)
+*/
+
+typedef struct rstring_t {
+  char *ptr;
+  mrb_int len, capa;
+} rstring_t;
 
 /*
  * Returns a pointer from a Ruby string
  */
-#define mrb_str_ptr(s)       ((struct RString*)(mrb_ptr(s)))
+#define mrb_str_ptr(s)       ((rstring_t*)(uddata(udataV(&s))))
 #define RSTRING(s)           mrb_str_ptr(s)
-#define RSTRING_PTR(s)       RSTR_PTR(RSTRING(s))
-#define RSTRING_EMBED_LEN(s) RSTR_EMBED_LEN(RSTRING(s))
-#define RSTRING_LEN(s)       RSTR_LEN(RSTRING(s))
-#define RSTRING_CAPA(s)      RSTR_CAPA(RSTRING(s))
+#define RSTRING_PTR(s)       RSTRING(s)->ptr
+// #define RSTRING_EMBED_LEN(s) RSTR_EMBED_LEN(RSTRING(s))
+#define RSTRING_LEN(s)       RSTRING(s)->len
+#define RSTRING_CAPA(s)      RSTRING(s)->capa
 #define RSTRING_END(s)       (RSTRING_PTR(s) + RSTRING_LEN(s))
-MRB_API mrb_int mrb_str_strlen(mrb_state*, struct RString*);
+MRB_API mrb_int mrb_str_strlen(mrb_state*, RString*);
 
 #define MRB_STR_SHARED    1
 #define MRB_STR_FSHARED   2
@@ -92,8 +99,8 @@ MRB_API mrb_int mrb_str_strlen(mrb_state*, struct RString*);
 #define MRB_STR_EMBED_LEN_MASK 0x7c0
 #define MRB_STR_EMBED_LEN_SHIFT 6
 
-void mrb_gc_free_str(mrb_state*, struct RString*);
-MRB_API void mrb_str_modify(mrb_state*, struct RString*);
+void mrb_gc_free_str(mrb_state*, RString*);
+MRB_API void mrb_str_modify(mrb_state*, RString*);
 
 /*
  * Finds the index of a substring in a string
@@ -418,7 +425,7 @@ MRB_API int mrb_str_cmp(mrb_state *mrb, mrb_value str1, mrb_value str2);
  */
 MRB_API char *mrb_str_to_cstr(mrb_state *mrb, mrb_value str);
 
-mrb_value mrb_str_pool(mrb_state *mrb, mrb_value str);
+// mrb_value mrb_str_pool(mrb_state *mrb, mrb_value str);
 uint32_t mrb_str_hash(mrb_state *mrb, mrb_value str);
 mrb_value mrb_str_dump(mrb_state *mrb, mrb_value str);
 

@@ -13,6 +13,8 @@
 #include <mruby/string.h>
 #include <mruby/class.h>
 
+#include <lauxlib.h>
+
 void mrb_init_core(mrb_state*);
 void mrb_init_mrbgems(mrb_state*);
 
@@ -23,21 +25,13 @@ MRB_API mrb_state*
 mrb_open_core(mrb_allocf f, void *ud)
 {
   static const mrb_state mrb_state_zero = { 0 };
-  static const struct mrb_context mrb_context_zero = { 0 };
   mrb_state *mrb;
 
   mrb = (mrb_state *)(f)(NULL, NULL, sizeof(mrb_state), ud);
   if (mrb == NULL) return NULL;
 
   *mrb = mrb_state_zero;
-  mrb->allocf_ud = ud;
-  mrb->allocf = f;
-  mrb->atexit_stack_len = 0;
-
-  mrb_gc_init(mrb, &mrb->gc);
-  mrb->c = (struct mrb_context*)mrb_malloc(mrb, sizeof(struct mrb_context));
-  *mrb->c = mrb_context_zero;
-  mrb->root_c = mrb->c;
+  mrb->L = luaL_newstate();
 
   mrb_init_core(mrb);
 
@@ -61,33 +55,6 @@ struct alloca_header {
   char buf[1];
 };
 
-MRB_API void*
-mrb_alloca(mrb_state *mrb, size_t size)
-{
-  struct alloca_header *p;
-
-  p = (struct alloca_header*) mrb_malloc(mrb, sizeof(struct alloca_header)+size);
-  p->next = mrb->mems;
-  mrb->mems = p;
-  return (void*)p->buf;
-}
-
-static void
-mrb_alloca_free(mrb_state *mrb)
-{
-  struct alloca_header *p;
-  struct alloca_header *tmp;
-
-  if (mrb == NULL) return;
-  p = mrb->mems;
-
-  while (p) {
-    tmp = p;
-    p = p->next;
-    mrb_free(mrb, tmp);
-  }
-}
-
 MRB_API mrb_state*
 mrb_open(void)
 {
@@ -107,7 +74,7 @@ mrb_open_allocf(mrb_allocf f, void *ud)
 
 #ifndef DISABLE_GEMS
   mrb_init_mrbgems(mrb);
-  mrb_gc_arena_restore(mrb, 0);
+  // mrb_gc_arena_restore(mrb, 0);
 #endif
   return mrb;
 }
@@ -117,21 +84,24 @@ void mrb_free_symtbl(mrb_state *mrb);
 void
 mrb_irep_incref(mrb_state *mrb, mrb_irep *irep)
 {
-  irep->refcnt++;
+  // irep->refcnt++;
 }
 
 void
 mrb_irep_decref(mrb_state *mrb, mrb_irep *irep)
 {
+  /*
   irep->refcnt--;
   if (irep->refcnt == 0) {
     mrb_irep_free(mrb, irep);
   }
+  */
 }
 
 void
 mrb_irep_cutref(mrb_state *mrb, mrb_irep *irep)
 {
+  /*
   mrb_irep *tmp;
   int i;
 
@@ -140,11 +110,13 @@ mrb_irep_cutref(mrb_state *mrb, mrb_irep *irep)
     irep->reps[i] = NULL;
     if (tmp) mrb_irep_decref(mrb, tmp);
   }
+  */
 }
 
 void
 mrb_irep_free(mrb_state *mrb, mrb_irep *irep)
 {
+  /*
   int i;
 
   if (!(irep->flags & MRB_ISEQ_NO_FREE))
@@ -174,17 +146,19 @@ mrb_irep_free(mrb_state *mrb, mrb_irep *irep)
   mrb_free(mrb, irep->lines);
   mrb_debug_info_free(mrb, irep->debug_info);
   mrb_free(mrb, irep);
+  */
 }
 
+/*
 mrb_value
 mrb_str_pool(mrb_state *mrb, mrb_value str)
 {
-  struct RString *s = mrb_str_ptr(str);
-  struct RString *ns;
+  RString *s = mrb_str_ptr(str);
+  RString *ns;
   char *ptr;
   mrb_int len;
 
-  ns = (struct RString *)mrb_malloc(mrb, sizeof(struct RString));
+  ns = (RString *)mrb_malloc(mrb, sizeof(RString));
   ns->tt = MRB_TT_STRING;
   ns->c = mrb->string_class;
 
@@ -227,9 +201,11 @@ mrb_str_pool(mrb_state *mrb, mrb_value str)
   MRB_SET_FROZEN_FLAG(ns);
   return mrb_obj_value(ns);
 }
+*/
 
 void mrb_free_backtrace(mrb_state *mrb);
 
+/*
 MRB_API void
 mrb_free_context(mrb_state *mrb, struct mrb_context *c)
 {
@@ -240,10 +216,12 @@ mrb_free_context(mrb_state *mrb, struct mrb_context *c)
   mrb_free(mrb, c->ensure);
   mrb_free(mrb, c);
 }
+*/
 
 MRB_API void
 mrb_close(mrb_state *mrb)
 {
+  /*
   if (!mrb) return;
   if (mrb->atexit_stack_len > 0) {
     mrb_int i;
@@ -255,15 +233,18 @@ mrb_close(mrb_state *mrb)
 #endif
   }
 
-  /* free */
+  // free
   mrb_gc_free_gv(mrb);
   mrb_free_context(mrb, mrb->root_c);
   mrb_free_symtbl(mrb);
-  mrb_alloca_free(mrb);
   mrb_gc_destroy(mrb, &mrb->gc);
   mrb_free(mrb, mrb);
+  */
+
+  lua_close(mrb->L);
 }
 
+/*
 MRB_API mrb_irep*
 mrb_add_irep(mrb_state *mrb)
 {
@@ -277,16 +258,18 @@ mrb_add_irep(mrb_state *mrb)
 
   return irep;
 }
+*/
 
 MRB_API mrb_value
 mrb_top_self(mrb_state *mrb)
 {
-  return mrb_obj_value(mrb->top_self);
+  return mrb->top_self; // mrb_obj_value(mrb->top_self);
 }
 
 MRB_API void
 mrb_state_atexit(mrb_state *mrb, mrb_atexit_func f)
 {
+  /*
 #ifdef MRB_FIXED_STATE_ATEXIT_STACK
   if (mrb->atexit_stack_len + 1 > MRB_FIXED_STATE_ATEXIT_STACK_SIZE) {
     mrb_raise(mrb, E_RUNTIME_ERROR, "exceeded fixed state atexit stack limit");
@@ -304,4 +287,5 @@ mrb_state_atexit(mrb_state *mrb, mrb_atexit_func f)
 #endif
 
   mrb->atexit_stack[mrb->atexit_stack_len++] = f;
+  */
 }

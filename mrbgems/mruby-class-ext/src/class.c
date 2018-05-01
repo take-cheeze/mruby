@@ -54,7 +54,7 @@ mrb_mod_module_exec(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_class_ext_gem_init(mrb_state *mrb)
 {
-  struct RClass *mod = mrb->module_class;
+  RClass *mod = mrb->module_class;
 
   mrb_define_method(mrb, mod, "name", mrb_mod_name, MRB_ARGS_NONE());
   mrb_define_method(mrb, mod, "singleton_class?", mrb_mod_singleton_class_p, MRB_ARGS_NONE());

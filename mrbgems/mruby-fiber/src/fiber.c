@@ -3,7 +3,7 @@
 #include <mruby/class.h>
 #include <mruby/proc.h>
 
-#define fiber_ptr(o) ((struct RFiber*)mrb_ptr(o))
+#define fiber_ptr(o) ((RFiber*)mrb_ptr(o))
 
 #define FIBER_STACK_INIT_SIZE 64
 #define FIBER_CI_INIT_SIZE 8
@@ -65,9 +65,9 @@ static mrb_value
 fiber_init(mrb_state *mrb, mrb_value self)
 {
   static const struct mrb_context mrb_context_zero = { 0 };
-  struct RFiber *f = fiber_ptr(self);
+  RFiber *f = fiber_ptr(self);
   struct mrb_context *c;
-  struct RProc *p;
+  RProc *p;
   mrb_callinfo *ci;
   mrb_value blk;
   size_t slen;
@@ -125,7 +125,7 @@ fiber_init(mrb_state *mrb, mrb_value self)
   ci = c->ci;
   ci->target_class = MRB_PROC_TARGET_CLASS(p);
   ci->proc = p;
-  mrb_field_write_barrier(mrb, (struct RBasic*)mrb_obj_ptr(self), (struct RBasic*)p);
+  mrb_field_write_barrier(mrb, (RBasic*)mrb_obj_ptr(self), (RBasic*)p);
   ci->pc = p->body.irep->iseq;
   ci->nregs = p->body.irep->nregs;
   ci[1] = ci[0];
@@ -140,7 +140,7 @@ fiber_init(mrb_state *mrb, mrb_value self)
 static struct mrb_context*
 fiber_check(mrb_state *mrb, mrb_value fib)
 {
-  struct RFiber *f = fiber_ptr(fib);
+  RFiber *f = fiber_ptr(fib);
 
   mrb_assert(f->tt == MRB_TT_FIBER);
   if (!f->cxt) {
@@ -384,7 +384,7 @@ static mrb_value
 fiber_current(mrb_state *mrb, mrb_value self)
 {
   if (!mrb->c->fib) {
-    struct RFiber *f = (struct RFiber*)mrb_obj_alloc(mrb, MRB_TT_FIBER, mrb_class_ptr(self));
+    RFiber *f = (RFiber*)mrb_obj_alloc(mrb, MRB_TT_FIBER, mrb_class_ptr(self));
 
     f->cxt = mrb->c;
     mrb->c->fib = f;
@@ -395,7 +395,7 @@ fiber_current(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_fiber_gem_init(mrb_state* mrb)
 {
-  struct RClass *c;
+  RClass *c;
 
   c = mrb_define_class(mrb, "Fiber", mrb->object_class);
   MRB_SET_INSTANCE_TT(c, MRB_TT_FIBER);

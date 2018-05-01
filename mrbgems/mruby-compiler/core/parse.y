@@ -5559,7 +5559,7 @@ parser_update_cxt(parser_state *p, mrbc_context *cxt)
   }
 }
 
-void mrb_codedump_all(mrb_state*, struct RProc*);
+void mrb_codedump_all(mrb_state*, RProc*);
 void mrb_parser_dump(mrb_state *mrb, node *tree, int offset);
 
 MRB_API void
@@ -5779,8 +5779,8 @@ mrb_parse_string(mrb_state *mrb, const char *s, mrbc_context *c)
 MRB_API mrb_value
 mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c)
 {
-  struct RClass *target = mrb->object_class;
-  struct RProc *proc;
+  RClass *target = mrb->object_class;
+  RProc *proc;
   mrb_value v;
   unsigned int keep = 0;
 

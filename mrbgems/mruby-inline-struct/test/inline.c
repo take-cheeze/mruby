@@ -70,7 +70,7 @@ istruct_test_mutate(mrb_state *mrb, mrb_value self)
 
 void mrb_mruby_inline_struct_gem_test(mrb_state *mrb)
 {
-  struct RClass *cls;
+  RClass *cls;
 
   cls = mrb_define_class(mrb, "InlineStructTest", mrb->object_class);
   MRB_SET_INSTANCE_TT(cls, MRB_TT_ISTRUCT);

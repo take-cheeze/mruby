@@ -364,7 +364,7 @@ mrb_filetest_s_size_p(mrb_state *mrb, mrb_value klass)
 void
 mrb_init_file_test(mrb_state *mrb)
 {
-  struct RClass *f;
+  RClass *f;
 
   f = mrb_define_class(mrb, "FileTest", mrb->object_class);
 

@@ -3050,11 +3050,11 @@ loop_pop(codegen_scope *s, int val)
   if (val) push();
 }
 
-MRB_API struct RProc*
+MRB_API RProc*
 mrb_generate_code(mrb_state *mrb, parser_state *p)
 {
   codegen_scope *scope = scope_new(mrb, 0, 0);
-  struct RProc *proc;
+  RProc *proc;
   struct mrb_jmpbuf *prev_jmp = mrb->jmp;
 
   if (!scope) {

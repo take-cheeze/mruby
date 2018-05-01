@@ -1478,9 +1478,9 @@ flo_plus(mrb_state *mrb, mrb_value x)
 void
 mrb_init_numeric(mrb_state *mrb)
 {
-  struct RClass *numeric, *integer, *fixnum;
+  RClass *numeric, *integer, *fixnum;
 #ifndef MRB_WITHOUT_FLOAT
-  struct RClass *fl;
+  RClass *fl;
 #endif
 
   /* Numeric Class */

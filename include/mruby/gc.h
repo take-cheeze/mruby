@@ -17,11 +17,13 @@ MRB_BEGIN_DECL
 
 struct mrb_state;
 
+/*
 #define MRB_EACH_OBJ_OK 0
 #define MRB_EACH_OBJ_BREAK 1
-typedef int (mrb_each_object_callback)(struct mrb_state *mrb, struct RBasic *obj, void *data);
+typedef int (mrb_each_object_callback)(struct mrb_state *mrb, RBasic *obj, void *data);
 void mrb_objspace_each_objects(struct mrb_state *mrb, mrb_each_object_callback *callback, void *data);
 MRB_API void mrb_free_context(struct mrb_state *mrb, struct mrb_context *c);
+*/
 
 #ifndef MRB_GC_ARENA_SIZE
 #define MRB_GC_ARENA_SIZE 100
@@ -41,7 +43,7 @@ typedef enum {
 #endif
 
 typedef struct mrb_heap_page {
-  struct RBasic *freelist;
+  RBasic *freelist;
   struct mrb_heap_page *prev;
   struct mrb_heap_page *next;
   struct mrb_heap_page *free_next;
@@ -60,17 +62,17 @@ typedef struct mrb_gc {
   mrb_heap_page *free_heaps;
   size_t live; /* count of live objects */
 #ifdef MRB_GC_FIXED_ARENA
-  struct RBasic *arena[MRB_GC_ARENA_SIZE]; /* GC protection array */
+  RBasic *arena[MRB_GC_ARENA_SIZE]; /* GC protection array */
 #else
-  struct RBasic **arena;                   /* GC protection array */
+  RBasic **arena;                   /* GC protection array */
   int arena_capa;
 #endif
   int arena_idx;
 
   mrb_gc_state state; /* state of gc */
   int current_white_part; /* make white object by white_part */
-  struct RBasic *gray_list; /* list of gray objects to be traversed incrementally */
-  struct RBasic *atomic_gray_list; /* list of objects to be traversed atomically */
+  RBasic *gray_list; /* list of gray objects to be traversed incrementally */
+  RBasic *atomic_gray_list; /* list of objects to be traversed atomically */
   size_t live_after_mark;
   size_t threshold;
   int interval_ratio;
@@ -84,7 +86,7 @@ typedef struct mrb_gc {
 } mrb_gc;
 
 MRB_API mrb_bool
-mrb_object_dead_p(struct mrb_state *mrb, struct RBasic *object);
+mrb_object_dead_p(struct mrb_state *mrb, RBasic *object);
 
 MRB_END_DECL
 

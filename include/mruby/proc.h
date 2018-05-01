@@ -15,14 +15,15 @@
  */
 MRB_BEGIN_DECL
 
-struct REnv {
+/*
+REnv {
   MRB_OBJECT_HEADER;
   mrb_value *stack;
   struct mrb_context *cxt;
   mrb_sym mid;
 };
 
-/* flags (21bits): 1(shared flag):10(cioff/bidx):10(stack_len) */
+// flags (21bits): 1(shared flag):10(cioff/bidx):10(stack_len)
 #define MRB_ENV_SET_STACK_LEN(e,len) (e)->flags = (((e)->flags & ~0x3ff)|((unsigned int)(len) & 0x3ff))
 #define MRB_ENV_STACK_LEN(e) ((mrb_int)((e)->flags & 0x3ff))
 #define MRB_ENV_STACK_UNSHARED (1<<20)
@@ -31,20 +32,21 @@ struct REnv {
 #define MRB_ENV_BIDX(e) (((e)->flags >> 10) & 0x3ff)
 #define MRB_ENV_SET_BIDX(e,idx) (e)->flags = (((e)->flags & ~(0x3ff<<10))|((unsigned int)(idx) & 0x3ff)<<10)
 
-void mrb_env_unshare(mrb_state*, struct REnv*);
+void mrb_env_unshare(mrb_state*, REnv*);
 
-struct RProc {
+RProc {
   MRB_OBJECT_HEADER;
   union {
     mrb_irep *irep;
     mrb_func_t func;
   } body;
-  struct RProc *upper;
+  RProc *upper;
   union {
-    struct RClass *target_class;
-    struct REnv *env;
+    RClass *target_class;
+    REnv *env;
   } e;
 };
+*/
 
 /* aspec access */
 #define MRB_ASPEC_REQ(a)          (((a) >> 18) & 0x1f)
@@ -55,6 +57,7 @@ struct RProc {
 #define MRB_ASPEC_KDICT(a)        ((a) & (1<<1))
 #define MRB_ASPEC_BLOCK(a)        ((a) & 1)
 
+/*
 #define MRB_PROC_CFUNC_FL 128
 #define MRB_PROC_CFUNC_P(p) (((p)->flags & MRB_PROC_CFUNC_FL) != 0)
 #define MRB_PROC_CFUNC(p) (p)->body.func
@@ -69,29 +72,30 @@ struct RProc {
 #define MRB_PROC_SET_TARGET_CLASS(p,tc) do {\
   if (MRB_PROC_ENV_P(p)) {\
     (p)->e.env->c = (tc);\
-    mrb_field_write_barrier(mrb, (struct RBasic*)(p)->e.env, (struct RBasic*)tc);\
+    mrb_field_write_barrier(mrb, (RBasic*)(p)->e.env, (RBasic*)tc);\
   }\
   else {\
     (p)->e.target_class = (tc);\
-    mrb_field_write_barrier(mrb, (struct RBasic*)p, (struct RBasic*)tc);\
+    mrb_field_write_barrier(mrb, (RBasic*)p, (RBasic*)tc);\
   }\
 } while (0)
 #define MRB_PROC_SCOPE 2048
 #define MRB_PROC_SCOPE_P(p) (((p)->flags & MRB_PROC_SCOPE) != 0)
+*/
 
-#define mrb_proc_ptr(v)    ((struct RProc*)(mrb_ptr(v)))
+#define mrb_proc_ptr(v)    ((RProc*)(mrb_ptr(v)))
 
-struct RProc *mrb_proc_new(mrb_state*, mrb_irep*);
-struct RProc *mrb_closure_new(mrb_state*, mrb_irep*);
-MRB_API struct RProc *mrb_proc_new_cfunc(mrb_state*, mrb_func_t);
-MRB_API struct RProc *mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals);
-void mrb_proc_copy(struct RProc *a, struct RProc *b);
+RProc *mrb_proc_new(mrb_state*, mrb_irep*);
+RProc *mrb_closure_new(mrb_state*, mrb_irep*);
+MRB_API RProc *mrb_proc_new_cfunc(mrb_state*, mrb_func_t);
+MRB_API RProc *mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals);
+void mrb_proc_copy(RProc *a, RProc *b);
 
 /* implementation of #send method */
 MRB_API mrb_value mrb_f_send(mrb_state *mrb, mrb_value self);
 
 /* following functions are defined in mruby-proc-ext so please include it when using */
-MRB_API struct RProc *mrb_proc_new_cfunc_with_env(mrb_state*, mrb_func_t, mrb_int, const mrb_value*);
+MRB_API RProc *mrb_proc_new_cfunc_with_env(mrb_state*, mrb_func_t, mrb_int, const mrb_value*);
 MRB_API mrb_value mrb_proc_cfunc_env_get(mrb_state*, mrb_int);
 /* old name */
 #define mrb_cfunc_env_get(mrb, idx) mrb_proc_cfunc_env_get(mrb, idx)
@@ -101,10 +105,10 @@ MRB_API mrb_value mrb_proc_cfunc_env_get(mrb_state*, mrb_int);
 #define MRB_METHOD_FUNC_FL ((uintptr_t)1)
 #define MRB_METHOD_FUNC_P(m) (((uintptr_t)(m))&MRB_METHOD_FUNC_FL)
 #define MRB_METHOD_FUNC(m) ((mrb_func_t)((uintptr_t)(m)&(~MRB_METHOD_FUNC_FL)))
-#define MRB_METHOD_FROM_FUNC(m,fn) m=(mrb_method_t)((struct RProc*)((uintptr_t)(fn)|MRB_METHOD_FUNC_FL))
-#define MRB_METHOD_FROM_PROC(m,pr) m=(mrb_method_t)(struct RProc*)(pr)
+#define MRB_METHOD_FROM_FUNC(m,fn) m=(mrb_method_t)((RProc*)((uintptr_t)(fn)|MRB_METHOD_FUNC_FL))
+#define MRB_METHOD_FROM_PROC(m,pr) m=(mrb_method_t)(RProc*)(pr)
 #define MRB_METHOD_PROC_P(m) (!MRB_METHOD_FUNC_P(m))
-#define MRB_METHOD_PROC(m) ((struct RProc*)(m))
+#define MRB_METHOD_PROC(m) ((RProc*)(m))
 #define MRB_METHOD_UNDEF_P(m) ((m)==0)
 
 #else

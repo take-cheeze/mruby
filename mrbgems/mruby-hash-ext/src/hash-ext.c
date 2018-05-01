@@ -114,7 +114,7 @@ hash_slice(mrb_state *mrb, mrb_value hash)
 void
 mrb_mruby_hash_ext_gem_init(mrb_state *mrb)
 {
-  struct RClass *h;
+  RClass *h;
 
   h = mrb->hash_class;
   mrb_define_method(mrb, h, "values_at", hash_values_at, MRB_ARGS_ANY());

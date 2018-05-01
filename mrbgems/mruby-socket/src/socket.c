@@ -742,12 +742,12 @@ mrb_socket_socket(mrb_state *mrb, mrb_value klass)
 static mrb_value
 mrb_tcpsocket_allocate(mrb_state *mrb, mrb_value klass)
 {
-  struct RClass *c = mrb_class_ptr(klass);
+  RClass *c = mrb_class_ptr(klass);
   enum mrb_vtype ttype = MRB_INSTANCE_TT(c);
 
   /* copied from mrb_instance_alloc() */
   if (ttype == 0) ttype = MRB_TT_OBJECT;
-  return mrb_obj_value((struct RObject*)mrb_obj_alloc(mrb, ttype, c));
+  return mrb_obj_value((RObject*)mrb_obj_alloc(mrb, ttype, c));
 }
 
 /* Windows overrides for IO methods on BasicSocket objects.
@@ -835,8 +835,8 @@ mrb_win32_basicsocket_syswrite(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_socket_gem_init(mrb_state* mrb)
 {
-  struct RClass *io, *ai, *sock, *bsock, *ipsock, *tcpsock;
-  struct RClass *constants;
+  RClass *io, *ai, *sock, *bsock, *ipsock, *tcpsock;
+  RClass *constants;
 
 #ifdef _WIN32
   WSADATA wsaData;

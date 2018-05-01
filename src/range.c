@@ -10,10 +10,10 @@
 #include <mruby/string.h>
 #include <mruby/array.h>
 
-MRB_API struct RRange*
+MRB_API RRange*
 mrb_range_ptr(mrb_state *mrb, mrb_value v)
 {
-  struct RRange *r = (struct RRange*)mrb_ptr(v);
+  RRange *r = (RRange*)mrb_ptr(v);
 
   if (r->edges == NULL) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "uninitialized range");
@@ -49,10 +49,10 @@ range_check(mrb_state *mrb, mrb_value a, mrb_value b)
 MRB_API mrb_value
 mrb_range_new(mrb_state *mrb, mrb_value beg, mrb_value end, mrb_bool excl)
 {
-  struct RRange *r;
+  RRange *r;
 
   range_check(mrb, beg, end);
-  r = (struct RRange*)mrb_obj_alloc(mrb, MRB_TT_RANGE, mrb->range_class);
+  r = (RRange*)mrb_obj_alloc(mrb, MRB_TT_RANGE, mrb->range_class);
   r->edges = (mrb_range_edges *)mrb_malloc(mrb, sizeof(mrb_range_edges));
   r->edges->beg = beg;
   r->edges->end = end;
@@ -70,7 +70,7 @@ mrb_range_new(mrb_state *mrb, mrb_value beg, mrb_value end, mrb_bool excl)
 mrb_value
 mrb_range_beg(mrb_state *mrb, mrb_value range)
 {
-  struct RRange *r = mrb_range_ptr(mrb, range);
+  RRange *r = mrb_range_ptr(mrb, range);
 
   return r->edges->beg;
 }
@@ -89,7 +89,7 @@ mrb_range_beg(mrb_state *mrb, mrb_value range)
 mrb_value
 mrb_range_end(mrb_state *mrb, mrb_value range)
 {
-  struct RRange *r = mrb_range_ptr(mrb, range);
+  RRange *r = mrb_range_ptr(mrb, range);
 
   return r->edges->end;
 }
@@ -103,7 +103,7 @@ mrb_range_end(mrb_state *mrb, mrb_value range)
 mrb_value
 mrb_range_excl(mrb_state *mrb, mrb_value range)
 {
-  struct RRange *r = mrb_range_ptr(mrb, range);
+  RRange *r = mrb_range_ptr(mrb, range);
 
   return mrb_bool_value(r->excl);
 }
@@ -111,7 +111,7 @@ mrb_range_excl(mrb_state *mrb, mrb_value range)
 static void
 range_init(mrb_state *mrb, mrb_value range, mrb_value beg, mrb_value end, mrb_bool exclude_end)
 {
-  struct RRange *r = mrb_range_raw_ptr(range);
+  RRange *r = mrb_range_raw_ptr(range);
 
   range_check(mrb, beg, end);
   r->excl = exclude_end;
@@ -166,8 +166,8 @@ mrb_range_initialize(mrb_state *mrb, mrb_value range)
 mrb_value
 mrb_range_eq(mrb_state *mrb, mrb_value range)
 {
-  struct RRange *rr;
-  struct RRange *ro;
+  RRange *rr;
+  RRange *ro;
   mrb_value obj, v1, v2;
 
   mrb_get_args(mrb, "o", &obj);
@@ -235,7 +235,7 @@ mrb_value
 mrb_range_include(mrb_state *mrb, mrb_value range)
 {
   mrb_value val;
-  struct RRange *r = mrb_range_ptr(mrb, range);
+  RRange *r = mrb_range_ptr(mrb, range);
   mrb_value beg, end;
   mrb_bool include_p;
 
@@ -254,7 +254,7 @@ MRB_API mrb_int
 mrb_range_beg_len(mrb_state *mrb, mrb_value range, mrb_int *begp, mrb_int *lenp, mrb_int len, mrb_bool trunc)
 {
   mrb_int beg, end;
-  struct RRange *r;
+  RRange *r;
 
   if (mrb_type(range) != MRB_TT_RANGE) return 0;
   r = mrb_range_ptr(mrb, range);
@@ -295,7 +295,7 @@ static mrb_value
 range_to_s(mrb_state *mrb, mrb_value range)
 {
   mrb_value str, str2;
-  struct RRange *r = mrb_range_ptr(mrb, range);
+  RRange *r = mrb_range_ptr(mrb, range);
 
   str  = mrb_obj_as_string(mrb, r->edges->beg);
   str2 = mrb_obj_as_string(mrb, r->edges->end);
@@ -320,7 +320,7 @@ static mrb_value
 range_inspect(mrb_state *mrb, mrb_value range)
 {
   mrb_value str, str2;
-  struct RRange *r = mrb_range_ptr(mrb, range);
+  RRange *r = mrb_range_ptr(mrb, range);
 
   str  = mrb_inspect(mrb, r->edges->beg);
   str2 = mrb_inspect(mrb, r->edges->end);
@@ -350,7 +350,7 @@ static mrb_value
 range_eql(mrb_state *mrb, mrb_value range)
 {
   mrb_value obj;
-  struct RRange *r, *o;
+  RRange *r, *o;
 
   mrb_get_args(mrb, "o", &obj);
 
@@ -375,7 +375,7 @@ static mrb_value
 range_initialize_copy(mrb_state *mrb, mrb_value copy)
 {
   mrb_value src;
-  struct RRange *r;
+  RRange *r;
 
   mrb_get_args(mrb, "o", &src);
 
@@ -422,7 +422,7 @@ mrb_get_values_at(mrb_state *mrb, mrb_value obj, mrb_int olen, mrb_int argc, con
 void
 mrb_init_range(mrb_state *mrb)
 {
-  struct RClass *r;
+  RClass *r;
 
   r = mrb_define_class(mrb, "Range", mrb->object_class);                                /* 15.2.14 */
   mrb->range_class = r;

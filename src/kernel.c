@@ -32,7 +32,7 @@ MRB_API mrb_bool
 mrb_func_basic_p(mrb_state *mrb, mrb_value obj, mrb_sym mid, mrb_func_t func)
 {
   mrb_method_t m = mrb_method_search(mrb, mrb_class(mrb, obj), mid);
-  struct RProc *p;
+  RProc *p;
 
   if (MRB_METHOD_UNDEF_P(m)) return FALSE;
   if (MRB_METHOD_FUNC_P(m))
@@ -143,7 +143,7 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
   mrb_callinfo *ci = &mrb->c->ci[-1];
   mrb_callinfo *cibase = mrb->c->cibase;
   mrb_value *bp;
-  struct RProc *p;
+  RProc *p;
 
   if (ci <= cibase) {
     /* toplevel does not have block */
@@ -165,7 +165,7 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
     return mrb_false_value();
   }
   else if (ci->env) {
-    struct REnv *e = ci->env;
+    REnv *e = ci->env;
     int bidx;
 
     /* top-level does not have block slot (always false) */
@@ -210,16 +210,16 @@ mrb_obj_class_m(mrb_state *mrb, mrb_value self)
   return mrb_obj_value(mrb_obj_class(mrb, self));
 }
 
-static struct RClass*
+static RClass*
 mrb_singleton_class_clone(mrb_state *mrb, mrb_value obj)
 {
-  struct RClass *klass = mrb_basic_ptr(obj)->c;
+  RClass *klass = mrb_basic_ptr(obj)->c;
 
   if (klass->tt != MRB_TT_SCLASS)
     return klass;
   else {
     /* copy singleton(unnamed) class */
-    struct RClass *clone = (struct RClass*)mrb_obj_alloc(mrb, klass->tt, mrb->class_class);
+    RClass *clone = (RClass*)mrb_obj_alloc(mrb, klass->tt, mrb->class_class);
 
     switch (mrb_type(obj)) {
     case MRB_TT_CLASS:
@@ -232,7 +232,7 @@ mrb_singleton_class_clone(mrb_state *mrb, mrb_value obj)
     clone->super = klass->super;
     if (klass->iv) {
       mrb_iv_copy(mrb, mrb_obj_value(clone), mrb_obj_value(klass));
-      mrb_obj_iv_set(mrb, (struct RObject*)clone, mrb_intern_lit(mrb, "__attached__"), obj);
+      mrb_obj_iv_set(mrb, (RObject*)clone, mrb_intern_lit(mrb, "__attached__"), obj);
     }
     if (klass->mt) {
       clone->mt = kh_copy(mt, mrb, klass->mt);
@@ -248,13 +248,13 @@ mrb_singleton_class_clone(mrb_state *mrb, mrb_value obj)
 static void
 copy_class(mrb_state *mrb, mrb_value dst, mrb_value src)
 {
-  struct RClass *dc = mrb_class_ptr(dst);
-  struct RClass *sc = mrb_class_ptr(src);
+  RClass *dc = mrb_class_ptr(dst);
+  RClass *sc = mrb_class_ptr(src);
   /* if the origin is not the same as the class, then the origin and
      the current class need to be copied */
   if (sc->flags & MRB_FLAG_IS_PREPENDED) {
-    struct RClass *c0 = sc->super;
-    struct RClass *c1 = dc;
+    RClass *c0 = sc->super;
+    RClass *c1 = dc;
 
     /* copy prepended iclasses */
     while (!(c0->flags & MRB_FLAG_IS_ORIGIN)) {
@@ -329,7 +329,7 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
 MRB_API mrb_value
 mrb_obj_clone(mrb_state *mrb, mrb_value self)
 {
-  struct RObject *p;
+  RObject *p;
   mrb_value clone;
 
   if (mrb_immediate_p(self)) {
@@ -338,9 +338,9 @@ mrb_obj_clone(mrb_state *mrb, mrb_value self)
   if (mrb_type(self) == MRB_TT_SCLASS) {
     mrb_raise(mrb, E_TYPE_ERROR, "can't clone singleton class");
   }
-  p = (struct RObject*)mrb_obj_alloc(mrb, mrb_type(self), mrb_obj_class(mrb, self));
+  p = (RObject*)mrb_obj_alloc(mrb, mrb_type(self), mrb_obj_class(mrb, self));
   p->c = mrb_singleton_class_clone(mrb, self);
-  mrb_field_write_barrier(mrb, (struct RBasic*)p, (struct RBasic*)p->c);
+  mrb_field_write_barrier(mrb, (RBasic*)p, (RBasic*)p->c);
   clone = mrb_obj_value(p);
   init_copy(mrb, clone, self);
 
@@ -369,7 +369,7 @@ mrb_obj_clone(mrb_state *mrb, mrb_value self)
 MRB_API mrb_value
 mrb_obj_dup(mrb_state *mrb, mrb_value obj)
 {
-  struct RBasic *p;
+  RBasic *p;
   mrb_value dup;
 
   if (mrb_immediate_p(obj)) {
@@ -441,7 +441,7 @@ mrb_obj_extend_m(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_obj_freeze(mrb_state *mrb, mrb_value self)
 {
-  struct RBasic *b;
+  RBasic *b;
 
   switch (mrb_type(self)) {
     case MRB_TT_FALSE:
@@ -466,7 +466,7 @@ mrb_obj_freeze(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_obj_frozen(mrb_state *mrb, mrb_value self)
 {
-  struct RBasic *b;
+  RBasic *b;
 
   switch (mrb_type(self)) {
     case MRB_TT_FALSE:
@@ -521,7 +521,7 @@ mrb_obj_init_copy(mrb_state *mrb, mrb_value self)
 
 
 MRB_API mrb_bool
-mrb_obj_is_instance_of(mrb_state *mrb, mrb_value obj, struct RClass* c)
+mrb_obj_is_instance_of(mrb_state *mrb, mrb_value obj, RClass* c)
 {
   if (mrb_obj_class(mrb, obj) == c) return TRUE;
   return FALSE;
@@ -676,7 +676,7 @@ KHASH_DECLARE(st, mrb_sym, char, FALSE)
 KHASH_DEFINE(st, mrb_sym, char, FALSE, kh_int_hash_func, kh_int_hash_equal)
 
 static void
-method_entry_loop(mrb_state *mrb, struct RClass* klass, khash_t(st)* set)
+method_entry_loop(mrb_state *mrb, RClass* klass, khash_t(st)* set)
 {
   khint_t i;
 
@@ -692,12 +692,12 @@ method_entry_loop(mrb_state *mrb, struct RClass* klass, khash_t(st)* set)
 }
 
 mrb_value
-mrb_class_instance_method_list(mrb_state *mrb, mrb_bool recur, struct RClass* klass, int obj)
+mrb_class_instance_method_list(mrb_state *mrb, mrb_bool recur, RClass* klass, int obj)
 {
   khint_t i;
   mrb_value ary;
   mrb_bool prepended = FALSE;
-  struct RClass* oldklass;
+  RClass* oldklass;
   khash_t(st)* set = kh_init(st, mrb);
 
   if (!recur && (klass->flags & MRB_FLAG_IS_PREPENDED)) {
@@ -734,7 +734,7 @@ mrb_obj_singleton_methods(mrb_state *mrb, mrb_bool recur, mrb_value obj)
 {
   khint_t i;
   mrb_value ary;
-  struct RClass* klass;
+  RClass* klass;
   khash_t(st)* set = kh_init(st, mrb);
 
   klass = mrb_class(mrb, obj);
@@ -1122,7 +1122,7 @@ mrb_obj_singleton_methods_m(mrb_state *mrb, mrb_value self)
 static mrb_value
 mod_define_singleton_method(mrb_state *mrb, mrb_value self)
 {
-  struct RProc *p;
+  RProc *p;
   mrb_method_t m;
   mrb_sym mid;
   mrb_value blk = mrb_nil_value();
@@ -1131,7 +1131,7 @@ mod_define_singleton_method(mrb_state *mrb, mrb_value self)
   if (mrb_nil_p(blk)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "no block given");
   }
-  p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
+  p = (RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
   mrb_proc_copy(p, mrb_proc_ptr(blk));
   p->flags |= MRB_PROC_STRICT;
   MRB_METHOD_FROM_PROC(m, p);
@@ -1171,7 +1171,7 @@ mrb_obj_ceqq(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_local_variables(mrb_state *mrb, mrb_value self)
 {
-  struct RProc *proc;
+  RProc *proc;
   mrb_irep *irep;
   mrb_value vars;
   size_t i;
@@ -1204,7 +1204,7 @@ mrb_value mrb_obj_equal_m(mrb_state *mrb, mrb_value);
 void
 mrb_init_kernel(mrb_state *mrb)
 {
-  struct RClass *krn;
+  RClass *krn;
 
   mrb->kernel_module = krn = mrb_define_module(mrb, "Kernel");                                                    /* 15.3.1 */
   mrb_define_class_method(mrb, krn, "block_given?",         mrb_f_block_given_p_m,           MRB_ARGS_NONE());    /* 15.3.1.2.2  */

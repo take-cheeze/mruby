@@ -243,7 +243,7 @@ mrb_io_win_p(mrb_state *mrb, mrb_value klass)
 void
 mrb_mruby_io_gem_test(mrb_state* mrb)
 {
-  struct RClass *io_test = mrb_define_module(mrb, "MRubyIOTestUtil");
+  RClass *io_test = mrb_define_module(mrb, "MRubyIOTestUtil");
   mrb_define_class_method(mrb, io_test, "io_test_setup", mrb_io_test_io_setup, MRB_ARGS_NONE());
   mrb_define_class_method(mrb, io_test, "io_test_cleanup", mrb_io_test_io_cleanup, MRB_ARGS_NONE());
 

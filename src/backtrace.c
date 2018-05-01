@@ -197,7 +197,7 @@ pack_backtrace_i(mrb_state *mrb,
 static mrb_value
 packed_backtrace(mrb_state *mrb)
 {
-  struct RData *backtrace;
+  RData *backtrace;
   ptrdiff_t ciidx = mrb->c->ci - mrb->c->cibase;
   int len = 0;
   int size;

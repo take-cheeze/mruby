@@ -95,7 +95,7 @@ mrb_str_swapcase_bang(mrb_state *mrb, mrb_value str)
 {
   char *p, *pend;
   int modify = 0;
-  struct RString *s = mrb_str_ptr(str);
+  RString *s = mrb_str_ptr(str);
 
   mrb_str_modify(mrb, s);
   p = RSTRING_PTR(str);
@@ -322,7 +322,7 @@ mrb_str_succ_bang(mrb_state *mrb, mrb_value self)
   mrb_value result;
   unsigned char *p, *e, *b, *t;
   const char *prepend;
-  struct RString *s = mrb_str_ptr(self);
+  RString *s = mrb_str_ptr(self);
   mrb_int l;
 
   if (RSTRING_LEN(self) == 0)
@@ -485,7 +485,7 @@ mrb_str_del_prefix_bang(mrb_state *mrb, mrb_value self)
 {
   mrb_int plen, slen;
   char *ptr, *s;
-  struct RString *str = RSTRING(self);
+  RString *str = RSTRING(self);
 
   mrb_get_args(mrb, "s", &ptr, &plen);
   slen = RSTR_LEN(str);
@@ -542,7 +542,7 @@ mrb_str_del_suffix_bang(mrb_state *mrb, mrb_value self)
 {
   mrb_int plen, slen;
   char *ptr, *s;
-  struct RString *str = RSTRING(self);
+  RString *str = RSTRING(self);
 
   mrb_get_args(mrb, "s", &ptr, &plen);
   slen = RSTR_LEN(str);
@@ -610,7 +610,7 @@ mrb_str_lines(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_string_ext_gem_init(mrb_state* mrb)
 {
-  struct RClass * s = mrb->string_class;
+  RClass * s = mrb->string_class;
 
   mrb_define_method(mrb, s, "dump",            mrb_str_dump,            MRB_ARGS_NONE());
   mrb_define_method(mrb, s, "getbyte",         mrb_str_getbyte,         MRB_ARGS_REQ(1));

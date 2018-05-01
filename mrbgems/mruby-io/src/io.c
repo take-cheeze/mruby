@@ -67,7 +67,7 @@ static int mrb_io_flags_to_modenum(mrb_state *mrb, int flags);
 static void fptr_finalize(mrb_state *mrb, struct mrb_io *fptr, int quiet);
 
 #if MRUBY_RELEASE_NO < 10000
-static struct RClass *
+static RClass *
 mrb_module_get(mrb_state *mrb, const char *name)
 {
   return mrb_class_get(mrb, name);
@@ -89,7 +89,7 @@ io_get_open_fptr(mrb_state *mrb, mrb_value self)
 static void
 io_set_process_status(mrb_state *mrb, pid_t pid, int status)
 {
-  struct RClass *c_process, *c_status;
+  RClass *c_process, *c_status;
   mrb_value v;
 
   c_status = NULL;
@@ -726,13 +726,13 @@ mrb_io_isatty(mrb_state *mrb, mrb_value self)
 mrb_value
 mrb_io_s_for_fd(mrb_state *mrb, mrb_value klass)
 {
-  struct RClass *c = mrb_class_ptr(klass);
+  RClass *c = mrb_class_ptr(klass);
   enum mrb_vtype ttype = MRB_INSTANCE_TT(c);
   mrb_value obj;
 
   /* copied from mrb_instance_alloc() */
   if (ttype == 0) ttype = MRB_TT_OBJECT;
-  obj = mrb_obj_value((struct RObject*)mrb_obj_alloc(mrb, ttype, c));
+  obj = mrb_obj_value((RObject*)mrb_obj_alloc(mrb, ttype, c));
   return mrb_io_initialize(mrb, obj);
 }
 
@@ -1292,7 +1292,7 @@ mrb_io_sync(mrb_state *mrb, mrb_value self)
 void
 mrb_init_io(mrb_state *mrb)
 {
-  struct RClass *io;
+  RClass *io;
 
   io      = mrb_define_class(mrb, "IO", mrb->object_class);
   MRB_SET_INSTANCE_TT(io, MRB_TT_DATA);
