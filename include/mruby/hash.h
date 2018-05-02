@@ -8,13 +8,13 @@
 #define MRUBY_HASH_H
 
 #include "common.h"
-#include <mruby/khash.h>
 
 /**
  * Hash class
  */
 MRB_BEGIN_DECL
 
+/*
 RHash {
   MRB_OBJECT_HEADER;
   struct iv_tbl *iv;
@@ -23,6 +23,7 @@ RHash {
 
 #define mrb_hash_ptr(v)    ((RHash*)(mrb_ptr(v)))
 #define mrb_hash_value(p)  mrb_obj_value((void*)(p))
+*/
 
 MRB_API mrb_value mrb_hash_new_capa(mrb_state*, mrb_int);
 
@@ -158,8 +159,6 @@ typedef struct {
   mrb_int n;
 } mrb_hash_value;
 
-KHASH_DECLARE(ht, mrb_value, mrb_hash_value, TRUE)
-
 /* RHASH_TBL allocates st_table if not available. */
 #define RHASH(obj)   ((RHash*)(mrb_ptr(obj)))
 #define RHASH_TBL(h)          (RHASH(h)->ht)
@@ -176,6 +175,8 @@ MRB_API struct kh_ht * mrb_hash_tbl(mrb_state *mrb, mrb_value hash);
 void mrb_gc_mark_hash(mrb_state*, RHash*);
 size_t mrb_gc_mark_hash_size(mrb_state*, RHash*);
 void mrb_gc_free_hash(mrb_state*, RHash*);
+
+static inline RHash* mrb_hash_ptr(mrb_value v) { return tabV(&v); }
 
 MRB_END_DECL
 

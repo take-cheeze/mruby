@@ -2,6 +2,8 @@
 
 #include <lj_obj.h>
 #include <lj_str.h>
+#include <lj_gc.h>
+#include <lj_tab.h>
 
 typedef _Bool mrb_bool;
 typedef lua_Integer mrb_int;
@@ -14,6 +16,7 @@ typedef GCstr* mrb_sym;
 typedef GCobj RObject;
 typedef GCtab RClass;
 typedef GCtab RArray;
+typedef GCtab RHash;
 typedef GCudata RString;
 typedef GCudata RData;
 typedef GCproto mrb_irep;
@@ -119,6 +122,8 @@ static inline mrb_value mrb_false_value() { return mrb_bool_value(FALSE); }
 static inline mrb_value mrb_true_value() { return mrb_bool_value(TRUE); }
 
 static inline mrb_bool mrb_array_p(mrb_value v) {}
+
+static inline mrb_bool mrb_fixnum_p(mrb_value v) { return tvisint(&v); }
 
 #define MRB_INT_MAX INT32_MAX
 #define MRB_INT_MIN INT32_MIN

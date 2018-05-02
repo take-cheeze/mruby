@@ -159,7 +159,7 @@ typedef struct mrb_state {
   RClass
     *false_class, *true_class, *nil_class,
     *symbol_class, *fixnum_class, *float_class,
-    *object_class, *array_class;
+    *object_class, *array_class, *hash_class;
 
   mrb_value top_self;
 } mrb_state;

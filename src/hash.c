@@ -8,7 +8,6 @@
 #include <mruby/array.h>
 #include <mruby/class.h>
 #include <mruby/hash.h>
-#include <mruby/khash.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
 
@@ -269,17 +268,6 @@ MRB_API mrb_value
 mrb_check_hash_type(mrb_state *mrb, mrb_value hash)
 {
   return mrb_check_convert_type(mrb, hash, MRB_TT_HASH, "Hash", "to_hash");
-}
-
-MRB_API khash_t(ht)*
-mrb_hash_tbl(mrb_state *mrb, mrb_value hash)
-{
-  khash_t(ht) *h = RHASH_TBL(hash);
-
-  if (!h) {
-    return RHASH_TBL(hash) = kh_init(ht, mrb);
-  }
-  return h;
 }
 
 static void
@@ -693,10 +681,7 @@ mrb_hash_aset(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_hash_size_m(mrb_state *mrb, mrb_value self)
 {
-  khash_t(ht) *h = RHASH_TBL(self);
-
-  if (!h) return mrb_fixnum_value(0);
-  return mrb_fixnum_value(kh_size(h));
+  return mrb_fixnum_value(lj_tab_len(mrb_hash_ptr(self)));
 }
 
 /* 15.2.13.4.12 */
@@ -712,10 +697,7 @@ mrb_hash_size_m(mrb_state *mrb, mrb_value self)
 MRB_API mrb_value
 mrb_hash_empty_p(mrb_state *mrb, mrb_value self)
 {
-  khash_t(ht) *h = RHASH_TBL(self);
-
-  if (h) return mrb_bool_value(kh_size(h) == 0);
-  return mrb_true_value();
+  return mrb_bool_value(lj_tab_len(mrb_hash_ptr(self)) == 0);
 }
 
 /* 15.2.13.4.29 (x)*/
@@ -748,29 +730,15 @@ mrb_hash_to_hash(mrb_state *mrb, mrb_value hash)
 MRB_API mrb_value
 mrb_hash_keys(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
-  mrb_int end;
   mrb_value ary;
-  mrb_value *p;
+  RHash* h = mrb_hash_ptr(hash);
+  mrb_value i[2];
+  int idx = 0;
 
-  if (!h || kh_size(h) == 0) return mrb_ary_new(mrb);
-  ary = mrb_ary_new_capa(mrb, kh_size(h));
-  end = kh_size(h)-1;
-  mrb_ary_set(mrb, ary, end, mrb_nil_value());
-  p = RARRAY_PTR(ary);
-  for (k = kh_begin(h); k != kh_end(h); k++) {
-    if (kh_exist(h, k)) {
-      mrb_value kv = kh_key(h, k);
-      mrb_hash_value hv = kh_value(h, k);
-
-      if (hv.n <= end) {
-        p[hv.n] = kv;
-      }
-      else {
-        p[end] = kv;
-      }
-    }
+  if (!h) return mrb_ary_new(mrb);
+  ary = mrb_ary_new_capa(mrb, lj_tab_len(h));
+  while (lj_tab_next(mrb->L, mrb_hash_ptr(hash), i)) {
+    *lj_tab_setint(mrb->L, h, idx++) = i[0];
   }
   return ary;
 }
@@ -791,18 +759,15 @@ mrb_hash_keys(mrb_state *mrb, mrb_value hash)
 MRB_API mrb_value
 mrb_hash_values(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
   mrb_value ary;
+  RHash* h = mrb_hash_ptr(hash);
+  mrb_value i[2];
+  int idx = 0;
 
   if (!h) return mrb_ary_new(mrb);
-  ary = mrb_ary_new_capa(mrb, kh_size(h));
-  for (k = kh_begin(h); k != kh_end(h); k++) {
-    if (kh_exist(h, k)) {
-      mrb_hash_value hv = kh_value(h, k);
-
-      mrb_ary_set(mrb, ary, hv.n, hv.v);
-    }
+  ary = mrb_ary_new_capa(mrb, lj_tab_len(h));
+  while (lj_tab_next(mrb->L, mrb_hash_ptr(hash), i)) {
+    *lj_tab_setint(mrb->L, h, idx++) = i[1];
   }
   return ary;
 }
@@ -830,17 +795,10 @@ static mrb_value
 mrb_hash_has_key(mrb_state *mrb, mrb_value hash)
 {
   mrb_value key;
-  khash_t(ht) *h;
-  khiter_t k;
 
   mrb_get_args(mrb, "o", &key);
 
-  h = RHASH_TBL(hash);
-  if (h) {
-    k = kh_get(ht, mrb, h, key);
-    return mrb_bool_value(k != kh_end(h));
-  }
-  return mrb_false_value();
+  return *lj_tab_get(mrb->L, mrb_hash_ptr(hash), &key);
 }
 
 /* 15.2.13.4.14 */
@@ -861,21 +819,13 @@ mrb_hash_has_key(mrb_state *mrb, mrb_value hash)
 static mrb_value
 mrb_hash_has_value(mrb_state *mrb, mrb_value hash)
 {
+  mrb_value i[2];
   mrb_value val;
-  khash_t(ht) *h;
-  khiter_t k;
 
   mrb_get_args(mrb, "o", &val);
-  h = RHASH_TBL(hash);
 
-  if (h) {
-    for (k = kh_begin(h); k != kh_end(h); k++) {
-      if (!kh_exist(h, k)) continue;
-
-      if (mrb_equal(mrb, kh_value(h, k).v, val)) {
-        return mrb_true_value();
-      }
-    }
+  while (lj_tab_next(mrb->L, mrb_hash_ptr(hash), i)) {
+    if (mrb_equal(mrb, i[1], val)) { return mrb_true_value(); }
   }
   return mrb_false_value();
 }
@@ -886,7 +836,6 @@ mrb_init_hash(mrb_state *mrb)
   RClass *h;
 
   mrb->hash_class = h = mrb_define_class(mrb, "Hash", mrb->object_class);              /* 15.2.13 */
-  MRB_SET_INSTANCE_TT(h, MRB_TT_HASH);
 
   mrb_define_method(mrb, h, "[]",              mrb_hash_aget,        MRB_ARGS_REQ(1)); /* 15.2.13.4.2  */
   mrb_define_method(mrb, h, "[]=",             mrb_hash_aset,        MRB_ARGS_REQ(2)); /* 15.2.13.4.3  */

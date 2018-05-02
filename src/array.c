@@ -76,10 +76,10 @@ ary_new_from_values(mrb_state *mrb, mrb_int size, const mrb_value *vals)
 {
   GCtab* ret = lj_tab_new(mrb->L, size, 0);
   for (mrb_int i = 0; i < size; ++i) {
-    copyTV(mrb->L, lj_tab_setinth(mrb->L, ret, i), vals[i])
+    copyTV(mrb->L, lj_tab_setinth(mrb->L, ret, i), vals + i);
   }
 
-  return mrb_obj_value(ret);
+  return ret;
 }
 
 MRB_API mrb_value
@@ -95,9 +95,8 @@ mrb_assoc_new(mrb_state *mrb, mrb_value car, mrb_value cdr)
   RArray *a;
 
   a = ary_new_capa(mrb, 2);
-  ARY_PTR(a)[0] = car;
-  ARY_PTR(a)[1] = cdr;
-  ARY_SET_LEN(a, 2);
+  *lj_tab_setint(mrb->L, a, 1) = car;
+  *lj_tab_setint(mrb->L, a, 2) = cdr;
   return mrb_obj_value(a);
 }
 
@@ -161,94 +160,12 @@ mrb_ary_modify(mrb_state *mrb, RArray* a)
   ary_modify(mrb, a);
 }
 
-static void
-ary_expand_capa(mrb_state *mrb, RArray *a, mrb_int len)
-{
-  mrb_int capa = ARY_CAPA(a);
-
-  if (len > ARY_MAX_SIZE || len < 0) {
-  size_error:
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "array size too big");
-  }
-
-  if (capa < ARY_DEFAULT_LEN) {
-    capa = ARY_DEFAULT_LEN;
-  }
-  while (capa < len) {
-    if (capa <= ARY_MAX_SIZE / 2) {
-      capa *= 2;
-    }
-    else {
-      capa = len;
-    }
-  }
-  if (capa < len || capa > ARY_MAX_SIZE) {
-    goto size_error;
-  }
-
-  if (ARY_EMBED_P(a)) {
-    mrb_value *ptr = ARY_EMBED_PTR(a);
-    mrb_int len = ARY_EMBED_LEN(a);
-    mrb_value *expanded_ptr = (mrb_value *)mrb_malloc(mrb, sizeof(mrb_value)*capa);
-
-    ARY_UNSET_EMBED_FLAG(a);
-    array_copy(expanded_ptr, ptr, len);
-    a->as.heap.len = len;
-    a->as.heap.aux.capa = capa;
-    a->as.heap.ptr = expanded_ptr;
-  }
-  else if (capa > a->as.heap.aux.capa) {
-    mrb_value *expanded_ptr = (mrb_value *)mrb_realloc(mrb, a->as.heap.ptr, sizeof(mrb_value)*capa);
-
-    a->as.heap.aux.capa = capa;
-    a->as.heap.ptr = expanded_ptr;
-  }
-}
-
-static void
-ary_shrink_capa(mrb_state *mrb, RArray *a)
-{
-  
-  mrb_int capa;
-
-  if (ARY_EMBED_P(a)) return;
-
-  capa = a->as.heap.aux.capa;
-  if (capa < ARY_DEFAULT_LEN * 2) return;
-  if (capa <= a->as.heap.len * ARY_SHRINK_RATIO) return;
-
-  do {
-    capa /= 2;
-    if (capa < ARY_DEFAULT_LEN) {
-      capa = ARY_DEFAULT_LEN;
-      break;
-    }
-  } while (capa > a->as.heap.len * ARY_SHRINK_RATIO);
-
-  if (capa > a->as.heap.len && capa < a->as.heap.aux.capa) {
-    a->as.heap.aux.capa = capa;
-    a->as.heap.ptr = (mrb_value *)mrb_realloc(mrb, a->as.heap.ptr, sizeof(mrb_value)*capa);
-  }
-}
-
 MRB_API mrb_value
 mrb_ary_resize(mrb_state *mrb, mrb_value ary, mrb_int new_len)
 {
-  mrb_int old_len;
   RArray *a = mrb_ary_ptr(ary);
 
-  ary_modify(mrb, a);
-  old_len = RARRAY_LEN(ary);
-  if (old_len != new_len) {
-    if (new_len < old_len) {
-      ary_shrink_capa(mrb, a);
-    }
-    else {
-      ary_expand_capa(mrb, a, new_len);
-      ary_fill_with_nil(ARY_PTR(a) + old_len, new_len - old_len);
-    }
-    ARY_SET_LEN(a, new_len);
-  }
+  lj_tab_reasize(mrb->L, a, new_len);
 
   return ary;
 }
@@ -264,7 +181,7 @@ mrb_ary_s_create(mrb_state *mrb, mrb_value klass)
   mrb_get_args(mrb, "*!", &vals, &len);
   ary = mrb_ary_new_from_values(mrb, len, vals);
   a = mrb_ary_ptr(ary);
-  a->c = mrb_class_ptr(klass);
+  setgcref(a->metatable, obj2gco(mrb_class_ptr(klass)));
 
   return ary;
 }
@@ -285,13 +202,9 @@ ary_concat(mrb_state *mrb, RArray *a, RArray *a2)
   }
   len = ARY_LEN(a) + ARY_LEN(a2);
 
-  ary_modify(mrb, a);
-  if (ARY_CAPA(a) < len) {
-    ary_expand_capa(mrb, a, len);
-  }
-  array_copy(ARY_PTR(a)+ARY_LEN(a), ARY_PTR(a2), ARY_LEN(a2));
-  mrb_write_barrier(mrb, (RBasic*)a);
-  ARY_SET_LEN(a, len);
+  lj_tab_reasize(mrb->L, a, len);
+  array_copy(arrayslot(a, ARY_LEN(a)), arrayslot(a2, 0), ARY_LEN(a2));
+  lj_gc_barrieruv(mrb->L, a);
 }
 
 MRB_API void
@@ -326,9 +239,9 @@ mrb_ary_plus(mrb_state *mrb, mrb_value self)
   }
   len1 = ARY_LEN(a1);
   a2 = ary_new_capa(mrb, len1 + blen);
-  array_copy(ARY_PTR(a2), ARY_PTR(a1), len1);
-  array_copy(ARY_PTR(a2) + len1, ptr, blen);
-  ARY_SET_LEN(a2, len1+blen);
+  lj_tab_reasize(mrb->L, a2, len1 + blen);
+  array_copy(arrayslot(a2, 0), arrayslot(a1, 0), len1);
+  array_copy(arrayslot(a2, len1), ptr, blen);
 
   return mrb_obj_value(a2);
 }
@@ -342,11 +255,9 @@ ary_replace(mrb_state *mrb, RArray *a, RArray *b)
 
   ary_modify_check(mrb, a);
   if (a == b) return;
-  if (ARY_CAPA(a) < len)
-    ary_expand_capa(mrb, a, len);
-  array_copy(ARY_PTR(a), ARY_PTR(b), len);
-  mrb_write_barrier(mrb, (RBasic*)a);
-  ARY_SET_LEN(a, len);
+  lj_tab_reasize(mrb->L, a, len);
+  array_copy(arrayslot(a, 0), arrayslot(b, 0), len);
+  lj_gc_barrieruv(mrb->L, a);
 }
 
 MRB_API void
@@ -389,10 +300,10 @@ mrb_ary_times(mrb_state *mrb, mrb_value self)
   }
   len1 = ARY_LEN(a1);
   a2 = ary_new_capa(mrb, len1 * times);
-  ARY_SET_LEN(a2, len1 * times);
-  ptr = ARY_PTR(a2);
+  lj_tab_reasize(mrb->L, a2, len1 * times);
+  ptr = arrayslot(a2, 0);
   while (times--) {
-    array_copy(ptr, ARY_PTR(a1), len1);
+    array_copy(ptr, arrayslot(a1, 0), len1);
     ptr += len1;
   }
 
@@ -408,8 +319,7 @@ mrb_ary_reverse_bang(mrb_state *mrb, mrb_value self)
   if (len > 1) {
     mrb_value *p1, *p2;
 
-    ary_modify(mrb, a);
-    p1 = ARY_PTR(a);
+    p1 = arrayslot(a, 0);
     p2 = p1 + len - 1;
 
     while (p1 < p2) {
@@ -427,16 +337,17 @@ mrb_ary_reverse(mrb_state *mrb, mrb_value self)
   RArray *a = mrb_ary_ptr(self), *b = ary_new_capa(mrb, ARY_LEN(a));
   mrb_int len = ARY_LEN(a);
 
+  lj_tab_reasize(mrb->L, b, len);
+
   if (len > 0) {
     mrb_value *p1, *p2, *e;
 
-    p1 = ARY_PTR(a);
+    p1 = arrayslot(a, 0);
     e  = p1 + len;
-    p2 = ARY_PTR(b) + len - 1;
+    p2 = arrayslot(b, len - 1);
     while (p1 < e) {
       *p2-- = *p1++;
     }
-    ARY_SET_LEN(b, len);
   }
   return mrb_obj_value(b);
 }
@@ -447,12 +358,8 @@ mrb_ary_push(mrb_state *mrb, mrb_value ary, mrb_value elem)
   RArray *a = mrb_ary_ptr(ary);
   mrb_int len = ARY_LEN(a);
 
-  ary_modify(mrb, a);
-  if (len == ARY_CAPA(a))
-    ary_expand_capa(mrb, a, len + 1);
-  ARY_PTR(a)[len] = elem;
-  ARY_SET_LEN(a, len+1);
-  mrb_field_write_barrier_value(mrb, (RBasic*)a, elem);
+  *lj_tab_setint(mrb->L, a, len + 1) = elem;
+  lj_gc_barriert(mrb->L, a, &elem);
 }
 
 static mrb_value
@@ -467,11 +374,8 @@ mrb_ary_push_m(mrb_state *mrb, mrb_value self)
   ary_modify(mrb, a);
   len = ARY_LEN(a);
   len2 = len + alen;
-  if (ARY_CAPA(a) < len2) {
-    ary_expand_capa(mrb, a, len2);
-  }
-  array_copy(ARY_PTR(a)+len, argv, alen);
-  ARY_SET_LEN(a, len2);
+  lj_tab_reasize(mrb->L, a, len2);
+  array_copy(arrayslot(a, len), argv, alen);
   mrb_write_barrier(mrb, (RBasic*)a);
 
   return self;
@@ -483,10 +387,10 @@ mrb_ary_pop(mrb_state *mrb, mrb_value ary)
   RArray *a = mrb_ary_ptr(ary);
   mrb_int len = ARY_LEN(a);
 
-  ary_modify_check(mrb, a);
   if (len == 0) return mrb_nil_value();
-  ARY_SET_LEN(a, len-1);
-  return ARY_PTR(a)[len-1];
+  mrb_value ret = *lj_tab_setint(mrb->L, a, len);
+  lj_tab_reasize(mrb->L, a, len - 1);
+  return ret;
 }
 
 #define ARY_SHIFT_SHARED_MIN 10
@@ -500,21 +404,16 @@ mrb_ary_shift(mrb_state *mrb, mrb_value self)
 
   ary_modify_check(mrb, a);
   if (len == 0) return mrb_nil_value();
-  if (len > ARY_SHIFT_SHARED_MIN) {
-    ary_make_shared(mrb, a);
-    goto L_SHIFT;
-  }
-  else {
-    mrb_value *ptr = ARY_PTR(a);
-    mrb_int size = len;
 
-    val = *ptr;
-    while (--size) {
-      *ptr = *(ptr+1);
-      ++ptr;
-    }
-    ARY_SET_LEN(a, len-1);
+  mrb_value *ptr = arrayslot(a, 0);
+  mrb_int size = len;
+
+  val = *ptr;
+  while (--size) {
+    *ptr = *(ptr+1);
+    ++ptr;
   }
+  lj_tab_reasize(mrb->L, a, len - 1);
   return val;
 }
 
@@ -531,13 +430,11 @@ mrb_ary_unshift(mrb_state *mrb, mrb_value self, mrb_value item)
   mrb_value *ptr;
 
   ary_modify(mrb, a);
-  if (ARY_CAPA(a) < len + 1)
-    ary_expand_capa(mrb, a, len + 1);
-  ptr = ARY_PTR(a);
+  lj_tab_reasize(mrb->L, a, len + 1);
+  ptr = arrayslot(a, 0);
   value_move(ptr + 1, ptr, len);
   ptr[0] = item;
-  ARY_SET_LEN(a, len+1);
-  mrb_field_write_barrier_value(mrb, (RBasic*)a, item);
+  lj_gc_barriert(mrb->L, a, &item);
 
   return self;
 }
@@ -558,15 +455,12 @@ mrb_ary_unshift_m(mrb_state *mrb, mrb_value self)
   if (alen > ARY_MAX_SIZE - len) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "array size too big");
   }
-  ary_modify(mrb, a);
-  if (ARY_CAPA(a) < len + alen)
-    ary_expand_capa(mrb, a, len + alen);
-  ptr = ARY_PTR(a);
+  lj_tab_reasize(mrb->L, a, alen);
+  ptr = arrayslot(a, 0);
   value_move(ptr + alen, ptr, len);
-  array_copy(ptr, vals, alen);
-  ARY_SET_LEN(a, len+alen);
+  array_copy(ptr, vals, len + alen);
   while (alen--) {
-    mrb_field_write_barrier_value(mrb, (RBasic*)a, vals[alen]);
+    lj_gc_barriert(mrb->L, a, vals + alen);
   }
 
   return self;
@@ -582,7 +476,7 @@ mrb_ary_ref(mrb_state *mrb, mrb_value ary, mrb_int n)
   if (n < 0) n += len;
   if (n < 0 || len <= n) return mrb_nil_value();
 
-  return ARY_PTR(a)[n];
+  return *lj_tab_setint(mrb->L, a, n);
 }
 
 MRB_API void
@@ -600,20 +494,18 @@ mrb_ary_set(mrb_state *mrb, mrb_value ary, mrb_int n, mrb_value val)
     }
   }
   if (len <= n) {
-    if (ARY_CAPA(a) <= n)
-      ary_expand_capa(mrb, a, n + 1);
-    ary_fill_with_nil(ARY_PTR(a) + len, n + 1 - len);
-    ARY_SET_LEN(a, n+1);
+    lj_tab_reasize(mrb->L, a, n + 1);
   }
 
-  ARY_PTR(a)[n] = val;
-  mrb_field_write_barrier_value(mrb, (RBasic*)a, val);
+  mrb_value *tv = lj_tab_setint(mrb->L, a, n + 1);
+  *tv = val;
+  lj_gc_barriert(mrb->L, a, tv);
 }
 
 static RArray*
 ary_dup(mrb_state *mrb, RArray *a)
 {
-  return ary_new_from_values(mrb, ARY_LEN(a), ARY_PTR(a));
+  return ary_new_from_values(mrb, ARY_LEN(a), arrayslot(a, 0));
 }
 
 MRB_API mrb_value
@@ -645,15 +537,15 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
   /* size check */
   if (mrb_array_p(rpl)) {
     argc = RARRAY_LEN(rpl);
-    argv = RARRAY_PTR(rpl);
-    if (argv == ARY_PTR(a)) {
+    argv = arrayslot(mrb_ary_ptr(rpl), 0);
+    if (argv == arrayslot(a, 0)) {
       RArray *r;
 
       if (argc > 32767) {
         mrb_raise(mrb, E_ARGUMENT_ERROR, "too big recursive splice");
       }
       r = ary_dup(mrb, a);
-      argv = ARY_PTR(r);
+      argv = arrayslot(r, 0);
     }
   }
   else {
@@ -665,14 +557,14 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
       mrb_raisef(mrb, E_INDEX_ERROR, "index %S too big", mrb_fixnum_value(head));
     }
     len = head + argc;
-    if (len > ARY_CAPA(a)) {
-      ary_expand_capa(mrb, a, head + argc);
+    if (len > ARY_LEN(a)) {
+      lj_tab_reasize(mrb->L, a, head + argc);
     }
-    ary_fill_with_nil(ARY_PTR(a) + alen, head - alen);
+    ary_fill_with_nil(arrayslot(a, alen), head - alen);
     if (argc > 0) {
-      array_copy(ARY_PTR(a) + head, argv, argc);
+      array_copy(arrayslot(a, head), argv, argc);
     }
-    ARY_SET_LEN(a, len);
+    lj_tab_reasize(mrb->L, a, len);
   }
   else {
     mrb_int newlen;
@@ -681,40 +573,27 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
       mrb_raisef(mrb, E_INDEX_ERROR, "index %S too big", mrb_fixnum_value(alen + argc - len));
     }
     newlen = alen + argc - len;
-    if (newlen > ARY_CAPA(a)) {
-      ary_expand_capa(mrb, a, newlen);
+    if (newlen > alen) {
+      lj_tab_reasize(mrb->L, a, newlen);
     }
 
     if (len != argc) {
-      mrb_value *ptr = ARY_PTR(a);
+      mrb_value *ptr = arrayslot(a, 0);
       tail = head + len;
       value_move(ptr + head + argc, ptr + tail, alen - tail);
-      ARY_SET_LEN(a, newlen);
     }
     if (argc > 0) {
-      value_move(ARY_PTR(a) + head, argv, argc);
+      value_move(arrayslot(a, head), argv, argc);
     }
   }
   mrb_write_barrier(mrb, (RBasic*)a);
   return ary;
 }
 
-void
-mrb_ary_decref(mrb_state *mrb, mrb_shared_array *shared)
-{
-  shared->refcnt--;
-  if (shared->refcnt == 0) {
-    mrb_free(mrb, shared->ptr);
-    mrb_free(mrb, shared);
-  }
-}
-
 static mrb_value
 ary_subseq(mrb_state *mrb, RArray *a, mrb_int beg, mrb_int len)
 {
-  RArray *b;
-
-  return mrb_ary_new_from_values(mrb, len, ARY_PTR(a)+beg);
+  return mrb_ary_new_from_values(mrb, len, arrayslot(a, beg));
 }
 
 static mrb_int
@@ -874,8 +753,7 @@ mrb_ary_delete_at(mrb_state *mrb, mrb_value self)
   if (index < 0) index += alen;
   if (index < 0 || alen <= index) return mrb_nil_value();
 
-  ary_modify(mrb, a);
-  ptr = ARY_PTR(a);
+  ptr = arrayslot(a, 0);
   val = ptr[index];
 
   ptr += index;
@@ -884,9 +762,7 @@ mrb_ary_delete_at(mrb_state *mrb, mrb_value self)
     *ptr = *(ptr+1);
     ++ptr;
   }
-  ARY_SET_LEN(a, alen-1);
-
-  ary_shrink_capa(mrb, a);
+  lj_tab_reasize(mrb->L, a, alen-1);
 
   return val;
 }
@@ -898,7 +774,7 @@ mrb_ary_first(mrb_state *mrb, mrb_value self)
   mrb_int size, alen = ARY_LEN(a);
 
   if (mrb_get_argc(mrb) == 0) {
-    return (alen > 0)? ARY_PTR(a)[0]: mrb_nil_value();
+    return (alen > 0)? *lj_tab_getint(a, 1): mrb_nil_value();
   }
   mrb_get_args(mrb, "|i", &size);
   if (size < 0) {
@@ -906,7 +782,7 @@ mrb_ary_first(mrb_state *mrb, mrb_value self)
   }
 
   if (size > alen) size = alen;
-  return mrb_ary_new_from_values(mrb, size, ARY_PTR(a));
+  return mrb_ary_new_from_values(mrb, size, arrayslot(a, 0));
 }
 
 static mrb_value
@@ -916,13 +792,13 @@ mrb_ary_last(mrb_state *mrb, mrb_value self)
   mrb_int size, alen = ARY_LEN(a);
 
   if (mrb_get_args(mrb, "|i", &size) == 0)
-    return (alen > 0)? ARY_PTR(a)[alen - 1]: mrb_nil_value();
+    return (alen > 0)? *lj_tab_getint(a, alen): mrb_nil_value();
 
   if (size < 0) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "negative array size");
   }
   if (size > alen) size = alen;
-x  return mrb_ary_new_from_values(mrb, size, ARY_PTR(a) + alen - size);
+  return mrb_ary_new_from_values(mrb, size, lj_tab_getint(a, alen - size + 1));
 }
 
 static mrb_value
@@ -933,7 +809,7 @@ mrb_ary_index_m(mrb_state *mrb, mrb_value self)
 
   mrb_get_args(mrb, "o", &obj);
   for (i = 0; i < RARRAY_LEN(self); i++) {
-    if (mrb_equal(mrb, RARRAY_PTR(self)[i], obj)) {
+    if (mrb_equal(mrb, *lj_tab_getint(mrb_ary_ptr(self), i + 1), obj)) {
       return mrb_fixnum_value(i);
     }
   }
@@ -948,7 +824,7 @@ mrb_ary_rindex_m(mrb_state *mrb, mrb_value self)
 
   mrb_get_args(mrb, "o", &obj);
   for (i = RARRAY_LEN(self) - 1; i >= 0; i--) {
-    if (mrb_equal(mrb, RARRAY_PTR(self)[i], obj)) {
+    if (mrb_equal(mrb, *lj_tab_getint(mrb_ary_ptr(self), i + 1), obj)) {
       return mrb_fixnum_value(i);
     }
     if (i > (len = RARRAY_LEN(self))) {
@@ -993,9 +869,7 @@ mrb_ary_splat(mrb_state *mrb, mrb_value v)
 static mrb_value
 mrb_ary_size(mrb_state *mrb, mrb_value self)
 {
-  RArray *a = mrb_ary_ptr(self);
-
-  return mrb_fixnum_value(ARY_LEN(a));
+  return mrb_fixnum_value(RARRAY_LEN(self));
 }
 
 MRB_API mrb_value
@@ -1011,9 +885,7 @@ mrb_ary_clear(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_ary_empty_p(mrb_state *mrb, mrb_value self)
 {
-  RArray *a = mrb_ary_ptr(self);
-
-  return mrb_bool_value(ARY_LEN(a) == 0);
+  return mrb_bool_value(RARRAY_LEN(self) == 0);
 }
 
 MRB_API mrb_value
@@ -1031,7 +903,7 @@ mrb_ary_entry(mrb_value ary, mrb_int offset)
   if (offset < 0 || RARRAY_LEN(ary) <= offset) {
     return mrb_nil_value();
   }
-  return *lj_tab_setint(mrb->L, ary, offset);
+  return *lj_tab_getint(mrb_ary_ptr(ary), offset + 1);
 }
 
 static mrb_value

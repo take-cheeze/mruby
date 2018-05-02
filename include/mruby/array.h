@@ -280,7 +280,8 @@ static inline RArray* mrb_ary_ptr(mrb_value v) {
   return tabV(&v);
 }
 
-#define RARRAY_LEN(a) lj_tab_len(mrb_ary_ptr(a))
+#define RARRAY_LEN(a) mrb_ary_ptr(a)->asize
+#define ARY_LEN(a) (a)->asize
 
 MRB_END_DECL
 
