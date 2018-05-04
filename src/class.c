@@ -16,42 +16,6 @@
 #include <mruby/data.h>
 #include <mruby/istruct.h>
 
-KHASH_DEFINE(mt, mrb_sym, mrb_method_t, TRUE, kh_int_hash_func, kh_int_hash_equal)
-
-void
-mrb_gc_mark_mt(mrb_state *mrb, RClass *c)
-{
-  khiter_t k;
-  khash_t(mt) *h = c->mt;
-
-  if (!h) return;
-  for (k = kh_begin(h); k != kh_end(h); k++) {
-    if (kh_exist(h, k)) {
-      mrb_method_t m = kh_value(h, k);
-
-      if (MRB_METHOD_PROC_P(m)) {
-        RProc *p = MRB_METHOD_PROC(m);
-        mrb_gc_mark(mrb, (RBasic*)p);
-      }
-    }
-  }
-}
-
-size_t
-mrb_gc_mark_mt_size(mrb_state *mrb, RClass *c)
-{
-  khash_t(mt) *h = c->mt;
-
-  if (!h) return 0;
-  return kh_size(h);
-}
-
-void
-mrb_gc_free_mt(mrb_state *mrb, RClass *c)
-{
-  kh_destroy(mt, mrb, c->mt);
-}
-
 void
 mrb_class_name_class(mrb_state *mrb, RClass *outer, RClass *c, mrb_sym id)
 {
@@ -91,7 +55,7 @@ prepare_singleton_class(mrb_state *mrb, RBasic *o)
 {
   RClass *sc, *c;
 
-  if (o->c->tt == MRB_TT_SCLASS) return;
+  if (mrb_obj_type((RObject*)mrb_obj_class(mrb, mrb_obj_value(o))) == MRB_TT_SCLASS) return;
   sc = (RClass*)mrb_obj_alloc(mrb, MRB_TT_SCLASS, mrb->class_class);
   sc->flags |= MRB_FLAG_IS_INHERITED;
   sc->mt = kh_init(mt, mrb);
@@ -2482,9 +2446,7 @@ mrb_init_class(mrb_state *mrb)
   mrb_class_name_class(mrb, NULL, cls, mrb_intern_lit(mrb, "Class"));  /* 15.2.3 */
 
   mrb->proc_class = mrb_define_class(mrb, "Proc", mrb->object_class);  /* 15.2.17 */
-  MRB_SET_INSTANCE_TT(mrb->proc_class, MRB_TT_PROC);
 
-  MRB_SET_INSTANCE_TT(cls, MRB_TT_CLASS);
   mrb_define_method(mrb, bob, "initialize",              mrb_bob_init,             MRB_ARGS_NONE());
   mrb_define_method(mrb, bob, "!",                       mrb_bob_not,              MRB_ARGS_NONE());
   mrb_define_method(mrb, bob, "==",                      mrb_obj_equal_m,          MRB_ARGS_REQ(1)); /* 15.3.1.3.1  */
@@ -2499,7 +2461,6 @@ mrb_init_class(mrb_state *mrb)
   mrb_define_method(mrb, cls, "initialize",              mrb_class_initialize,     MRB_ARGS_OPT(1)); /* 15.2.3.3.1 */
   mrb_define_method(mrb, cls, "inherited",               mrb_bob_init,             MRB_ARGS_REQ(1));
 
-  MRB_SET_INSTANCE_TT(mod, MRB_TT_MODULE);
   mrb_define_method(mrb, mod, "class_variable_defined?", mrb_mod_cvar_defined,     MRB_ARGS_REQ(1)); /* 15.2.2.4.16 */
   mrb_define_method(mrb, mod, "class_variable_get",      mrb_mod_cvar_get,         MRB_ARGS_REQ(1)); /* 15.2.2.4.17 */
   mrb_define_method(mrb, mod, "class_variable_set",      mrb_mod_cvar_set,         MRB_ARGS_REQ(2)); /* 15.2.2.4.18 */

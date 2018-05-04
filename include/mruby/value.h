@@ -14,14 +14,14 @@ typedef TValue mrb_value;
 typedef GCstr* mrb_sym;
 
 typedef GCobj RObject;
-typedef GCtab RClass;
+typedef GCudata RClass;
 typedef GCtab RArray;
 typedef GCtab RHash;
 typedef GCudata RString;
 typedef GCudata RData;
 typedef GCproto mrb_irep;
 typedef GCfunc RProc;
-typedef GChead RBasic;
+typedef GCobj RBasic;
 
 typedef enum mrb_vtype {
   MRB_TT_FALSE = 0,   /*   0 */
@@ -76,11 +76,12 @@ static inline mrb_sym mrb_symbol(mrb_value v) { return strV(&v); }
 static inline void *mrb_ptr(mrb_value v) { return gcval(&v); }
 #define mrb_float(v) numberVnum(&v)
 
-static inline mrb_value mrb_obj_value(RObject *obj) {
+static inline mrb_value mrb_obj_value_impl(RObject *obj) {
   mrb_value v;
   setgcV(NULL, &v, obj, ~obj->gch.gct);
   return v;
 }
+#define mrb_obj_value(v) mrb_obj_value_impl(obj2gco(v))
 
 static inline mrb_value mrb_nil_value() {
   mrb_value v;
@@ -95,11 +96,11 @@ static inline mrb_value mrb_symbol_value(mrb_sym s) {
 }
 
 static inline RBasic* mrb_basic_ptr(mrb_value v) {
-  return &gcV(&v)->gch;
+  return gcV(&v);
 }
 
 static inline RClass* mrb_class_ptr(mrb_value v) {
-  return tabV(&v);
+  return udataV(&v);
 }
 
 static inline mrb_value mrb_fixnum_value(mrb_int i) {
@@ -121,9 +122,12 @@ static inline mrb_value mrb_bool_value(mrb_bool b) {
 static inline mrb_value mrb_false_value() { return mrb_bool_value(FALSE); }
 static inline mrb_value mrb_true_value() { return mrb_bool_value(TRUE); }
 
-static inline mrb_bool mrb_array_p(mrb_value v) {}
+static inline mrb_bool mrb_array_p(mrb_value v) { return tvistab(&v); }
 
 static inline mrb_bool mrb_fixnum_p(mrb_value v) { return tvisint(&v); }
+static inline mrb_bool mrb_string_p(mrb_value v) { return tvisudata(&v); }
+
+mrb_vtype mrb_obj_type(RObject *v);
 
 #define MRB_INT_MAX INT32_MAX
 #define MRB_INT_MIN INT32_MIN

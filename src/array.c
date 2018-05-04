@@ -192,6 +192,7 @@ static void
 ary_concat(mrb_state *mrb, RArray *a, RArray *a2)
 {
   mrb_int len;
+  mrb_value val = mrb_obj_value(a);
 
   if (ARY_LEN(a) == 0) {
     ary_replace(mrb, a, a2);
@@ -204,7 +205,7 @@ ary_concat(mrb_state *mrb, RArray *a, RArray *a2)
 
   lj_tab_reasize(mrb->L, a, len);
   array_copy(arrayslot(a, ARY_LEN(a)), arrayslot(a2, 0), ARY_LEN(a2));
-  lj_gc_barrieruv(mrb->L, a);
+  lj_gc_barrieruv(G(mrb->L), &val);
 }
 
 MRB_API void
@@ -252,12 +253,13 @@ static void
 ary_replace(mrb_state *mrb, RArray *a, RArray *b)
 {
   mrb_int len = ARY_LEN(b);
+  mrb_value val = mrb_obj_value(a);
 
   ary_modify_check(mrb, a);
   if (a == b) return;
   lj_tab_reasize(mrb->L, a, len);
   array_copy(arrayslot(a, 0), arrayslot(b, 0), len);
-  lj_gc_barrieruv(mrb->L, a);
+  lj_gc_barrieruv(G(mrb->L), &val);
 }
 
 MRB_API void

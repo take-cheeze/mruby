@@ -159,12 +159,13 @@ typedef struct mrb_state {
   RClass
     *false_class, *true_class, *nil_class,
     *symbol_class, *fixnum_class, *float_class,
-    *object_class, *array_class, *hash_class;
+    *object_class, *array_class, *hash_class,
+    *class_class, *proc_class;
 
-  mrb_value top_self;
+  RObject* top_self;
 } mrb_state;
 
-static inline RObject* mrb_globals(mrb_state *mrb) { return gco2tab(gcref(mrb->L->env)); }
+static inline RObject* mrb_globals(mrb_state *mrb) { return gcref(mrb->L->env); }
 
 /**
  * Defines a new class.
@@ -767,6 +768,7 @@ mrb_get_mid(mrb_state *mrb) /* get method symbol */
 {
   lua_Debug debug;
   lua_getstack(mrb->L, 0, &debug);
+  lua_getinfo(mrb->L, "S", &debug);
   return lj_str_newz(mrb->L, debug.name);
 }
 
@@ -878,7 +880,7 @@ MRB_API void *mrb_calloc(mrb_state*, size_t, size_t); /* ditto */
 MRB_API void *mrb_realloc(mrb_state*, void*, size_t); /* ditto */
 MRB_API void *mrb_realloc_simple(mrb_state*, void*, size_t); /* return NULL if no memory available */
 MRB_API void *mrb_malloc_simple(mrb_state*, size_t);  /* return NULL if no memory available */
-// MRB_API RBasic *mrb_obj_alloc(mrb_state*, enum mrb_vtype, RClass*);
+MRB_API RBasic *mrb_obj_alloc(mrb_state*, enum mrb_vtype, RClass*);
 MRB_API void mrb_free(mrb_state*, void*);
 
 MRB_API mrb_value mrb_str_new(mrb_state *mrb, const char *p, size_t len);

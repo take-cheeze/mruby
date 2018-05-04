@@ -50,11 +50,11 @@ mrb_class(mrb_state *mrb, mrb_value v)
     return NULL;
   default:
     if (tvistab(&v))
-      return tabref(tabV(&v)->metatable);
+      return &gcref(tabV(&v)->metatable)->ud;
     else if (tvisudata(&v))
-      return tabref(udataV(&v)->metatable);
+      return &gcref(udataV(&v)->metatable)->ud;
     else
-      return tabref(basemt_obj(G(mrb->L), &v));
+      return &gcref(basemt_obj(G(mrb->L), &v))->ud;
   }
 }
 

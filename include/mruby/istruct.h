@@ -19,6 +19,7 @@ MRB_BEGIN_DECL
 
 #define ISTRUCT_DATA_SIZE (sizeof(void*) * 3)
 
+/*
 RIstruct {
   MRB_OBJECT_HEADER;
   char inline_data[ISTRUCT_DATA_SIZE];
@@ -41,6 +42,7 @@ MRB_INLINE void mrb_istruct_copy(mrb_value dest, mrb_value src)
 {
   memcpy(ISTRUCT_PTR(dest), ISTRUCT_PTR(src), ISTRUCT_DATA_SIZE);
 }
+*/
 
 MRB_END_DECL
 

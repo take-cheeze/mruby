@@ -15,6 +15,8 @@
 #include <mruby/numeric.h>
 #include <mruby/data.h>
 
+#include "lj_debug.h"
+
 struct backtrace_location {
   int lineno;
   const char *filename;
@@ -26,47 +28,17 @@ typedef void (*each_backtrace_func)(mrb_state*, struct backtrace_location*, void
 static const mrb_data_type bt_type = { "Backtrace", mrb_free };
 
 static void
-each_backtrace(mrb_state *mrb, ptrdiff_t ciidx, mrb_code *pc0, each_backtrace_func func, void *data)
+each_backtrace(mrb_state *mrb, int ciidx, each_backtrace_func func, void *data)
 {
-  ptrdiff_t i, j;
-
-  if (ciidx >= mrb->c->ciend - mrb->c->cibase)
-    ciidx = 10; /* ciidx is broken... */
-
-  for (i=ciidx, j=0; i >= 0; i--,j++) {
+  int i;
+  for (i=ciidx; i >= 0; i--) {
     struct backtrace_location loc;
-    mrb_callinfo *ci;
-    mrb_irep *irep;
-    mrb_code *pc;
-
-    ci = &mrb->c->cibase[i];
-
-    if (!ci->proc) continue;
-    if (MRB_PROC_CFUNC_P(ci->proc)) continue;
-
-    irep = ci->proc->body.irep;
-    if (!irep) continue;
-
-    if (mrb->c->cibase[i].err) {
-      pc = mrb->c->cibase[i].err;
-    }
-    else if (i+1 <= ciidx) {
-      if (!mrb->c->cibase[i + 1].pc) continue;
-      pc = &mrb->c->cibase[i+1].pc[-1];
-    }
-    else {
-      pc = pc0;
-    }
-    loc.filename = mrb_debug_get_filename(irep, pc - irep->iseq);
-    loc.lineno = mrb_debug_get_line(irep, pc - irep->iseq);
-
-    if (loc.lineno == -1) continue;
-
-    if (!loc.filename) {
-      loc.filename = "(unknown)";
-    }
-
-    loc.method_id = ci->mid;
+    struct lua_Debug dbg;
+    if (lua_getstack(mrb->L, i, &dbg)) { return; }
+    lua_getinfo(mrb->L, "Snlf", &dbg);
+    loc.lineno = dbg.currentline;
+    loc.filename = dbg.source;
+    loc.method_id = mrb_intern_cstr(mrb, dbg.name);
     func(mrb, &loc, data);
   }
 }
@@ -87,7 +59,7 @@ print_backtrace(mrb_state *mrb, mrb_value backtrace)
 
   fprintf(stream, "trace (most recent call last):\n");
   for (i=0; i<n; i++) {
-    mrb_value entry = RARRAY_PTR(backtrace)[n-i-1];
+    mrb_value entry = *arrayslot(mrb_ary_ptr(backtrace), n-i-1);
 
     if (mrb_string_p(entry)) {
       fprintf(stream, "\t[%d] %.*s\n", i, (int)RSTRING_LEN(entry), RSTRING_PTR(entry));
@@ -119,9 +91,9 @@ print_packed_backtrace(mrb_state *mrb, mrb_value packed)
 
   bt = (struct backtrace_location*)mrb_data_check_get_ptr(mrb, packed, &bt_type);
   if (bt == NULL) return;
-  n = (mrb_int)RDATA(packed)->flags;
+  n = packed_bt_len(bt, 10);
 
-  if (packed_bt_len(bt, n) == 0) return;
+  if (n == 0) return;
   fprintf(stream, "trace (most recent call last):\n");
   for (i = 0; i<n; i++) {
     struct backtrace_location *entry = &bt[n-i-1];
@@ -148,11 +120,11 @@ mrb_print_backtrace(mrb_state *mrb)
 {
   mrb_value backtrace;
 
-  if (!mrb->exc) {
+  if (mrb->L->status != LUA_ERRERR) {
     return;
   }
 
-  backtrace = mrb_obj_iv_get(mrb, mrb->exc, mrb_intern_lit(mrb, "backtrace"));
+  backtrace = mrb_obj_iv_get(mrb, mrb_obj_ptr(mrb->L->top[-1]), mrb_intern_lit(mrb, "backtrace"));
   if (mrb_nil_p(backtrace)) return;
   if (mrb_array_p(backtrace)) {
     print_backtrace(mrb, backtrace);
@@ -198,18 +170,19 @@ static mrb_value
 packed_backtrace(mrb_state *mrb)
 {
   RData *backtrace;
-  ptrdiff_t ciidx = mrb->c->ci - mrb->c->cibase;
+  int ciidx;
   int len = 0;
   int size;
   void *ptr;
 
-  each_backtrace(mrb, ciidx, mrb->c->ci->pc, count_backtrace_i, &len);
+  lj_debug_frame(mrb->L, INT_MAX, &ciidx);
+
+  each_backtrace(mrb, ciidx, count_backtrace_i, &len);
   size = len * sizeof(struct backtrace_location);
   ptr = mrb_malloc(mrb, size);
   if (ptr) memset(ptr, 0, size);
   backtrace = mrb_data_object_alloc(mrb, NULL, ptr, &bt_type);
-  backtrace->flags = (unsigned int)len;
-  each_backtrace(mrb, ciidx, mrb->c->ci->pc, pack_backtrace_i, &ptr);
+  each_backtrace(mrb, ciidx, pack_backtrace_i, &ptr);
   return mrb_obj_value(backtrace);
 }
 
@@ -231,7 +204,7 @@ mrb_value
 mrb_unpack_backtrace(mrb_state *mrb, mrb_value backtrace)
 {
   struct backtrace_location *bt;
-  mrb_int n, i;
+  mrb_int n = 10, i;
   int ai;
 
   if (mrb_nil_p(backtrace)) {
@@ -241,7 +214,6 @@ mrb_unpack_backtrace(mrb_state *mrb, mrb_value backtrace)
   if (mrb_array_p(backtrace)) return backtrace;
   bt = (struct backtrace_location*)mrb_data_check_get_ptr(mrb, backtrace, &bt_type);
   if (bt == NULL) goto empty_backtrace;
-  n = (mrb_int)RDATA(backtrace)->flags;
   backtrace = mrb_ary_new_capa(mrb, n);
   ai = mrb_gc_arena_save(mrb);
   for (i = 0; i < n; i++) {
