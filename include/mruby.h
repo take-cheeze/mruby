@@ -119,6 +119,7 @@ typedef void* (*mrb_allocf) (struct mrb_state *mrb, void*, size_t, void *ud);
 #define MRB_FIXED_STATE_ATEXIT_STACK_SIZE 5
 #endif
 
+/*
 typedef struct {
   mrb_sym mid;
   struct RProc *proc;
@@ -127,12 +128,13 @@ typedef struct {
   int ridx;
   int epos;
   struct REnv *env;
-  mrb_code *pc;                 /* return address */
-  mrb_code *err;                /* error position */
+  mrb_code *pc;                 // return address
+  mrb_code *err;                // error position
   int argc;
   int acc;
   struct RClass *target_class;
 } mrb_callinfo;
+*/
 
 enum mrb_fiber_state {
   MRB_FIBER_CREATED = 0,
@@ -143,24 +145,26 @@ enum mrb_fiber_state {
   MRB_FIBER_TERMINATED,
 };
 
+/*
 struct mrb_context {
   struct mrb_context *prev;
 
-  mrb_value *stack;                       /* stack of virtual machine */
+  mrb_value *stack;                       // stack of virtual machine
   mrb_value *stbase, *stend;
 
   mrb_callinfo *ci;
   mrb_callinfo *cibase, *ciend;
 
-  mrb_code **rescue;                      /* exception handler stack */
+  mrb_code **rescue;                      // exception handler stack
   int rsize;
-  struct RProc **ensure;                  /* ensure handler stack */
+  struct RProc **ensure;                  // ensure handler stack
   int esize, eidx;
 
   enum mrb_fiber_state status;
   mrb_bool vmexec;
   struct RFiber *fib;
 };
+*/
 
 #ifdef MRB_METHOD_CACHE_SIZE
 # define MRB_METHOD_CACHE
@@ -203,12 +207,6 @@ typedef struct mrb_state {
   struct mrb_jmpbuf *jmp;
 
   uint32_t flags;
-  mrb_allocf allocf;                      /* memory allocation function */
-  void *allocf_ud;                        /* auxiliary data of allocf */
-
-  struct mrb_context *c;
-  struct mrb_context *root_c;
-  struct iv_tbl *globals;                 /* global variable table */
 
   struct RObject *exc;                    /* exception */
 
@@ -232,43 +230,16 @@ typedef struct mrb_state {
   struct RClass *symbol_class;
   struct RClass *kernel_module;
 
-  struct alloca_header *mems;
-  mrb_gc gc;
-
-#ifdef MRB_METHOD_CACHE
-  struct mrb_cache_entry cache[MRB_METHOD_CACHE_SIZE];
-#endif
-
-  mrb_sym symidx;
-  struct kh_n2s *name2sym;      /* symbol hash */
-  struct symbol_name *symtbl;   /* symbol table */
-  size_t symcapa;
-
-#ifdef MRB_ENABLE_DEBUG_HOOK
-  void (*code_fetch_hook)(struct mrb_state* mrb, struct mrb_irep *irep, mrb_code *pc, mrb_value *regs);
-  void (*debug_op_hook)(struct mrb_state* mrb, struct mrb_irep *irep, mrb_code *pc, mrb_value *regs);
-#endif
-
-#ifdef MRB_BYTECODE_DECODE_OPTION
-  mrb_code (*bytecode_decoder)(struct mrb_state* mrb, mrb_code code);
-#endif
-
   struct RClass *eException_class;
   struct RClass *eStandardError_class;
-  struct RObject *nomem_err;              /* pre-allocated NoMemoryError */
-  struct RObject *stack_err;              /* pre-allocated SysStackError */
-#ifdef MRB_GC_FIXED_ARENA
-  struct RObject *arena_err;              /* pre-allocated arena overfow error */
-#endif
 
-  void *ud; /* auxiliary data */
+  lua_State *L;
+  mrb_value true_value, false_value, nil_value;
+  mrb_value *symbols;
+  struct RObject *stack_err, *nomem_err;
 
-#ifdef MRB_FIXED_STATE_ATEXIT_STACK
-  mrb_atexit_func atexit_stack[MRB_FIXED_STATE_ATEXIT_STACK_SIZE];
-#else
-  mrb_atexit_func *atexit_stack;
-#endif
-  mrb_int atexit_stack_len;
+  mrb_allocf allocf;
+  void *allocf_ud;
 } mrb_state;
 
 /**
@@ -870,7 +841,10 @@ MRB_API mrb_int mrb_get_args(mrb_state *mrb, mrb_args_format format, ...);
 static inline mrb_sym
 mrb_get_mid(mrb_state *mrb) /* get method symbol */
 {
-  return mrb->c->ci->mid;
+  lua_Debug ar;
+  lua_getstack(mrb->L, 0, &ar);
+  lua_getinfo(mrb->L, ">S", &ar);
+  return lj_str_newz(mrb->L, ar.what);
 }
 
 /**
@@ -1086,13 +1060,15 @@ static inline void mrb_gc_arena_restore(mrb_state*,int);
 static inline int
 mrb_gc_arena_save(mrb_state *mrb)
 {
-  return mrb->gc.arena_idx;
+  return mrb->L->top - mrb->L->base;// mrb->gc.arena_idx;
 }
 
 static inline void
 mrb_gc_arena_restore(mrb_state *mrb, int idx)
 {
-  mrb->gc.arena_idx = idx;
+  if (!lua_isnone(mrb->L, idx)) {
+    lua_settop(mrb->L, idx); // mrb->gc.arena_idx = idx;
+  }
 }
 
 MRB_API void mrb_garbage_collect(mrb_state*);

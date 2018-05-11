@@ -194,6 +194,7 @@ exc_set_backtrace(mrb_state *mrb, mrb_value exc)
   return backtrace;
 }
 
+/*
 static void
 exc_debug_info(mrb_state *mrb, struct RObject *exc)
 {
@@ -220,6 +221,7 @@ exc_debug_info(mrb_state *mrb, struct RObject *exc)
     ci--;
   }
 }
+*/
 
 void
 mrb_exc_set(mrb_state *mrb, mrb_value exc)
@@ -229,6 +231,7 @@ mrb_exc_set(mrb_state *mrb, mrb_value exc)
   }
   else {
     mrb->exc = mrb_obj_ptr(exc);
+    /*
     if (mrb->gc.arena_idx > 0 &&
         (struct RBasic*)mrb->exc == mrb->gc.arena[mrb->gc.arena_idx-1]) {
       mrb->gc.arena_idx--;
@@ -237,6 +240,7 @@ mrb_exc_set(mrb_state *mrb, mrb_value exc)
       exc_debug_info(mrb, mrb->exc);
       mrb_keep_backtrace(mrb, exc);
     }
+    */
   }
 }
 

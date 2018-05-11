@@ -8,7 +8,6 @@
 #define MRUBY_HASH_H
 
 #include "common.h"
-#include <mruby/khash.h>
 
 /**
  * Hash class
@@ -18,7 +17,7 @@ MRB_BEGIN_DECL
 struct RHash {
   MRB_OBJECT_HEADER;
   struct iv_tbl *iv;
-  struct kh_ht *ht;
+  struct GCtab *ht;
 };
 
 #define mrb_hash_ptr(v)    ((struct RHash*)(mrb_ptr(v)))
@@ -158,7 +157,6 @@ typedef struct {
   mrb_int n;
 } mrb_hash_value;
 
-KHASH_DECLARE(ht, mrb_value, mrb_hash_value, TRUE)
 
 /* RHASH_TBL allocates st_table if not available. */
 #define RHASH(obj)   ((struct RHash*)(mrb_ptr(obj)))

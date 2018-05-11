@@ -108,7 +108,7 @@ mrb_assoc_new(mrb_state *mrb, mrb_value car, mrb_value cdr)
 }
 
 static void
-ary_fill_with_nil(mrb_value *ptr, mrb_int size)
+ary_fill_with_nil(mrb_state *mrb, mrb_value *ptr, mrb_int size)
 {
   mrb_value nil = mrb_nil_value();
 
@@ -268,7 +268,7 @@ mrb_ary_resize(mrb_state *mrb, mrb_value ary, mrb_int new_len)
     }
     else {
       ary_expand_capa(mrb, a, new_len);
-      ary_fill_with_nil(ARY_PTR(a) + old_len, new_len - old_len);
+      ary_fill_with_nil(mrb, ARY_PTR(a) + old_len, new_len - old_len);
     }
     ARY_SET_LEN(a, new_len);
   }
@@ -676,7 +676,7 @@ mrb_ary_set(mrb_state *mrb, mrb_value ary, mrb_int n, mrb_value val)
   if (len <= n) {
     if (ARY_CAPA(a) <= n)
       ary_expand_capa(mrb, a, n + 1);
-    ary_fill_with_nil(ARY_PTR(a) + len, n + 1 - len);
+    ary_fill_with_nil(mrb, ARY_PTR(a) + len, n + 1 - len);
     ARY_SET_LEN(a, n+1);
   }
 
@@ -742,7 +742,7 @@ mrb_ary_splice(mrb_state *mrb, mrb_value ary, mrb_int head, mrb_int len, mrb_val
     if (len > ARY_CAPA(a)) {
       ary_expand_capa(mrb, a, head + argc);
     }
-    ary_fill_with_nil(ARY_PTR(a) + alen, head - alen);
+    ary_fill_with_nil(mrb, ARY_PTR(a) + alen, head - alen);
     if (argc > 0) {
       array_copy(ARY_PTR(a) + head, argv, argc);
     }
@@ -1122,7 +1122,7 @@ mrb_check_array_type(mrb_state *mrb, mrb_value ary)
 }
 
 MRB_API mrb_value
-mrb_ary_entry(mrb_value ary, mrb_int offset)
+mrb_ary_entry(mrb_state *mrb, mrb_value ary, mrb_int offset)
 {
   if (offset < 0) {
     offset += RARRAY_LEN(ary);

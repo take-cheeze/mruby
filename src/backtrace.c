@@ -28,10 +28,11 @@ static const mrb_data_type bt_type = { "Backtrace", mrb_free };
 static void
 each_backtrace(mrb_state *mrb, ptrdiff_t ciidx, mrb_code *pc0, each_backtrace_func func, void *data)
 {
+  /*
   ptrdiff_t i, j;
 
   if (ciidx >= mrb->c->ciend - mrb->c->cibase)
-    ciidx = 10; /* ciidx is broken... */
+    ciidx = 10; // ciidx is broken...
 
   for (i=ciidx, j=0; i >= 0; i--,j++) {
     struct backtrace_location loc;
@@ -69,6 +70,7 @@ each_backtrace(mrb_state *mrb, ptrdiff_t ciidx, mrb_code *pc0, each_backtrace_fu
     loc.method_id = ci->mid;
     func(mrb, &loc, data);
   }
+  */
 }
 
 #ifndef MRB_DISABLE_STDIO
@@ -197,6 +199,8 @@ pack_backtrace_i(mrb_state *mrb,
 static mrb_value
 packed_backtrace(mrb_state *mrb)
 {
+  return mrb_nil_value();
+  /*
   struct RData *backtrace;
   ptrdiff_t ciidx = mrb->c->ci - mrb->c->cibase;
   int len = 0;
@@ -211,6 +215,7 @@ packed_backtrace(mrb_state *mrb)
   backtrace->flags = (unsigned int)len;
   each_backtrace(mrb, ciidx, mrb->c->ci->pc, pack_backtrace_i, &ptr);
   return mrb_obj_value(backtrace);
+  */
 }
 
 void

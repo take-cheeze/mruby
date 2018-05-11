@@ -224,7 +224,7 @@ MRB_API mrb_value mrb_ary_unshift(mrb_state *mrb, mrb_value self, mrb_value item
  * @param ary The target array.
  * @param offset The element position (negative counts from the tail).
  */
-MRB_API mrb_value mrb_ary_entry(mrb_value ary, mrb_int offset);
+MRB_API mrb_value mrb_ary_entry(mrb_state *mrb, mrb_value ary, mrb_int offset);
 
 /*
  * Shifts the first element from the array.

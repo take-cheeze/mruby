@@ -8,15 +8,17 @@
 #include <mruby/array.h>
 #include <mruby/class.h>
 #include <mruby/hash.h>
-#include <mruby/khash.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
+
+#include <math.h>
 
 #ifndef MRB_WITHOUT_FLOAT
 /* a function to get hash value of a float number */
 mrb_int mrb_float_id(mrb_float f);
 #endif
 
+/*
 static inline khint_t
 mrb_hash_ht_hash_func(mrb_state *mrb, mrb_value key)
 {
@@ -90,6 +92,7 @@ mrb_hash_ht_hash_equal(mrb_state *mrb, mrb_value a, mrb_value b)
 }
 
 KHASH_DEFINE (ht, mrb_value, mrb_hash_value, TRUE, mrb_hash_ht_hash_func, mrb_hash_ht_hash_equal)
+*/
 
 static void mrb_hash_modify(mrb_state *mrb, mrb_value hash);
 
@@ -105,6 +108,7 @@ mrb_hash_ht_key(mrb_state *mrb, mrb_value key)
 
 #define KEY(key) mrb_hash_ht_key(mrb, key)
 
+/*
 void
 mrb_gc_mark_hash(mrb_state *mrb, struct RHash *hash)
 {
@@ -135,6 +139,7 @@ mrb_gc_free_hash(mrb_state *mrb, struct RHash *hash)
 {
   if (hash->ht) kh_destroy(ht, mrb, hash->ht);
 }
+*/
 
 
 MRB_API mrb_value
@@ -147,7 +152,7 @@ mrb_hash_new_capa(mrb_state *mrb, mrb_int capa)
   if (capa == 0)
     h->ht = 0;
   else
-    h->ht = kh_init_size(ht, mrb, (khint_t)(capa*4/3));
+    h->ht = lj_tab_new(mrb->L, log2(capa), 0); // kh_init_size(ht, mrb, (khint_t)(capa*4/3));
   h->iv = 0;
   return mrb_obj_value(h);
 }
@@ -164,15 +169,18 @@ static mrb_value hash_default(mrb_state *mrb, mrb_value hash, mrb_value key);
 MRB_API mrb_value
 mrb_hash_get(mrb_state *mrb, mrb_value hash, mrb_value key)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
   mrb_sym mid;
-
+  mrb_value v = lj_tab_get(mrb->L, RHASH_TBL(hash), key);
+  if (v) {
+    return v;
+  }
+  /*
   if (h) {
     k = kh_get(ht, mrb, h, key);
     if (k != kh_end(h))
       return kh_value(h, k).v;
   }
+  */
 
   mid = mrb_intern_lit(mrb, "default");
   if (mrb_func_basic_p(mrb, hash, mid, mrb_hash_default)) {
@@ -271,6 +279,7 @@ mrb_check_hash_type(mrb_state *mrb, mrb_value hash)
   return mrb_check_convert_type(mrb, hash, MRB_TT_HASH, "Hash", "to_hash");
 }
 
+/*
 MRB_API khash_t(ht)*
 mrb_hash_tbl(mrb_state *mrb, mrb_value hash)
 {
@@ -281,6 +290,7 @@ mrb_hash_tbl(mrb_state *mrb, mrb_value hash)
   }
   return h;
 }
+*/
 
 static void
 mrb_hash_modify(mrb_state *mrb, mrb_value hash)
@@ -830,15 +840,13 @@ static mrb_value
 mrb_hash_has_key(mrb_state *mrb, mrb_value hash)
 {
   mrb_value key;
-  khash_t(ht) *h;
-  khiter_t k;
+  GCtab *h;
 
   mrb_get_args(mrb, "o", &key);
 
   h = RHASH_TBL(hash);
   if (h) {
-    k = kh_get(ht, mrb, h, key);
-    return mrb_bool_value(k != kh_end(h));
+    return mrb_bool_value(lj_tab_get(mrb->L, h, key));
   }
   return mrb_false_value();
 }
@@ -862,17 +870,16 @@ static mrb_value
 mrb_hash_has_value(mrb_state *mrb, mrb_value hash)
 {
   mrb_value val;
-  khash_t(ht) *h;
-  khiter_t k;
+  GCtab *h;
 
   mrb_get_args(mrb, "o", &val);
   h = RHASH_TBL(hash);
 
   if (h) {
-    for (k = kh_begin(h); k != kh_end(h); k++) {
-      if (!kh_exist(h, k)) continue;
-
-      if (mrb_equal(mrb, kh_value(h, k).v, val)) {
+    setnilV(mrb->L->top);
+    incr_top(mrb->L);
+    while (lj_tab_next(mrb->L, h, mrb->L->top)) {
+      if (mrb_equal(mrb, lj_tab_get(mrb->L, h, mrb->L->top - 1), val)) {
         return mrb_true_value();
       }
     }
