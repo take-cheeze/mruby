@@ -29,7 +29,7 @@ void mrb_init_mrblib(mrb_state*);
 void
 mrb_init_core(mrb_state *mrb)
 {
-  mrb_init_symtbl(mrb); DONE;
+  // mrb_init_symtbl(mrb); DONE;
 
   mrb_init_class(mrb); DONE;
   mrb_init_object(mrb); DONE;

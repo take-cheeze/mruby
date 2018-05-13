@@ -240,6 +240,9 @@ typedef struct mrb_state {
 
   mrb_allocf allocf;
   void *allocf_ud;
+
+  size_t atexit_stack_len;
+  mrb_atexit_func *atexit_stack;
 } mrb_state;
 
 /**
@@ -854,7 +857,8 @@ mrb_get_mid(mrb_state *mrb) /* get method symbol */
  */
 MRB_API mrb_int mrb_get_argc(mrb_state *mrb);
 
-MRB_API mrb_value* mrb_get_argv(mrb_state *mrb);
+MRB_API mrb_value mrb_get_argv(mrb_state *mrb);
+// MRB_API mrb_value* mrb_get_argv(mrb_state *mrb);
 
 /* `strlen` for character string literals (use with caution or `strlen` instead)
     Adjacent string literals are concatenated in C/C++ in translation phase 6.
@@ -1254,6 +1258,8 @@ mrbmemset(void *s, int c, size_t n)
 }
 #define memset(a,b,c) mrbmemset(a,b,c)
 #endif
+
+mrb_bool mrb_regexp_p(mrb_state *mrb, mrb_value v);
 
 MRB_END_DECL
 

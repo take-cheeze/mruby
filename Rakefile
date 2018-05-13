@@ -65,7 +65,7 @@ MRuby.each_target do |target|
       exec = exefile("#{build_dir}/bin/#{bin}")
       objs = Dir.glob("#{current_dir}/tools/#{bin}/*.{c,cpp,cxx,cc}").map { |f| objfile(f.pathmap("#{current_build_dir}/tools/#{bin}/%n")) }
 
-      file exec => objs + [libfile("#{build_dir}/lib/libmruby")] do |t|
+      file exec => objs + target.libmruby do |t|
         gem_flags = gems.map { |g| g.linker.flags }
         gem_flags_before_libraries = gems.map { |g| g.linker.flags_before_libraries }
         gem_flags_after_libraries = gems.map { |g| g.linker.flags_after_libraries }
@@ -99,9 +99,7 @@ MRuby.each_target do |target|
   end
 end
 
-depfiles += MRuby.targets.map { |n, t|
-  [t.libfile("#{t.build_dir}/lib/libmruby")]
-}.flatten
+depfiles += MRuby.targets.map { |_, t| t.libmruby }.flatten
 
 depfiles += MRuby.targets.reject { |n, t| n == 'host' }.map { |n, t|
   t.bins.map { |bin| t.exefile("#{t.build_dir}/bin/#{bin}") }

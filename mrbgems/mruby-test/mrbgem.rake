@@ -17,7 +17,6 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
   exec = exefile("#{build.build_dir}/bin/mrbtest")
 
   libmruby = libfile("#{build.build_dir}/lib/libmruby")
-  libmruby_core = libfile("#{build.build_dir}/lib/libmruby_core")
 
   mrbtest_lib = libfile("#{build_dir}/mrbtest")
   mrbtest_objs = []
@@ -140,13 +139,13 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
   end
 
   unless build.build_mrbtest_lib_only?
-    file exec => [driver_obj, mlib, mrbtest_lib, libmruby_core, libmruby] do |t|
+    file exec => [driver_obj, mlib, mrbtest_lib, libmruby] do |t|
       gem_flags = build.gems.map { |g| g.linker.flags }
       gem_flags_before_libraries = build.gems.map { |g| g.linker.flags_before_libraries }
       gem_flags_after_libraries = build.gems.map { |g| g.linker.flags_after_libraries }
       gem_libraries = build.gems.map { |g| g.linker.libraries }
       gem_library_paths = build.gems.map { |g| g.linker.library_paths }
-      build.linker.run t.name, t.prerequisites, gem_libraries, gem_library_paths, gem_flags, gem_flags_before_libraries
+      build.linker.run t.name, t.prerequisites, gem_libraries, gem_library_paths, gem_flags, gem_flags_before_libraries, gem_flags_after_libraries
     end
   end
 

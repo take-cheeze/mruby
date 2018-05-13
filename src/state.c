@@ -23,7 +23,7 @@ MRB_API mrb_state*
 mrb_open_core(mrb_allocf f, void *ud)
 {
   static const mrb_state mrb_state_zero = { 0 };
-  static const struct mrb_context mrb_context_zero = { 0 };
+  // static const struct mrb_context mrb_context_zero = { 0 };
   mrb_state *mrb;
 
   mrb = (mrb_state *)(f)(NULL, NULL, sizeof(mrb_state), ud);
@@ -33,11 +33,12 @@ mrb_open_core(mrb_allocf f, void *ud)
   mrb->allocf_ud = ud;
   mrb->allocf = f;
   mrb->atexit_stack_len = 0;
+  mrb->L = luaL_newstate();
 
-  mrb_gc_init(mrb, &mrb->gc);
-  mrb->c = (struct mrb_context*)mrb_malloc(mrb, sizeof(struct mrb_context));
-  *mrb->c = mrb_context_zero;
-  mrb->root_c = mrb->c;
+  // mrb_gc_init(mrb, &mrb->gc);
+  // mrb->c = (struct mrb_context*)mrb_malloc(mrb, sizeof(struct mrb_context));
+  // *mrb->c = mrb_context_zero;
+  // mrb->root_c = mrb->c;
 
   mrb_init_core(mrb);
 
@@ -56,6 +57,7 @@ mrb_default_allocf(mrb_state *mrb, void *p, size_t size, void *ud)
   }
 }
 
+/*
 struct alloca_header {
   struct alloca_header *next;
   char buf[1];
@@ -87,6 +89,7 @@ mrb_alloca_free(mrb_state *mrb)
     mrb_free(mrb, tmp);
   }
 }
+*/
 
 MRB_API mrb_state*
 mrb_open(void)
@@ -228,6 +231,7 @@ mrb_str_pool(mrb_state *mrb, mrb_value str)
   return mrb_obj_value(ns);
 }
 
+/*
 void mrb_free_backtrace(mrb_state *mrb);
 
 MRB_API void
@@ -240,6 +244,7 @@ mrb_free_context(mrb_state *mrb, struct mrb_context *c)
   mrb_free(mrb, c->ensure);
   mrb_free(mrb, c);
 }
+*/
 
 MRB_API void
 mrb_close(mrb_state *mrb)
@@ -255,12 +260,15 @@ mrb_close(mrb_state *mrb)
 #endif
   }
 
-  /* free */
+  /*
+  // free
   mrb_gc_free_gv(mrb);
   mrb_free_context(mrb, mrb->root_c);
   mrb_free_symtbl(mrb);
   mrb_alloca_free(mrb);
   mrb_gc_destroy(mrb, &mrb->gc);
+  */
+  lua_close(mrb->L);
   mrb_free(mrb, mrb);
 }
 

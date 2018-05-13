@@ -140,23 +140,25 @@ mrb_obj_id_m(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
 {
+  return mrb_true_value();
+  /*
   mrb_callinfo *ci = &mrb->c->ci[-1];
   mrb_callinfo *cibase = mrb->c->cibase;
   mrb_value *bp;
   struct RProc *p;
 
   if (ci <= cibase) {
-    /* toplevel does not have block */
+    //  toplevel does not have block
     return mrb_false_value();
   }
   p = ci->proc;
-  /* search method/class/module proc */
+  //  search method/class/module proc
   while (p) {
     if (MRB_PROC_SCOPE_P(p)) break;
     p = p->upper;
   }
   if (p == NULL) return mrb_false_value();
-  /* search ci corresponding to proc */
+  //  search ci corresponding to proc
   while (cibase < ci) {
     if (ci->proc == p) break;
     ci--;
@@ -168,12 +170,12 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
     struct REnv *e = ci->env;
     int bidx;
 
-    /* top-level does not have block slot (always false) */
+    //  top-level does not have block slot (always false)
     if (e->stack == mrb->c->stbase)
       return mrb_false_value();
-    /* use saved block arg position */
+    //  use saved block arg position
     bidx = MRB_ENV_BIDX(e);
-    /* bidx may be useless (e.g. define_method) */
+    //  bidx may be useless (e.g. define_method)
     if (bidx >= MRB_ENV_STACK_LEN(e))
       return mrb_false_value();
     bp = &e->stack[bidx];
@@ -190,6 +192,7 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
   if (mrb_nil_p(*bp))
     return mrb_false_value();
   return mrb_true_value();
+  */
 }
 
 /* 15.3.1.3.7  */
@@ -235,10 +238,10 @@ mrb_singleton_class_clone(mrb_state *mrb, mrb_value obj)
       mrb_obj_iv_set(mrb, (struct RObject*)clone, mrb_intern_lit(mrb, "__attached__"), obj);
     }
     if (klass->mt) {
-      clone->mt = kh_copy(mt, mrb, klass->mt);
+      clone->mt = lj_tab_dup(mrb->L, klass->mt);
     }
     else {
-      clone->mt = kh_init(mt, mrb);
+      clone->mt = lj_tab_new(mrb->L, 0, 0);
     }
     clone->tt = MRB_TT_SCLASS;
     return clone;
@@ -266,10 +269,10 @@ copy_class(mrb_state *mrb, mrb_value dst, mrb_value src)
     c1->super->flags |= MRB_FLAG_IS_ORIGIN;
   }
   if (sc->mt) {
-    dc->mt = kh_copy(mt, mrb, sc->mt);
+    dc->mt = lj_tab_dup(mrb->L, sc->mt);
   }
   else {
-    dc->mt = kh_init(mt, mrb);
+    dc->mt = lj_tab_new(mrb->L, 0, 0);
   }
   dc->super = sc->super;
   MRB_SET_INSTANCE_TT(dc, MRB_INSTANCE_TT(sc));
@@ -672,14 +675,15 @@ mrb_obj_is_kind_of_m(mrb_state *mrb, mrb_value self)
   return mrb_bool_value(mrb_obj_is_kind_of(mrb, self, mrb_class_ptr(arg)));
 }
 
-KHASH_DECLARE(st, mrb_sym, char, FALSE)
-KHASH_DEFINE(st, mrb_sym, char, FALSE, kh_int_hash_func, kh_int_hash_equal)
-
 static void
-method_entry_loop(mrb_state *mrb, struct RClass* klass, khash_t(st)* set)
+method_entry_loop(mrb_state *mrb, struct RClass* klass, GCtab* set)
 {
-  khint_t i;
-
+  setnilV(mrb->L->top);
+  incr_top(mrb->L);
+  while (lj_tab_next(mrb->L, klass->mt, mrb->L->top - 1)) {
+    setboolV(lj_tab_set(mrb->L, klass->mt, mrb->L->top - 1), TRUE);
+  }
+  /*
   khash_t(mt) *h = klass->mt;
   if (!h || kh_size(h) == 0) return;
   for (i=0;i<kh_end(h);i++) {
@@ -689,16 +693,16 @@ method_entry_loop(mrb_state *mrb, struct RClass* klass, khash_t(st)* set)
       kh_put(st, mrb, set, kh_key(h, i));
     }
   }
+  */
 }
 
 mrb_value
 mrb_class_instance_method_list(mrb_state *mrb, mrb_bool recur, struct RClass* klass, int obj)
 {
-  khint_t i;
   mrb_value ary;
   mrb_bool prepended = FALSE;
   struct RClass* oldklass;
-  khash_t(st)* set = kh_init(st, mrb);
+  GCtab* set = lj_tab_new(mrb->L, 0, 0);
 
   if (!recur && (klass->flags & MRB_FLAG_IS_PREPENDED)) {
     MRB_CLASS_ORIGIN(klass);
@@ -718,13 +722,12 @@ mrb_class_instance_method_list(mrb_state *mrb, mrb_bool recur, struct RClass* kl
     klass = klass->super;
   }
 
-  ary = mrb_ary_new_capa(mrb, kh_size(set));
-  for (i=0;i<kh_end(set);i++) {
-    if (kh_exist(set, i)) {
-      mrb_ary_push(mrb, ary, mrb_symbol_value(kh_key(set, i)));
-    }
+  ary = mrb_ary_new_capa(mrb, lj_tab_len(set));
+  setnilV(mrb->L->top);
+  incr_top(mrb->L);
+  while (lj_tab_next(mrb->L, set, mrb->L->top - 1)) {
+    mrb_ary_push(mrb, ary, mrb_symbol_value(strV(mrb->L->top)));
   }
-  kh_destroy(st, mrb, set);
 
   return ary;
 }
@@ -732,10 +735,9 @@ mrb_class_instance_method_list(mrb_state *mrb, mrb_bool recur, struct RClass* kl
 static mrb_value
 mrb_obj_singleton_methods(mrb_state *mrb, mrb_bool recur, mrb_value obj)
 {
-  khint_t i;
   mrb_value ary;
   struct RClass* klass;
-  khash_t(st)* set = kh_init(st, mrb);
+  GCtab* set = lj_tab_new(mrb->L, 0, 0);
 
   klass = mrb_class(mrb, obj);
 
@@ -751,12 +753,11 @@ mrb_obj_singleton_methods(mrb_state *mrb, mrb_bool recur, mrb_value obj)
   }
 
   ary = mrb_ary_new(mrb);
-  for (i=0;i<kh_end(set);i++) {
-    if (kh_exist(set, i)) {
-      mrb_ary_push(mrb, ary, mrb_symbol_value(kh_key(set, i)));
-    }
+  setnilV(mrb->L->top);
+  incr_top(mrb->L);
+  while (lj_tab_next(mrb->L, set, mrb->L->top - 1)) {
+    mrb_ary_push(mrb, ary, mrb_symbol_value(strV(mrb->L->top)));
   }
-  kh_destroy(st, mrb, set);
 
   return ary;
 }
@@ -1150,7 +1151,7 @@ mrb_obj_ceqq(mrb_state *mrb, mrb_value self)
   mrb_get_args(mrb, "o", &v);
   len = RARRAY_LEN(ary);
   for (i=0; i<len; i++) {
-    mrb_value c = mrb_funcall_argv(mrb, mrb_ary_entry(ary, i), eqq, 1, &v);
+    mrb_value c = mrb_funcall_argv(mrb, mrb_ary_entry(mrb, ary, i), eqq, 1, &v);
     if (mrb_test(c)) return mrb_true_value();
   }
   return mrb_false_value();
@@ -1171,11 +1172,25 @@ mrb_obj_ceqq(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_local_variables(mrb_state *mrb, mrb_value self)
 {
-  struct RProc *proc;
-  mrb_irep *irep;
+  // struct RProc *proc;
   mrb_value vars;
-  size_t i;
+  int i;
+  struct lua_Debug ld;
+  ptrdiff_t stk = savestack(mrb->L, mrb->L->top);
 
+  if (!lua_getstack(mrb->L, 1, &ld)) {
+    return mrb_ary_new(mrb);
+  }
+  lua_getinfo(mrb->L, "u", &ld);
+
+  vars = mrb_ary_new_capa(mrb, ld.nups);
+  for (i = 1; i <= ld.nups; ++i) {
+    mrb_ary_push(mrb, vars, mrb_symbol_value(mrb_intern_cstr(mrb, lua_getlocal(mrb->L, &ld, i))));
+    mrb->L->top = restorestack(mrb->L, stk);
+  }
+  return vars;
+
+  /*
   proc = mrb->c->ci[-1].proc;
 
   if (MRB_PROC_CFUNC_P(proc)) {
@@ -1198,6 +1213,7 @@ mrb_local_variables(mrb_state *mrb, mrb_value self)
   }
 
   return mrb_hash_keys(mrb, vars);
+  */
 }
 
 mrb_value mrb_obj_equal_m(mrb_state *mrb, mrb_value);

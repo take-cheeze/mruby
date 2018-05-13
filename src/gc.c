@@ -19,6 +19,10 @@
 #include <mruby/error.h>
 #include <mruby/throw.h>
 
+void mrb_full_gc(mrb_state *mrb) {
+  lua_gc(mrb->L, LUA_GCCOLLECT, 0);
+}
+
 /*
   = Tri-color Incremental Garbage Collection
 
@@ -284,6 +288,7 @@ mrb_object_dead_p(mrb_state *mrb, struct RBasic *object) {
   // return is_dead(&mrb->gc, object);
 }
 
+/*
 static void
 link_heap_page(mrb_gc *gc, mrb_heap_page *page)
 {
@@ -378,7 +383,9 @@ mrb_gc_init(mrb_state *mrb, mrb_gc *gc)
   program_invoke_time = gettimeofday_time();
 #endif
 }
+*/
 
+/*
 static void obj_free(mrb_state *mrb, struct RBasic *obj, int end);
 
 void
@@ -413,19 +420,20 @@ gc_protect(mrb_state *mrb, mrb_gc *gc, struct RBasic *p)
 {
 #ifdef MRB_GC_FIXED_ARENA
   if (gc->arena_idx >= MRB_GC_ARENA_SIZE) {
-    /* arena overflow error */
-    gc->arena_idx = MRB_GC_ARENA_SIZE - 4; /* force room in arena */
+    // arena overflow error
+    gc->arena_idx = MRB_GC_ARENA_SIZE - 4; // force room in arena
     mrb_exc_raise(mrb, mrb_obj_value(mrb->arena_err));
   }
 #else
   if (gc->arena_idx >= gc->arena_capa) {
-    /* extend arena */
+    // extend arena
     gc->arena_capa = (int)(gc->arena_capa * 3 / 2);
     gc->arena = (struct RBasic**)mrb_realloc(mrb, gc->arena, sizeof(struct RBasic*)*gc->arena_capa);
   }
 #endif
   gc->arena[gc->arena_idx++] = p;
 }
+*/
 
 /* mrb_gc_protect() leaves the object in the arena */
 MRB_API void

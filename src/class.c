@@ -555,6 +555,12 @@ mrb_get_argc(mrb_state *mrb)
   */
 }
 
+MRB_API mrb_value
+mrb_get_argv(mrb_state *mrb)
+{
+  return mrb->L->base + 1;
+}
+
 /*
 MRB_API mrb_value*
 mrb_get_argv(mrb_state *mrb)
@@ -612,7 +618,7 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
   va_list ap;
   mrb_int argc = mrb_get_argc(mrb);
   mrb_int arg_i = 0;
-  mrb_value *array_argv = mrb_get_argv(mrb);
+  mrb_value array_argv = mrb_get_argv(mrb);
   mrb_bool opt = FALSE;
   mrb_bool opt_skip = TRUE;
   mrb_bool given = TRUE;
@@ -620,7 +626,7 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
   va_start(ap, format);
 
 #define ARGV \
-  (mrb->L->top + 1)
+  (mrb->L->base + 1)
   // (array_argv ? array_argv : (mrb->c->stack + 1))
 
   while ((c = *fmt++)) {
@@ -962,7 +968,7 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
 
     case '*':
       {
-        mrb_value **var;
+        mrb_value *var;
         mrb_int *pl;
         mrb_bool nocopy = array_argv ? TRUE : FALSE;
 
@@ -970,7 +976,7 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
           format++;
           nocopy = TRUE;
         }
-        var = va_arg(ap, mrb_value**);
+        var = va_arg(ap, mrb_value*);
         pl = va_arg(ap, mrb_int*);
         if (argc > i) {
           *pl = argc-i;

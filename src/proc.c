@@ -17,9 +17,10 @@ struct RProc*
 mrb_proc_new(mrb_state *mrb, mrb_irep *irep)
 {
   struct RProc *p;
-  mrb_callinfo *ci = mrb->c->ci;
+  // mrb_callinfo *ci = mrb->c->ci;
 
   p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
+  /*
   if (ci) {
     struct RClass *tc = NULL;
 
@@ -34,10 +35,12 @@ mrb_proc_new(mrb_state *mrb, mrb_irep *irep)
   }
   p->body.irep = irep;
   mrb_irep_incref(mrb, irep);
+  */
 
   return p;
 }
 
+/*
 static struct REnv*
 env_new(mrb_state *mrb, mrb_int nlocals)
 {
@@ -82,13 +85,14 @@ closure_setup(mrb_state *mrb, struct RProc *p)
   p->flags |= MRB_PROC_ENVSET;
   mrb_field_write_barrier(mrb, (struct RBasic*)p, (struct RBasic*)e);
 }
+*/
 
 struct RProc*
 mrb_closure_new(mrb_state *mrb, mrb_irep *irep)
 {
   struct RProc *p = mrb_proc_new(mrb, irep);
 
-  closure_setup(mrb, p);
+  // closure_setup(mrb, p);
   return p;
 }
 
@@ -106,6 +110,7 @@ mrb_proc_new_cfunc(mrb_state *mrb, mrb_func_t func)
   return p;
 }
 
+/*
 MRB_API struct RProc*
 mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const mrb_value *argv)
 {
@@ -130,6 +135,7 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
   }
   return p;
 }
+*/
 
 MRB_API struct RProc*
 mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
@@ -137,6 +143,7 @@ mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
   return mrb_proc_new_cfunc_with_env(mrb, func, nlocals, NULL);
 }
 
+/*
 MRB_API mrb_value
 mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
 {
@@ -157,6 +164,7 @@ mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
 
   return e->stack[idx];
 }
+*/
 
 void
 mrb_proc_copy(struct RProc *a, struct RProc *b)
@@ -191,10 +199,12 @@ mrb_proc_s_new(mrb_state *mrb, mrb_value proc_class)
   mrb_proc_copy(p, mrb_proc_ptr(blk));
   proc = mrb_obj_value(p);
   mrb_funcall_with_block(mrb, proc, mrb_intern_lit(mrb, "initialize"), 0, NULL, proc);
+  /*
   if (!MRB_PROC_STRICT_P(p) &&
       mrb->c->ci > mrb->c->cibase && MRB_PROC_ENV(p) == mrb->c->ci[-1].env) {
     p->flags |= MRB_PROC_ORPHAN;
   }
+  */
   return proc;
 }
 

@@ -39,7 +39,7 @@ struct RBasic {
 
 struct RObject {
   MRB_OBJECT_HEADER;
-  struct iv_tbl *iv;
+  GCtab *iv;
 };
 #define mrb_obj_ptr(v)   ((struct RObject*)(mrb_ptr(v)))
 

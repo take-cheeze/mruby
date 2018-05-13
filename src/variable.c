@@ -12,19 +12,17 @@
 
 typedef int (iv_foreach_func)(mrb_state*,mrb_sym,mrb_value,void*);
 
-#include <mruby/khash.h>
-
 #ifndef MRB_IVHASH_INIT_SIZE
 #define MRB_IVHASH_INIT_SIZE KHASH_MIN_SIZE
 #endif
 
-KHASH_DECLARE(iv, mrb_sym, mrb_value, TRUE)
-KHASH_DEFINE(iv, mrb_sym, mrb_value, TRUE, kh_int_hash_func, kh_int_hash_equal)
+#define current_proc(mrb) ((struct RProc*)udataV((mrb)->L->base - 1))
+
+// KHASH_DECLARE(iv, mrb_sym, mrb_value, TRUE)
+// KHASH_DEFINE(iv, mrb_sym, mrb_value, TRUE, kh_int_hash_func, kh_int_hash_equal)
 
 /* Instance variable table structure */
-typedef struct iv_tbl {
-  khash_t(iv) h;
-} iv_tbl;
+typedef GCtab iv_tbl;
 
 /*
  * Creates the instance variable table.
@@ -37,7 +35,7 @@ typedef struct iv_tbl {
 static iv_tbl*
 iv_new(mrb_state *mrb)
 {
-  return (iv_tbl*)kh_init_size(iv, mrb, MRB_IVHASH_INIT_SIZE);
+  return (iv_tbl*)lj_tab_new(mrb->L, 0, 3 /* MRB_IVHASH_INIT_SIZE */);
 }
 
 /*
@@ -52,11 +50,7 @@ iv_new(mrb_state *mrb)
 static void
 iv_put(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value val)
 {
-  khash_t(iv) *h = &t->h;
-  khiter_t k;
-
-  k = kh_put(iv, mrb, h, sym);
-  kh_value(h, k) = val;
+  copyTV(mrb->L, lj_tab_setstr(mrb->L, t, sym), val);
 }
 
 /*
@@ -74,15 +68,11 @@ iv_put(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value val)
 static mrb_bool
 iv_get(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 {
-  khash_t(iv) *h = &t->h;
-  khiter_t k;
-
-  k = kh_get(iv, mrb, h, sym);
-  if (k != kh_end(h)) {
-    if (vp) *vp = kh_value(h, k);
-    return TRUE;
+  cTValue *v = lj_tab_getstr(t, sym);
+  if (v) {
+    *vp = (mrb_value)v;
   }
-  return FALSE;
+  return v;
 }
 
 /*
@@ -101,14 +91,9 @@ iv_del(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 {
   if (t == NULL) return FALSE;
   else {
-    khash_t(iv) *h = &t->h;
-    khiter_t k;
-
-    k = kh_get(iv, mrb, h, sym);
-    if (k != kh_end(h)) {
-      mrb_value val = kh_value(h, k);
-      kh_del(iv, mrb, h, k);
-      if (vp) *vp = val;
+    cTValue *v = lj_tab_getstr(t, sym);
+    if (v) {
+      setnilV(lj_tab_setstr(mrb->L, t, sym));
       return TRUE;
     }
   }
@@ -122,18 +107,10 @@ iv_foreach(mrb_state *mrb, iv_tbl *t, iv_foreach_func *func, void *p)
     return TRUE;
   }
   else {
-    khash_t(iv) *h = &t->h;
-    khiter_t k;
-    int n;
-
-    for (k = kh_begin(h); k != kh_end(h); k++) {
-      if (kh_exist(h, k)) {
-        n = (*func)(mrb, kh_key(h, k), kh_value(h, k), p);
-        if (n > 0) return FALSE;
-        if (n < 0) {
-          kh_del(iv, mrb, h, k);
-        }
-      }
+    incr_top(mrb->L);
+    int idx = lua_gettop(mrb->L) - 1;
+    while (lj_tab_next(mrb->L, t, mrb->L->base + idx)) {
+      func(mrb, strV(mrb->L->base + idx), lj_tab_setstr(mrb->L, t, strV(mrb->L->base + idx)), p);
     }
   }
   return TRUE;
@@ -143,7 +120,7 @@ static size_t
 iv_size(mrb_state *mrb, iv_tbl *t)
 {
   if (t) {
-    return kh_size(&t->h);
+    return lj_tab_len(t);
   }
   return 0;
 }
@@ -151,9 +128,10 @@ iv_size(mrb_state *mrb, iv_tbl *t)
 static iv_tbl*
 iv_copy(mrb_state *mrb, iv_tbl *t)
 {
-  return (iv_tbl*)kh_copy(iv, mrb, &t->h);
+  return lj_tab_dup(mrb->L, t);
 }
 
+/*
 static void
 iv_free(mrb_state *mrb, iv_tbl *t)
 {
@@ -207,6 +185,7 @@ mrb_gc_free_iv(mrb_state *mrb, struct RObject *obj)
     iv_free(mrb, obj->iv);
   }
 }
+*/
 
 mrb_value
 mrb_vm_special_get(mrb_state *mrb, mrb_sym i)
@@ -333,7 +312,7 @@ mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
   struct RObject *s = mrb_obj_ptr(src);
 
   if (d->iv) {
-    iv_free(mrb, d->iv);
+    // iv_free(mrb, d->iv);
     d->iv = 0;
   }
   if (s->iv) {
@@ -412,14 +391,14 @@ mrb_value
 mrb_vm_iv_get(mrb_state *mrb, mrb_sym sym)
 {
   /* get self */
-  return mrb_iv_get(mrb, mrb->c->stack[0], sym);
+  return mrb_iv_get(mrb, mrb->L->base, sym);
 }
 
 void
 mrb_vm_iv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
   /* get self */
-  mrb_iv_set(mrb, mrb->c->stack[0], sym, v);
+  mrb_iv_set(mrb, mrb->L->base, sym, v);
 }
 
 static int
@@ -634,7 +613,7 @@ mrb_vm_cv_get(mrb_state *mrb, mrb_sym sym)
 {
   struct RClass *c;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
+  c = MRB_PROC_TARGET_CLASS(current_proc(mrb));
   return mrb_mod_cv_get(mrb, c, sym);
 }
 
@@ -643,7 +622,7 @@ mrb_vm_cv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
   struct RClass *c;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
+  c = MRB_PROC_TARGET_CLASS(current_proc(mrb));
   mrb_mod_cv_set(mrb, c, sym, v);
 }
 
@@ -702,7 +681,7 @@ mrb_vm_const_get(mrb_state *mrb, mrb_sym sym)
   mrb_value v;
   struct RProc *proc;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
+  c = MRB_PROC_TARGET_CLASS(current_proc(mrb));
   if (c->iv && iv_get(mrb, c->iv, sym, &v)) {
     return v;
   }
@@ -714,8 +693,8 @@ mrb_vm_const_get(mrb_state *mrb, mrb_sym sym)
     c2 = mrb_class_ptr(klass);
   }
   if (c2->tt == MRB_TT_CLASS || c2->tt == MRB_TT_MODULE) c = c2;
-  mrb_assert(!MRB_PROC_CFUNC_P(mrb->c->ci->proc));
-  proc = mrb->c->ci->proc;
+  mrb_assert(!MRB_PROC_CFUNC_P(current_proc(mrb)));
+  proc = current_proc(mrb);
   while (proc) {
     c2 = MRB_PROC_TARGET_CLASS(proc);
     if (c2 && c2->iv && iv_get(mrb, c2->iv, sym, &v)) { 
@@ -741,7 +720,7 @@ mrb_vm_const_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
   struct RClass *c;
 
-  c = MRB_PROC_TARGET_CLASS(mrb->c->ci->proc);
+  c = MRB_PROC_TARGET_CLASS(current_proc(mrb));
   mrb_obj_iv_set(mrb, (struct RObject*)c, sym, v);
 }
 
@@ -811,10 +790,7 @@ mrb_gv_get(mrb_state *mrb, mrb_sym sym)
 {
   mrb_value v;
 
-  if (!mrb->globals) {
-    return mrb_nil_value();
-  }
-  if (iv_get(mrb, mrb->globals, sym, &v))
+  if (iv_get(mrb, tabref(mrb->L->env), sym, &v))
     return v;
   return mrb_nil_value();
 }
@@ -822,24 +798,13 @@ mrb_gv_get(mrb_state *mrb, mrb_sym sym)
 MRB_API void
 mrb_gv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
-  iv_tbl *t;
-
-  if (!mrb->globals) {
-    t = mrb->globals = iv_new(mrb);
-  }
-  else {
-    t = mrb->globals;
-  }
-  iv_put(mrb, t, sym, v);
+  iv_put(mrb, tabref(mrb->L->env), sym, v);
 }
 
 MRB_API void
 mrb_gv_remove(mrb_state *mrb, mrb_sym sym)
 {
-  if (!mrb->globals) {
-    return;
-  }
-  iv_del(mrb, mrb->globals, sym, NULL);
+  iv_del(mrb, tabref(mrb->L->env), sym, NULL);
 }
 
 static int
@@ -865,7 +830,7 @@ gv_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
 mrb_value
 mrb_f_global_variables(mrb_state *mrb, mrb_value self)
 {
-  iv_tbl *t = mrb->globals;
+  iv_tbl *t = tabref(mrb->L->env);
   mrb_value ary = mrb_ary_new(mrb);
   size_t i;
   char buf[3];

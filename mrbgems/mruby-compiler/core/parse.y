@@ -3190,7 +3190,7 @@ f_rest_arg      : restarg_mark tIDENTIFIER
                 | restarg_mark
                     {
                       local_add_f(p, 0);
-                      $$ = -1;
+                      $$ = NULL;
                     }
                 ;
 
@@ -3449,6 +3449,7 @@ static void
 backref_error(parser_state *p, node *n)
 {
   int c;
+  mrb_state* mrb = p->mrb;
 
   c = (int)(intptr_t)n->car;
 
@@ -5829,9 +5830,11 @@ mrb_load_exec(mrb_state *mrb, struct mrb_parser_state *p, mrbc_context *c)
     }
   }
   MRB_PROC_SET_TARGET_CLASS(proc, target);
+  /*
   if (mrb->c->ci) {
     mrb->c->ci->target_class = target;
   }
+  */
   v = mrb_top_run(mrb, proc, mrb_top_self(mrb), keep);
   if (mrb->exc) return mrb_nil_value();
   return v;

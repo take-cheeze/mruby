@@ -45,7 +45,7 @@ module MRuby
     include Rake::DSL
     include LoadGems
     attr_accessor :name, :bins, :exts, :file_separator, :build_dir, :gem_clone_dir
-    attr_reader :libmruby, :gems, :toolchains
+    attr_reader :libmruby, :libmruby_core, :gems, :toolchains
     attr_writer :enable_bintest, :enable_test
 
     COMPILERS = %w(cc cxx objc asm)
@@ -81,7 +81,9 @@ module MRuby
         @mrbc = Command::Mrbc.new(self)
 
         @bins = []
-        @gems, @libmruby = MRuby::Gem::List.new, []
+        @gems = MRuby::Gem::List.new
+        @libmruby = [libfile("#{@build_dir}/lib/libmruby")]
+        @libmruby_core = [libfile("#{@build_dir}/lib/libmruby_core")]
         @build_mrbtest_lib_only = false
         @cxx_exception_enabled = false
         @cxx_exception_disabled = false

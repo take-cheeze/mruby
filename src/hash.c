@@ -96,6 +96,7 @@ KHASH_DEFINE (ht, mrb_value, mrb_hash_value, TRUE, mrb_hash_ht_hash_func, mrb_ha
 
 static void mrb_hash_modify(mrb_state *mrb, mrb_value hash);
 
+/*
 static inline mrb_value
 mrb_hash_ht_key(mrb_state *mrb, mrb_value key)
 {
@@ -105,6 +106,7 @@ mrb_hash_ht_key(mrb_state *mrb, mrb_value key)
   }
   return key;
 }
+*/
 
 #define KEY(key) mrb_hash_ht_key(mrb, key)
 
@@ -170,7 +172,7 @@ MRB_API mrb_value
 mrb_hash_get(mrb_state *mrb, mrb_value hash, mrb_value key)
 {
   mrb_sym mid;
-  mrb_value v = lj_tab_get(mrb->L, RHASH_TBL(hash), key);
+  mrb_value v = lj_tab_set(mrb->L, RHASH_TBL(hash), key);
   if (v) {
     return v;
   }
@@ -193,13 +195,9 @@ mrb_hash_get(mrb_state *mrb, mrb_value hash, mrb_value key)
 MRB_API mrb_value
 mrb_hash_fetch(mrb_state *mrb, mrb_value hash, mrb_value key, mrb_value def)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
-
-  if (h) {
-    k = kh_get(ht, mrb, h, key);
-    if (k != kh_end(h))
-      return kh_value(h, k).v;
+  if (RHASH_TBL(hash)) {
+    mrb_value ret = lj_tab_set(mrb->L, RHASH_TBL(hash), key);
+    if (ret) { return ret; }
   }
 
   /* not found */
@@ -209,55 +207,28 @@ mrb_hash_fetch(mrb_state *mrb, mrb_value hash, mrb_value key, mrb_value def)
 MRB_API void
 mrb_hash_set(mrb_state *mrb, mrb_value hash, mrb_value key, mrb_value val)
 {
-  khash_t(ht) *h;
-  khiter_t k;
-  int r;
+  GCtab *h;
 
   mrb_hash_modify(mrb, hash);
   h = RHASH_TBL(hash);
 
-  if (!h) h = RHASH_TBL(hash) = kh_init(ht, mrb);
-  k = kh_put2(ht, mrb, h, key, &r);
-  kh_value(h, k).v = val;
-
-  if (r != 0) {
-    /* expand */
-    int ai = mrb_gc_arena_save(mrb);
-    key = kh_key(h, k) = KEY(key);
-    mrb_gc_arena_restore(mrb, ai);
-    kh_value(h, k).n = kh_size(h)-1;
-  }
+  if (!h) h = RHASH_TBL(hash) = lj_tab_new(mrb->L, 0, 0);
+  copyTV(mrb->L, lj_tab_set(mrb->L, h, key), val);
 
   mrb_field_write_barrier_value(mrb, (struct RBasic*)RHASH(hash), key);
   mrb_field_write_barrier_value(mrb, (struct RBasic*)RHASH(hash), val);
-  return;
 }
 
 static mrb_value
 mrb_hash_dup(mrb_state *mrb, mrb_value hash)
 {
   struct RHash* ret;
-  khash_t(ht) *h, *ret_h;
-  khiter_t k, ret_k;
+  GCtab *h;
   mrb_value ifnone, vret;
 
   h = RHASH_TBL(hash);
   ret = (struct RHash*)mrb_obj_alloc(mrb, MRB_TT_HASH, mrb->hash_class);
-  ret->ht = kh_init(ht, mrb);
-
-  if (h && kh_size(h) > 0) {
-    ret_h = ret->ht;
-
-    for (k = kh_begin(h); k != kh_end(h); k++) {
-      if (kh_exist(h, k)) {
-        int ai = mrb_gc_arena_save(mrb);
-        ret_k = kh_put(ht, mrb, ret_h, KEY(kh_key(h, k)));
-        mrb_gc_arena_restore(mrb, ai);
-        kh_val(ret_h, ret_k).v = kh_val(h, k).v;
-        kh_val(ret_h, ret_k).n = kh_size(ret_h)-1;
-      }
-    }
-  }
+  ret->ht = lj_tab_dup(mrb->L, h);
 
   if (MRB_RHASH_DEFAULT_P(hash)) {
     ret->flags |= MRB_HASH_DEFAULT;
@@ -279,18 +250,14 @@ mrb_check_hash_type(mrb_state *mrb, mrb_value hash)
   return mrb_check_convert_type(mrb, hash, MRB_TT_HASH, "Hash", "to_hash");
 }
 
-/*
-MRB_API khash_t(ht)*
+MRB_API GCtab*
 mrb_hash_tbl(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-
-  if (!h) {
-    return RHASH_TBL(hash) = kh_init(ht, mrb);
+  if (!RHASH_TBL(hash)) {
+    return RHASH_TBL(hash) = lj_tab_new(mrb->L, 0, 0);
   }
-  return h;
+  return RHASH_TBL(hash);
 }
-*/
 
 static void
 mrb_hash_modify(mrb_state *mrb, mrb_value hash)
@@ -538,23 +505,16 @@ mrb_hash_set_default_proc(mrb_state *mrb, mrb_value hash)
 MRB_API mrb_value
 mrb_hash_delete_key(mrb_state *mrb, mrb_value hash, mrb_value key)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
-  mrb_value delVal;
-  mrb_int n;
+  GCtab *h = RHASH_TBL(hash);
 
   if (h) {
-    k = kh_get(ht, mrb, h, key);
-    if (k != kh_end(h)) {
-      delVal = kh_value(h, k).v;
-      n = kh_value(h, k).n;
-      kh_del(ht, mrb, h, k);
-      for (k = kh_begin(h); k != kh_end(h); k++) {
-        if (!kh_exist(h, k)) continue;
-        if (kh_value(h, k).n > n) kh_value(h, k).n--;
-      }
-      return delVal;
+    cTValue *v = lj_tab_get(mrb->L, h, key);
+    if (!v) {
+      return mrb_nil_value();
     }
+    mrb_value ret = lj_tab_set(mrb->L, h, key);
+    setnilV(ret);
+    return ret;
   }
 
   /* not found */
@@ -606,21 +566,17 @@ mrb_hash_delete(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_hash_shift(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
-  mrb_value delKey, delVal;
+  GCtab *h = RHASH_TBL(hash);
 
   mrb_hash_modify(mrb, hash);
-  if (h && kh_size(h) > 0) {
-    for (k = kh_begin(h); k != kh_end(h); k++) {
-      if (!kh_exist(h, k)) continue;
-
-      delKey = kh_key(h, k);
-      mrb_gc_protect(mrb, delKey);
-      delVal = mrb_hash_delete_key(mrb, hash, delKey);
-      mrb_gc_protect(mrb, delVal);
-
-      return mrb_assoc_new(mrb, delKey, delVal);
+  if (h && lj_tab_len(h) > 0) {
+    setnilV(mrb->L->top);
+    incr_top(mrb->L);
+    while (lj_tab_next(mrb->L, h, mrb->L->top - 1)) {
+      mrb_value v = lj_tab_set(mrb->L, h, mrb->L->top - 1);
+      if (tvisnil(v)) { continue; }
+      setnilV(v);
+      return mrb_assoc_new(mrb, mrb->L->top - 1, v);
     }
   }
 
@@ -650,10 +606,7 @@ mrb_hash_shift(mrb_state *mrb, mrb_value hash)
 MRB_API mrb_value
 mrb_hash_clear(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-
-  mrb_hash_modify(mrb, hash);
-  if (h) kh_clear(ht, mrb, h);
+  RHASH_TBL(hash) = lj_tab_new(mrb->L, 0, 0);
   return hash;
 }
 
@@ -703,10 +656,10 @@ mrb_hash_aset(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_hash_size_m(mrb_state *mrb, mrb_value self)
 {
-  khash_t(ht) *h = RHASH_TBL(self);
+  GCtab *h = RHASH_TBL(self);
 
   if (!h) return mrb_fixnum_value(0);
-  return mrb_fixnum_value(kh_size(h));
+  return mrb_fixnum_value(lj_tab_len(h));
 }
 
 /* 15.2.13.4.12 */
@@ -722,9 +675,9 @@ mrb_hash_size_m(mrb_state *mrb, mrb_value self)
 MRB_API mrb_value
 mrb_hash_empty_p(mrb_state *mrb, mrb_value self)
 {
-  khash_t(ht) *h = RHASH_TBL(self);
+  GCtab *h = RHASH_TBL(self);
 
-  if (h) return mrb_bool_value(kh_size(h) == 0);
+  if (h) return mrb_bool_value(lj_tab_len(h) == 0);
   return mrb_true_value();
 }
 
@@ -758,29 +711,15 @@ mrb_hash_to_hash(mrb_state *mrb, mrb_value hash)
 MRB_API mrb_value
 mrb_hash_keys(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
-  mrb_int end;
+  GCtab *h = RHASH_TBL(hash);
   mrb_value ary;
-  mrb_value *p;
 
-  if (!h || kh_size(h) == 0) return mrb_ary_new(mrb);
-  ary = mrb_ary_new_capa(mrb, kh_size(h));
-  end = kh_size(h)-1;
-  mrb_ary_set(mrb, ary, end, mrb_nil_value());
-  p = RARRAY_PTR(ary);
-  for (k = kh_begin(h); k != kh_end(h); k++) {
-    if (kh_exist(h, k)) {
-      mrb_value kv = kh_key(h, k);
-      mrb_hash_value hv = kh_value(h, k);
-
-      if (hv.n <= end) {
-        p[hv.n] = kv;
-      }
-      else {
-        p[end] = kv;
-      }
-    }
+  if (!h || lj_tab_len(h) == 0) return mrb_ary_new(mrb);
+  ary = mrb_ary_new_capa(mrb, lj_tab_len(h));
+  incr_top(mrb->L);
+  setnilV(mrb->L->top - 1);
+  while (lj_tab_next(mrb->L, h, mrb->L->top - 1)) {
+    mrb_ary_push(mrb, ary, mrb->L->top - 1);
   }
   return ary;
 }
@@ -801,18 +740,15 @@ mrb_hash_keys(mrb_state *mrb, mrb_value hash)
 MRB_API mrb_value
 mrb_hash_values(mrb_state *mrb, mrb_value hash)
 {
-  khash_t(ht) *h = RHASH_TBL(hash);
-  khiter_t k;
+  GCtab *h = RHASH_TBL(hash);
   mrb_value ary;
 
   if (!h) return mrb_ary_new(mrb);
-  ary = mrb_ary_new_capa(mrb, kh_size(h));
-  for (k = kh_begin(h); k != kh_end(h); k++) {
-    if (kh_exist(h, k)) {
-      mrb_hash_value hv = kh_value(h, k);
-
-      mrb_ary_set(mrb, ary, hv.n, hv.v);
-    }
+  ary = mrb_ary_new_capa(mrb, lj_tab_len(h));
+  incr_top(mrb->L);
+  setnilV(mrb->L->top - 1);
+  while (lj_tab_next(mrb->L, h, mrb->L->top - 1)) {
+    mrb_ary_push(mrb, ary, lj_tab_set(mrb->L, h, mrb->L->top - 1));
   }
   return ary;
 }
@@ -878,8 +814,8 @@ mrb_hash_has_value(mrb_state *mrb, mrb_value hash)
   if (h) {
     setnilV(mrb->L->top);
     incr_top(mrb->L);
-    while (lj_tab_next(mrb->L, h, mrb->L->top)) {
-      if (mrb_equal(mrb, lj_tab_get(mrb->L, h, mrb->L->top - 1), val)) {
+    while (lj_tab_next(mrb->L, h, mrb->L->top - 1)) {
+      if (mrb_equal(mrb, lj_tab_set(mrb->L, h, mrb->L->top - 1), val)) {
         return mrb_true_value();
       }
     }

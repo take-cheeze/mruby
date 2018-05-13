@@ -29,7 +29,7 @@ typedef struct mrb_data_type {
 
 struct RData {
   MRB_OBJECT_HEADER;
-  struct iv_tbl *iv;
+  GCtab *iv;
   const mrb_data_type *type;
   void *data;
 };

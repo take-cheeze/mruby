@@ -1054,7 +1054,7 @@ bit_overflow:
 }
 
 static mrb_value
-rshift(mrb_int val, mrb_int width)
+rshift(mrb_state *mrb, mrb_int val, mrb_int width)
 {
   if (width < 0) {              /* mrb_int overflow */
     return mrb_fixnum_value(0);
@@ -1088,7 +1088,7 @@ fix_lshift(mrb_state *mrb, mrb_value x)
   val = mrb_fixnum(x);
   if (val == 0) return x;
   if (width < 0) {
-    return rshift(val, -width);
+    return rshift(mrb, val, -width);
   }
   return lshift(mrb, val, width);
 }
@@ -1115,7 +1115,7 @@ fix_rshift(mrb_state *mrb, mrb_value x)
   if (width < 0) {
     return lshift(mrb, val, -width);
   }
-  return rshift(val, width);
+  return rshift(mrb, val, width);
 }
 
 /* 15.2.8.3.23 */

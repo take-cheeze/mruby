@@ -6,6 +6,7 @@
 #include <lj_state.h>
 #include <lj_tab.h>
 #include <lj_udata.h>
+#include <lauxlib.h>
 
 typedef enum mrb_vtype {
   MRB_TT_FALSE = 0,   /*   0 */
@@ -45,6 +46,7 @@ typedef GCstr* mrb_sym;
 
 #define MRB_INT_MAX INT32_MAX
 #define MRB_INT_MIN INT32_MIN
+#define MRB_INT_BIT 32
 
 #define ARY_SIZE_MAX MRB_INT_MAX
 
@@ -54,6 +56,7 @@ typedef TValue* mrb_value;
 #define mrb_float(v) numV(v)
 #define mrb_symbol(v) strV(v)
 #define mrb_test(v) (mrb_type(v) == MRB_TT_FALSE)
+#define mrb_bool(v) mrb_test(v)
 
 #define mrb_type(v) ((struct RBasic*)udataV(v))->tt
 #define mrb_ptr(v) ((void*)udataV(v))
@@ -66,6 +69,8 @@ typedef TValue* mrb_value;
 #define mrb_nil_value() (mrb->nil_value)
 #define mrb_undef_value() niltv(mrb->L)
 #define mrb_symbol_value(sym) (setstrV(mrb->L, mrb->L->top, sym), incr_top(mrb->L), mrb->L->top - 1)
+#define mrb_float_value(mrb, f) (setnumV(mrb->L->top, f), incr_top(mrb->L), mrb->L->top - 1)
+#define mrb_float_pool(mrb, f) mrb_float_value(mrb, f)
 
 #define mrb_array_p(v) (mrb_type(v) == MRB_TT_ARRAY)
 #define mrb_fixnum_p(v) (mrb_type(v) == MRB_TT_FIXNUM)
@@ -74,5 +79,11 @@ typedef TValue* mrb_value;
 #define mrb_string_p(v) (mrb_type(v) == MRB_TT_STRING)
 #define mrb_symbol_p(v) (mrb_type(v) == MRB_TT_SYMBOL)
 #define mrb_undef_p(v) tvisnil(v)
+
+#define mrb_ro_data_p(p) FALSE
+
+MRB_API double mrb_float_read(const char *string, char **endPtr);
+
+#define MRB_PRId "d"
 
 #include <mruby/object.h>

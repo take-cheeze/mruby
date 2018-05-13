@@ -16,7 +16,7 @@ MRB_BEGIN_DECL
 
 struct RHash {
   MRB_OBJECT_HEADER;
-  struct iv_tbl *iv;
+  GCtab *iv;
   struct GCtab *ht;
 };
 
@@ -163,7 +163,7 @@ typedef struct {
 #define RHASH_TBL(h)          (RHASH(h)->ht)
 #define RHASH_IFNONE(h)       mrb_iv_get(mrb, (h), mrb_intern_lit(mrb, "ifnone"))
 #define RHASH_PROCDEFAULT(h)  RHASH_IFNONE(h)
-MRB_API struct kh_ht * mrb_hash_tbl(mrb_state *mrb, mrb_value hash);
+MRB_API GCtab* mrb_hash_tbl(mrb_state *mrb, mrb_value hash);
 
 #define MRB_HASH_DEFAULT      1
 #define MRB_HASH_PROC_DEFAULT 2

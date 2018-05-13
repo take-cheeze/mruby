@@ -1291,6 +1291,7 @@ codegen(codegen_scope *s, node *tree, int val)
 {
   int nt;
   int rlev = s->rlev;
+  mrb_state *mrb = s->mrb;
 
   if (!tree) {
     if (val) {
@@ -3072,9 +3073,11 @@ generate_code(mrb_state *mrb, parser_state *p, int val)
     mrb_irep_decref(mrb, scope->irep);
     mrb_pool_close(scope->mpool);
     proc->c = NULL;
+    /*
     if (mrb->c->cibase && mrb->c->cibase->proc == proc->upper) {
       proc->upper = NULL;
     }
+    */
     mrb->jmp = prev_jmp;
     return proc;
   }

@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <string.h>
 #include <mruby.h>
-#include <mruby/khash.h>
 #include <mruby/string.h>
 #include <mruby/dump.h>
 #include <mruby/class.h>
@@ -19,6 +18,7 @@ typedef struct symbol_name {
   const char *name;
 } symbol_name;
 
+/*
 static inline khint_t
 sym_hash_func(mrb_state *mrb, mrb_sym s)
 {
@@ -31,12 +31,14 @@ sym_hash_func(mrb_state *mrb, mrb_sym s)
   }
   return h;
 }
+*/
 #define sym_hash_equal(mrb,a, b) (mrb->symtbl[a].len == mrb->symtbl[b].len && memcmp(mrb->symtbl[a].name, mrb->symtbl[b].name, mrb->symtbl[a].len) == 0)
 
-KHASH_DECLARE(n2s, mrb_sym, mrb_sym, FALSE)
-KHASH_DEFINE (n2s, mrb_sym, mrb_sym, FALSE, sym_hash_func, sym_hash_equal)
+// KHASH_DECLARE(n2s, mrb_sym, mrb_sym, FALSE)
+// KHASH_DEFINE (n2s, mrb_sym, mrb_sym, FALSE, sym_hash_func, sym_hash_equal)
 /* ------------------------------------------------------ */
 
+/*
 static void
 sym_validate_len(mrb_state *mrb, size_t len)
 {
@@ -44,12 +46,15 @@ sym_validate_len(mrb_state *mrb, size_t len)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "symbol length too long");
   }
 }
+*/
 
 static mrb_sym
 sym_intern(mrb_state *mrb, const char *name, size_t len, mrb_bool lit)
 {
+  return lj_str_new(mrb->L, name, len);
+  /*
   khash_t(n2s) *h = mrb->name2sym;
-  symbol_name *sname = mrb->symtbl; /* symtbl[0] for working memory */
+  symbol_name *sname = mrb->symtbl; // symtbl[0] for working memory
   khiter_t k;
   mrb_sym sym;
   char *p;
@@ -64,7 +69,7 @@ sym_intern(mrb_state *mrb, const char *name, size_t len, mrb_bool lit)
       return kh_key(h, k);
   }
 
-  /* registering a new symbol */
+  // registering a new symbol
   sym = ++mrb->symidx;
   if (mrb->symcapa < sym) {
     if (mrb->symcapa == 0) mrb->symcapa = 100;
@@ -87,6 +92,7 @@ sym_intern(mrb_state *mrb, const char *name, size_t len, mrb_bool lit)
   kh_put(n2s, mrb, h, sym);
 
   return sym;
+  */
 }
 
 MRB_API mrb_sym
@@ -116,6 +122,8 @@ mrb_intern_str(mrb_state *mrb, mrb_value str)
 MRB_API mrb_value
 mrb_check_intern(mrb_state *mrb, const char *name, size_t len)
 {
+  return mrb_symbol_value(lj_str_new(mrb->L, name, len));
+  /*
   khash_t(n2s) *h = mrb->name2sym;
   symbol_name *sname = mrb->symtbl;
   khiter_t k;
@@ -129,6 +137,7 @@ mrb_check_intern(mrb_state *mrb, const char *name, size_t len)
     return mrb_symbol_value(kh_key(h, k));
   }
   return mrb_nil_value();
+  */
 }
 
 MRB_API mrb_value
@@ -147,6 +156,9 @@ mrb_check_intern_str(mrb_state *mrb, mrb_value str)
 MRB_API const char*
 mrb_sym2name_len(mrb_state *mrb, mrb_sym sym, mrb_int *lenp)
 {
+  *lenp = sym->len;
+  return strdata(sym);
+  /*
   if (sym == 0 || mrb->symidx < sym) {
     if (lenp) *lenp = 0;
     return NULL;
@@ -154,8 +166,10 @@ mrb_sym2name_len(mrb_state *mrb, mrb_sym sym, mrb_int *lenp)
 
   if (lenp) *lenp = mrb->symtbl[sym].len;
   return mrb->symtbl[sym].name;
+  */
 }
 
+/*
 void
 mrb_free_symtbl(mrb_state *mrb)
 {
@@ -175,6 +189,7 @@ mrb_init_symtbl(mrb_state *mrb)
 {
   mrb->name2sym = kh_init(n2s, mrb);
 }
+*/
 
 /**********************************************************************
  * Document-class: Symbol
