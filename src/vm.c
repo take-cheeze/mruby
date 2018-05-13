@@ -579,10 +579,32 @@ mrb_exec_irep(mrb_state *mrb, mrb_value self, struct RProc *p)
  *     k = Klass.new
  *     k.send :hello, "gentle", "readers"   #=> "Hello gentle readers"
  */
-/*
 MRB_API mrb_value
 mrb_f_send(mrb_state *mrb, mrb_value self)
 {
+  mrb_sym name;
+  mrb_value block, argv;
+  mrb_int argc;
+  mrb_get_args(mrb, "n*&", &name, &argv, &argc, &block);
+
+  incr_top(mrb->L);
+  setstrV(mrb->L, mrb->L->top, name);
+
+  cTValue *m = lj_meta_tget(mrb->L, self, mrb->L->top);
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, m);
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, self);
+  for (int i = 0; i < argc; ++i) {
+    incr_top(mrb->L);
+    copyTV(mrb->L, mrb->L->top, argv + i);
+  }
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, block);
+  lj_vm_call(mrb->L, mrb->L->top - (argc + 2), 1);
+  return mrb->L->top;
+
+  /*
   mrb_sym name;
   mrb_value block, *argv, *regs;
   mrb_int argc, i, len;
@@ -624,11 +646,23 @@ mrb_f_send(mrb_state *mrb, mrb_value self)
     return MRB_METHOD_CFUNC(m)(mrb, self);
   }
   return mrb_exec_irep(mrb, self, MRB_METHOD_PROC(m));
+  */
 }
 
 static mrb_value
 eval_under(mrb_state *mrb, mrb_value self, mrb_value blk, struct RClass *c)
 {
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, blk);
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, self);
+  incr_top(mrb->L);
+  setnilV(mrb->L->top);
+  incr_top(mrb->L);
+  setudataV(mrb->L, mrb->L->top, &c->udata);
+  lj_vm_call(mrb->L, mrb->L->top - 3, 1);
+  return mrb->L->top;
+  /*
   struct RProc *p;
   mrb_callinfo *ci;
 
@@ -663,10 +697,10 @@ eval_under(mrb_state *mrb, mrb_value self, mrb_value blk, struct RClass *c)
   ci->pc = p->body.irep->iseq;
   ci->stackent = mrb->c->stack;
   ci->acc = 0;
+  */
 
   return self;
 }
-*/
 
 /* 15.2.2.4.35 */
 /*
@@ -678,7 +712,6 @@ eval_under(mrb_state *mrb, mrb_value self, mrb_value blk, struct RClass *c)
  *  be used to add methods to a class. <code>module_eval</code> returns
  *  the result of evaluating its argument.
  */
-/*
 mrb_value
 mrb_mod_module_eval(mrb_state *mrb, mrb_value mod)
 {
@@ -689,7 +722,6 @@ mrb_mod_module_eval(mrb_state *mrb, mrb_value mod)
   }
   return eval_under(mrb, mod, b, mrb_class_ptr(mod));
 }
-*/
 
 /* 15.3.1.3.18 */
 /*
@@ -712,7 +744,6 @@ mrb_mod_module_eval(mrb_state *mrb, mrb_value mod)
  *     k = KlassWithSecret.new
  *     k.instance_eval { @secret }   #=> 99
  */
-/*
 mrb_value
 mrb_obj_instance_eval(mrb_state *mrb, mrb_value self)
 {
@@ -742,6 +773,17 @@ mrb_obj_instance_eval(mrb_state *mrb, mrb_value self)
 MRB_API mrb_value
 mrb_yield_with_class(mrb_state *mrb, mrb_value b, mrb_int argc, const mrb_value *argv, mrb_value self, struct RClass *c)
 {
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, b);
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, self);
+  incr_top(mrb->L);
+  setnilV(mrb->L->top);
+  incr_top(mrb->L);
+  setudataV(mrb->L, mrb->L->top, &c->udata);
+  lj_vm_call(mrb->L, mrb->L->top - (3 + argc), 1);
+  return mrb->L->top;
+  /*
   struct RProc *p;
   mrb_sym mid = mrb->c->ci->mid;
   mrb_callinfo *ci;
@@ -781,8 +823,8 @@ mrb_yield_with_class(mrb_state *mrb, mrb_value b, mrb_int argc, const mrb_value 
     val = mrb_run(mrb, p, self);
   }
   return val;
+  */
 }
-*/
 
 MRB_API mrb_value
 mrb_yield_argv(mrb_state *mrb, mrb_value b, mrb_int argc, const mrb_value *argv)
@@ -910,7 +952,6 @@ argnum_error(mrb_state *mrb, mrb_int num)
   exc = mrb_exc_new_str(mrb, E_ARGUMENT_ERROR, str);
   mrb_exc_set(mrb, exc);
 }
-*/
 
 #define ERR_PC_SET(mrb, pc) mrb->c->ci->err = pc;
 #define ERR_PC_CLR(mrb)     mrb->c->ci->err = 0;
@@ -950,7 +991,6 @@ argnum_error(mrb_state *mrb, mrb_int num)
 
 #endif
 
-/*
 MRB_API mrb_value
 mrb_vm_run(mrb_state *mrb, struct RProc *proc, mrb_value self, unsigned int stack_keep)
 {

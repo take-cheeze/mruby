@@ -1,11 +1,13 @@
 #pragma once
 
 #include <lj_gc.h>
+#include <lj_meta.h>
 #include <lj_obj.h>
 #include <lj_str.h>
 #include <lj_state.h>
 #include <lj_tab.h>
 #include <lj_udata.h>
+#include <lj_vm.h>
 #include <lauxlib.h>
 
 typedef enum mrb_vtype {

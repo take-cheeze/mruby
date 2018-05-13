@@ -110,11 +110,11 @@ mrb_proc_new_cfunc(mrb_state *mrb, mrb_func_t func)
   return p;
 }
 
-/*
 MRB_API struct RProc*
 mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const mrb_value *argv)
 {
   struct RProc *p = mrb_proc_new_cfunc(mrb, func);
+  /*
   struct REnv *e;
   int i;
 
@@ -133,9 +133,9 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
       SET_NIL_VALUE(e->stack[i]);
     }
   }
+  */
   return p;
 }
-*/
 
 MRB_API struct RProc*
 mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
@@ -143,10 +143,10 @@ mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
   return mrb_proc_new_cfunc_with_env(mrb, func, nlocals, NULL);
 }
 
-/*
 MRB_API mrb_value
 mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
 {
+  /*
   struct RProc *p = mrb->c->ci->proc;
   struct REnv *e;
 
@@ -163,8 +163,8 @@ mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
   }
 
   return e->stack[idx];
+  */
 }
-*/
 
 void
 mrb_proc_copy(struct RProc *a, struct RProc *b)
