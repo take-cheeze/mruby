@@ -888,16 +888,18 @@ mrb_yield_cont(mrb_state *mrb, mrb_value b, mrb_value self, mrb_int argc, const 
   ci->argc = -1;
   return mrb_exec_irep(mrb, self, p);
 }
+*/
 
 mrb_value
 mrb_mod_s_nesting(mrb_state *mrb, mrb_value mod)
 {
-  struct RProc *proc;
+  // struct RProc *proc;
   mrb_value ary;
-  struct RClass *c = NULL;
+  // struct RClass *c = NULL;
 
   mrb_get_args(mrb, "");
   ary = mrb_ary_new(mrb);
+  /*
   proc = mrb->c->ci[-1].proc;   // callee proc
   mrb_assert(!MRB_PROC_CFUNC_P(proc));
   while (proc) {
@@ -911,9 +913,11 @@ mrb_mod_s_nesting(mrb_state *mrb, mrb_value mod)
     }
     proc = proc->upper;
   }
+  */
   return ary;
 }
 
+/*
 static struct RBreak*
 break_new(mrb_state *mrb, struct RProc *p, mrb_value val)
 {
@@ -3079,10 +3083,17 @@ mrb_run(mrb_state *mrb, struct RProc *proc, mrb_value self)
 }
 */
 
-/*
 MRB_API mrb_value
 mrb_top_run(mrb_state *mrb, struct RProc *proc, mrb_value self, unsigned int stack_keep)
 {
+  lj_state_growstack(mrb->L, 4);
+  setudataV(mrb->L, mrb->L->top - 3, &proc->udata);
+  copyTV(mrb->L, mrb->L->top - 2, self);
+  setnilV(mrb->L->top - 1);
+  setnilV(mrb->L->top - 0);
+  lj_vm_call(mrb->L, mrb->L->top - 3, 1);
+  return mrb->L->top;
+  /*
   mrb_callinfo *ci;
   mrb_value v;
 
@@ -3101,8 +3112,8 @@ mrb_top_run(mrb_state *mrb, struct RProc *proc, mrb_value self, unsigned int sta
   cipop(mrb);
 
   return v;
+  */
 }
-*/
 
 #if defined(MRB_ENABLE_CXX_EXCEPTION) && defined(__cplusplus)
 # if !defined(MRB_ENABLE_CXX_ABI)
