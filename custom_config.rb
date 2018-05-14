@@ -13,7 +13,7 @@ MRuby::Build.new do |conf|
   conf.libmruby_core << luajit_lib
 
   file luajit_lib => luajit_dir do |_|
-    sh "make -C #{luajit_dir} src/libluajit.a"
+    sh "make -C #{luajit_dir}/src -j2 libluajit.a"
   end
 
   file luajit_dir do |t|
