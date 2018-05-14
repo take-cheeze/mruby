@@ -402,10 +402,29 @@ mrb_funcall(mrb_state *mrb, mrb_value self, const char *name, mrb_int argc, ...)
   return mrb_funcall_argv(mrb, self, mid, argc, argv);
 }
 
-/*
 MRB_API mrb_value
 mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value blk)
 {
+  incr_top(mrb->L);
+  setudataV(mrb->L, mrb->L->top, &mrb_class(mrb, self)->udata);
+  incr_top(mrb->L);
+  setstrV(mrb->L, mrb->L->top, mid);
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, lj_meta_tget(mrb->L, mrb->L->top - 2, mrb->L->top - 1));
+  incr_top(mrb->L);
+  copyTV(mrb->L, mrb->L->top, self);
+  for (int i = 0; i < argc; ++i) {
+    incr_top(mrb->L);
+    copyTV(mrb->L, mrb->L->top, argv[i]);
+  }
+  incr_top(mrb->L);
+  setnilV(mrb->L->top);
+  incr_top(mrb->L);
+  setudataV(mrb->L, mrb->L->top, &mrb_class(mrb, self)->udata);
+  lj_vm_call(mrb->L, mrb->L->top - (3 + argc), 1);
+  return mrb->L->top;
+
+  /*
   mrb_value val;
 
   if (!mrb->jmp) {
@@ -515,8 +534,8 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
   }
   mrb_gc_protect(mrb, val);
   return val;
+  */
 }
-*/
 
 MRB_API mrb_value
 mrb_funcall_argv(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv)
@@ -777,6 +796,10 @@ mrb_yield_with_class(mrb_state *mrb, mrb_value b, mrb_int argc, const mrb_value 
   copyTV(mrb->L, mrb->L->top, b);
   incr_top(mrb->L);
   copyTV(mrb->L, mrb->L->top, self);
+  for (int i = 0; i < argc; ++i) {
+    incr_top(mrb->L);
+    copyTV(mrb->L, mrb->L->top, argv[i]);
+  }
   incr_top(mrb->L);
   setnilV(mrb->L->top);
   incr_top(mrb->L);
