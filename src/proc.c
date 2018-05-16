@@ -146,6 +146,7 @@ mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
 MRB_API mrb_value
 mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
 {
+  return mrb_nil_value();
   /*
   struct RProc *p = mrb->c->ci->proc;
   struct REnv *e;

@@ -552,9 +552,17 @@ mrb_obj_alloc(mrb_state *mrb, enum mrb_vtype ttype, struct RClass *cls)
   paint_partial_white(gc, p);
   return p;
   */
+
   struct RBasic* ud = (struct RBasic*)lj_udata_new(mrb->L, sizeof(struct RBasic) - sizeof(GCudata) + sizeof(uintptr_t) * 3, tabref(mrb->L->env));
   ud->tt = ttype;
-  setgcref(ud->udata.metatable, obj2gco(&cls->udata));
+  ud->c = cls;
+  ud->flags = 0;
+  ((struct RData*)ud)->iv = NULL;
+  ((struct RData*)ud)->type = NULL;
+  ((struct RData*)ud)->data = NULL;
+  if (cls) {
+    setgcref(ud->udata.metatable, obj2gco(&cls->udata));
+  }
   return ud;
 }
 
@@ -1544,6 +1552,7 @@ gc_generational_mode_set(mrb_state *mrb, mrb_value self)
 }
 
 
+/*
 static void
 gc_each_objects(mrb_state *mrb, mrb_gc *gc, mrb_each_object_callback *callback, void *data)
 {
@@ -1563,7 +1572,6 @@ gc_each_objects(mrb_state *mrb, mrb_gc *gc, mrb_each_object_callback *callback, 
   }
 }
 
-/*
 void
 mrb_objspace_each_objects(mrb_state *mrb, mrb_each_object_callback *callback, void *data)
 {

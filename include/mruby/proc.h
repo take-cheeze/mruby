@@ -96,6 +96,15 @@ MRB_API mrb_value mrb_proc_cfunc_env_get(mrb_state*, mrb_int);
 /* old name */
 #define mrb_cfunc_env_get(mrb, idx) mrb_proc_cfunc_env_get(mrb, idx)
 
+#define MRB_METHOD_PROC(p) (p)
+#define MRB_METHOD_PROC_P(p) ((p) && !MRB_PROC_CFUNC_P(p))
+#define MRB_METHOD_UNDEF_P(p) (!(p))
+#define MRB_METHOD_FROM_PROC(v, p) (v) = (p)
+#define MRB_METHOD_FROM_FUNC(v, f) (v) = mrb_proc_new_cfunc(mrb, f)
+#define MRB_METHOD_FUNC_P(p) ((p) && MRB_PROC_CFUNC_P(p))
+#define MRB_METHOD_FUNC(p) MRB_PROC_CFUNC(p)
+
+/*
 #ifdef MRB_METHOD_TABLE_INLINE
 
 #define MRB_METHOD_FUNC_FL ((uintptr_t)1)
@@ -117,7 +126,8 @@ MRB_API mrb_value mrb_proc_cfunc_env_get(mrb_state*, mrb_int);
 #define MRB_METHOD_PROC(m) ((m).proc)
 #define MRB_METHOD_UNDEF_P(m) ((m).proc==NULL)
 
-#endif /* MRB_METHOD_TABLE_INLINE */
+#endif // MRB_METHOD_TABLE_INLINE
+*/
 
 #define MRB_METHOD_CFUNC_P(m) (MRB_METHOD_FUNC_P(m)?TRUE:(MRB_METHOD_PROC(m)?(MRB_PROC_CFUNC_P(MRB_METHOD_PROC(m))):FALSE))
 #define MRB_METHOD_CFUNC(m) (MRB_METHOD_FUNC_P(m)?MRB_METHOD_FUNC(m):((MRB_METHOD_PROC(m)&&MRB_PROC_CFUNC_P(MRB_METHOD_PROC(m)))?MRB_PROC_CFUNC(MRB_METHOD_PROC(m)):NULL))

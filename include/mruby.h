@@ -176,6 +176,8 @@ struct mrb_context {
 
 typedef mrb_value (*mrb_func_t)(struct mrb_state *mrb, mrb_value);
 
+typedef struct RProc* mrb_method_t;
+/*
 #ifdef MRB_METHOD_TABLE_INLINE
 typedef uintptr_t mrb_method_t;
 #else
@@ -195,6 +197,7 @@ struct mrb_cache_entry {
   mrb_method_t m;
 };
 #endif
+*/
 
 struct mrb_jmpbuf;
 

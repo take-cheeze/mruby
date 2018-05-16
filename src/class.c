@@ -15,6 +15,7 @@
 #include <mruby/error.h>
 #include <mruby/data.h>
 #include <mruby/istruct.h>
+#include <mruby/proc.h>
 
 /*
 KHASH_DEFINE(mt, mrb_sym, mrb_method_t, TRUE, kh_int_hash_func, kh_int_hash_equal)
@@ -436,7 +437,11 @@ mrb_define_method_raw(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_method_
       mrb_raise(mrb, E_FROZEN_ERROR, "can't modify frozen class");
   }
   if (!h) h = c->mt = lj_tab_new(mrb->L, 0, 0);
-  copyTV(mrb->L, lj_tab_setstr(mrb->L, h, mid), MRB_METHOD_PROC(m));
+  if (MRB_METHOD_PROC(m)) {
+    setudataV(mrb->L, lj_tab_setstr(mrb->L, h, mid), &MRB_METHOD_PROC(m)->udata);
+  } else {
+    setnilV(lj_tab_setstr(mrb->L, h, mid));
+  }
   if (MRB_METHOD_PROC_P(m) && !MRB_METHOD_UNDEF_P(m)) {
     struct RProc *p = MRB_METHOD_PROC(m);
 
@@ -985,7 +990,8 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
               *var = ARGV + arg_i;
             }
             else {
-              mrb_value args = mrb_ary_new_from_values(mrb, *pl, ARGV+arg_i);
+              mrb_value args_val = ARGV+arg_i;
+              mrb_value args = mrb_ary_new_from_values(mrb, *pl, &args_val);
               RARRAY(args)->c = NULL;
               *var = RARRAY_PTR(args);
             }
@@ -1403,7 +1409,6 @@ mc_clear_by_id(mrb_state *mrb, struct RClass *c, mrb_sym mid)
 MRB_API mrb_method_t
 mrb_method_search_vm(mrb_state *mrb, struct RClass **cp, mrb_sym mid)
 {
-  mrb_method_t m;
   struct RClass *c = *cp;
 #ifdef MRB_METHOD_CACHE
   struct RClass *oc = c;
@@ -1420,10 +1425,10 @@ mrb_method_search_vm(mrb_state *mrb, struct RClass **cp, mrb_sym mid)
     GCtab *h = c->mt;
 
     if (h) {
-      mrb_value k = lj_tab_getstr(h, mid);
+      mrb_value k = (mrb_value)lj_tab_getstr(h, mid);
       if (k) {
         *cp = c;
-        return m;
+        return mrb_proc_ptr(k);
         /*
         m = kh_value(h, k);
         if (MRB_METHOD_UNDEF_P(m)) break;
@@ -1440,8 +1445,8 @@ mrb_method_search_vm(mrb_state *mrb, struct RClass **cp, mrb_sym mid)
     }
     c = c->super;
   }
-  MRB_METHOD_FROM_PROC(m, NULL);
-  return m;                  /* no method */
+  // MRB_METHOD_FROM_PROC(m, NULL);
+  return NULL;                  /* no method */
 }
 
 MRB_API mrb_method_t
