@@ -5,6 +5,7 @@
 #include <mruby/string.h>
 #include <mruby/proc.h>
 
+/*
 #ifndef MRB_DISABLE_STDIO
 static int
 print_r(mrb_state *mrb, mrb_irep *irep, size_t n, int pre)
@@ -475,3 +476,4 @@ mrb_codedump_all(mrb_state *mrb, struct RProc *proc)
 {
   codedump_recur(mrb, proc->body.irep);
 }
+*/

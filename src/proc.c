@@ -9,9 +9,11 @@
 #include <mruby/proc.h>
 #include <mruby/opcode.h>
 
+/*
 static mrb_code call_iseq[] = {
   MKOP_A(OP_CALL, 0),
 };
+*/
 
 struct RProc*
 mrb_proc_new(mrb_state *mrb, mrb_irep *irep)
@@ -167,11 +169,12 @@ mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
   */
 }
 
+/*
 void
 mrb_proc_copy(struct RProc *a, struct RProc *b)
 {
   if (a->body.irep) {
-    /* already initialized proc */
+    // already initialized proc
     return;
   }
   a->flags = b->flags;
@@ -181,8 +184,9 @@ mrb_proc_copy(struct RProc *a, struct RProc *b)
   }
   a->upper = b->upper;
   a->e.env = b->e.env;
-  /* a->e.target_class = a->e.target_class; */
+  // a->e.target_class = a->e.target_class;
 }
+*/
 
 static mrb_value
 mrb_proc_s_new(mrb_state *mrb, mrb_value proc_class)
@@ -233,23 +237,32 @@ static mrb_value
 mrb_proc_arity(mrb_state *mrb, mrb_value self)
 {
   struct RProc *p = mrb_proc_ptr(self);
+  /*
   struct mrb_irep *irep;
   mrb_code *iseq;
   mrb_aspec aspec;
   int ma, op, ra, pa, arity;
+  */
 
   if (MRB_PROC_CFUNC_P(p)) {
-    /* TODO cfunc aspec not implemented yet */
+    // TODO cfunc aspec not implemented yet
     return mrb_fixnum_value(-1);
   }
 
+  if (p->body.irep->flags & PROTO_VARARG) {
+    return mrb_fixnum_value(-(p->body.irep->numparams + 1));
+  }
+
+  return mrb_fixnum_value(p->body.irep->numparams);
+
+  /*
   irep = p->body.irep;
   if (!irep) {
     return mrb_fixnum_value(0);
   }
 
   iseq = irep->iseq;
-  /* arity is depend on OP_ENTER */
+  // arity is depend on OP_ENTER
   if (GET_OPCODE(*iseq) != OP_ENTER) {
     return mrb_fixnum_value(0);
   }
@@ -262,6 +275,7 @@ mrb_proc_arity(mrb_state *mrb, mrb_value self)
   arity = ra || (MRB_PROC_STRICT_P(p) && op) ? -(ma + pa + 1) : ma + pa;
 
   return mrb_fixnum_value(arity);
+  */
 }
 
 /* 15.3.1.2.6  */
@@ -299,6 +313,7 @@ proc_lambda(mrb_state *mrb, mrb_value self)
 void
 mrb_init_proc(mrb_state *mrb)
 {
+  /*
   struct RProc *p;
   mrb_method_t m;
   mrb_irep *call_irep = (mrb_irep *)mrb_malloc(mrb, sizeof(mrb_irep));
@@ -308,16 +323,19 @@ mrb_init_proc(mrb_state *mrb)
   call_irep->flags = MRB_ISEQ_NO_FREE;
   call_irep->iseq = call_iseq;
   call_irep->ilen = 1;
-  call_irep->nregs = 2;         /* receiver and block */
+  call_irep->nregs = 2;         // receiver and block
+  */
 
   mrb_define_class_method(mrb, mrb->proc_class, "new", mrb_proc_s_new, MRB_ARGS_ANY());
   mrb_define_method(mrb, mrb->proc_class, "initialize_copy", mrb_proc_init_copy, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, mrb->proc_class, "arity", mrb_proc_arity, MRB_ARGS_NONE());
 
+  /*
   p = mrb_proc_new(mrb, call_irep);
   MRB_METHOD_FROM_PROC(m, p);
   mrb_define_method_raw(mrb, mrb->proc_class, mrb_intern_lit(mrb, "call"), m);
   mrb_define_method_raw(mrb, mrb->proc_class, mrb_intern_lit(mrb, "[]"), m);
+  */
 
   mrb_define_class_method(mrb, mrb->kernel_module, "lambda", proc_lambda, MRB_ARGS_NONE()); /* 15.3.1.2.6  */
   mrb_define_method(mrb, mrb->kernel_module,       "lambda", proc_lambda, MRB_ARGS_NONE()); /* 15.3.1.3.27 */

@@ -117,6 +117,7 @@ mrb_open_allocf(mrb_allocf f, void *ud)
 
 void mrb_free_symtbl(mrb_state *mrb);
 
+/*
 void
 mrb_irep_incref(mrb_state *mrb, mrb_irep *irep)
 {
@@ -178,6 +179,7 @@ mrb_irep_free(mrb_state *mrb, mrb_irep *irep)
   mrb_debug_info_free(mrb, irep->debug_info);
   mrb_free(mrb, irep);
 }
+*/
 
 mrb_value
 mrb_str_pool(mrb_state *mrb, mrb_value str)
@@ -272,6 +274,7 @@ mrb_close(mrb_state *mrb)
   mrb_free(mrb, mrb);
 }
 
+/*
 MRB_API mrb_irep*
 mrb_add_irep(mrb_state *mrb)
 {
@@ -285,6 +288,7 @@ mrb_add_irep(mrb_state *mrb)
 
   return irep;
 }
+*/
 
 MRB_API mrb_value
 mrb_top_self(mrb_state *mrb)
