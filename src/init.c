@@ -47,5 +47,14 @@ mrb_init_core(mrb_state *mrb)
   mrb_init_range(mrb); DONE;
   mrb_init_gc(mrb); DONE;
   mrb_init_version(mrb); DONE;
+
+  /*
+  setgcref(basemt_it(G(mrb->L), LJ_TNIL), mrb->nil_class);
+  setgcref(basemt_it(G(mrb->L), LJ_TFALSE), mrb->false_class);
+  setgcref(basemt_it(G(mrb->L), LJ_TTRUE), mrb->true_class);
+  setgcref(basemt_it(G(mrb->L), LJ_TNUMX), mrb->float_class);
+  setgcref(basemt_it(G(mrb->L), LJ_TSTR), mrb->symbol_class);
+  */
+
   mrb_init_mrblib(mrb); DONE;
 }
