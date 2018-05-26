@@ -32,8 +32,7 @@ typedef struct code_generator {
   size_t str_len, str_capa;
 } code_generator;
 
-static void append_str(code_generator *g, const char *str) {
-  size_t str_len = strlen(str);
+static void append_str_len(code_generator *g, const char *str, size_t str_len) {
   if ((g->str_len + str_len) > g->str_capa) {
     g->str_capa *= 3; // * 1.5
     g->str_capa /= 2;
@@ -43,8 +42,74 @@ static void append_str(code_generator *g, const char *str) {
   g->str_len += str_len;
 }
 
+static void append_str(code_generator *g, const char *str) {
+  append_str_len(g, str, strlen(str));
+}
+
 static void append_sym(code_generator *g, GCstr *str) {
   append_str(g, strdata(str));
+}
+
+static void codegen(code_generator *g, node *tree);
+
+static void
+gen_assignment(code_generator *s, node *tree)
+{
+  int type = nint(tree->car);
+
+  tree = tree->cdr;
+  switch (type) {
+  case NODE_GVAR:
+    append_sym(s, nsym(tree));
+    break;
+  case NODE_LVAR:
+    append_sym(s, nsym(tree));
+    break;
+  case NODE_IVAR:
+    append_str(s, "self[\"");
+    append_sym(s, nsym(tree));
+    append_str(s, "\"]");
+    break;
+  case NODE_CVAR:
+    append_str(s, "getmetatable(self)[\"");
+    append_sym(s, nsym(tree));
+    append_str(s, "\"]");
+    break;
+  case NODE_CONST:
+    append_str(s, "getmetatable(self)[\"");
+    append_sym(s, nsym(tree));
+    append_str(s, "\"]");
+    break;
+  case NODE_COLON2:
+    append_sym(s, nsym(tree->cdr));
+    append_str(s, ".");
+    codegen(s, tree->car);
+    break;
+
+  case NODE_CALL:
+  case NODE_SCALL:
+    append_str(s, " do\nlocal _res = ");
+    codegen(s, tree);
+    append_str(s, " ;\n _res[\"");
+    append_sym(s, nsym(tree->cdr->car));
+    append_str(s, "=\"]");
+    append_str(s, "(");
+    break;
+
+  case NODE_MASGN:
+    gen_vmassignment(s, tree->car);
+    break;
+
+  /* splat without assignment */
+  case NODE_NIL:
+    break;
+
+  default:
+#ifndef MRB_DISABLE_STDIO
+    fprintf(stderr, "unknown lhs %d\n", type);
+#endif
+    break;
+  }
 }
 
 static void
@@ -68,111 +133,78 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_RESCUE:
-    {
-      int onerr, noexc, exend, pos1, pos2, tmp;
-      struct loopinfo *lp;
+    append_str(s, "do\n");
+    append_str(s, "lcaol _ok, _err = pcall(function()\n");
+    codegen(s, tree->car);
+    tree = tree->cdr;
+    if (tree->car) {
+      node *rescues = tree->car;
+      while (rescues) {
+        node *rescue = rescues->car;
+        node *exc_list = rescue->car;
 
-      if (tree->car == NULL) return;
-      onerr = genop(s, MKOP_Bx(OP_ONERR, 0));
-      lp = loop_push(s, LOOP_BEGIN);
-      lp->pc1 = onerr;
-      codegen(s, tree->car);
-      pop();
-      lp->type = LOOP_RESCUE;
-      noexc = genop(s, MKOP_Bx(OP_JMP, 0));
-      dispatch(s, onerr);
-      tree = tree->cdr;
-      exend = 0;
-      pos1 = 0;
-      if (tree->car) {
-        node *n2 = tree->car;
-        int exc = cursp();
+        if (rescues != tree->car) { append_str(s, " else\n"); }
 
-        genop(s, MKOP_ABC(OP_RESCUE, exc, 0, 0));
-        push();
-        while (n2) {
-          node *n3 = n2->car;
-          node *n4 = n3->car;
+        append_str(s, "if (");
+        do {
+          if (exc_list != rescue->car) { append_str(s, " or "); }
+          append_str(s, "(");
 
-          if (pos1) dispatch(s, pos1);
-          pos2 = 0;
-          do {
-            if (n4 && n4->car && nint(n4->car->car) == NODE_SPLAT) {
-              codegen(s, n4->car);
-              genop(s, MKOP_AB(OP_MOVE, cursp(), exc));
-              push_n(2); pop_n(2); // space for one arg and a block
-              pop();
-              genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "__case_eqq")), 1));
+          if (exc_list && exc_list->car && nint(exc_list->car->car) == NODE_SPLAT) {
+            append_str(s, "_err:__case_eqq(");
+            codegen(s, exc_list->car);
+            append_str(s, ")");
+          }
+          else {
+            if (exc_list) {
+              append_str(s, "_err[\"kind_of?\"](_err, (");
+              codegen(s, exc_list->car);
+              append_str(s, "))");
             }
             else {
-              if (n4) {
-                codegen(s, n4->car);
-              }
-              else {
-                genop(s, MKOP_ABx(OP_GETCONST, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "StandardError"))));
-                push();
-              }
-              pop();
-              genop(s, MKOP_ABC(OP_RESCUE, exc, cursp(), 1));
+              append_str(s, "_err[\"kind_of?\"](_err, StandardError)");
             }
-            distcheck(s, pos2);
-            tmp = genop(s, MKOP_AsBx(OP_JMPIF, cursp(), pos2));
-            pos2 = tmp;
-            if (n4) {
-              n4 = n4->cdr;
-            }
-          } while (n4);
-          pos1 = genop(s, MKOP_sBx(OP_JMP, 0));
-          dispatch_linked(s, pos2);
+          }
+          exc_list = exc_list->cdr;
+          append_str(s, ")");
+        } while (exc_list);
+        append_str(s, ")\n");
 
-          pop();
-          if (n3->cdr->car) {
-            gen_assignment(s, n3->cdr->car, exc);
-          }
-          if (n3->cdr->cdr->car) {
-            codegen(s, n3->cdr->cdr->car);
-            if (val) pop();
-          }
-          distcheck(s, exend);
-          tmp = genop(s, MKOP_sBx(OP_JMP, exend));
-          exend = tmp;
-          n2 = n2->cdr;
-          push();
+        // exc_var
+        if (rescue->cdr->car) {
+          append_str(s, "local ");
+          gen_assignment(s, rescue->cdr->car);
+          append_str(s, " = _err;\n");
         }
-        if (pos1) {
-          dispatch(s, pos1);
-          genop(s, MKOP_A(OP_RAISE, exc));
+        if (rescue->cdr->cdr->car) {
+          codegen(s, rescue->cdr->cdr->car);
         }
+        rescues = rescues->cdr;
       }
-      pop();
+
+      // else
       tree = tree->cdr;
-      dispatch(s, noexc);
-      genop(s, MKOP_A(OP_POPERR, 1));
       if (tree->car) {
+        append_str(s, " else \n");
         codegen(s, tree->car);
       }
-      else if (val) {
-        push();
-      }
-      dispatch_linked(s, exend);
-      loop_pop(s);
+
+      append_str(s, " end \n");
     }
+
+    append_str(s, ")\n");
+    append_str(s, "end\n");
     break;
 
   case NODE_ENSURE:
     if (!tree->cdr || !tree->cdr->cdr ||
         (nint(tree->cdr->cdr->car) == NODE_BEGIN &&
          tree->cdr->cdr->cdr)) {
-      int idx;
-      int epush = s->pc;
-
-      genop(s, MKOP_Bx(OP_EPUSH, 0));
-      s->ensure_level++;
       append_str(s, "local _ok, _err = pcall(function()\n");
       codegen(s, tree->car);
       append_str(s, "end);\n");
-      scope_body(s, tree->cdr);
-      append_str(s, "if !_ok then error(_err) end\n")
+      codegen(s, tree->cdr);
+      append_str(s, "if !_ok then error(_err) end\n");
     }
     else {                      // empty ensure ignored
       codegen(s, tree->car);
@@ -212,18 +244,18 @@ codegen(code_generator *s, node *tree)
       }
       append_str(s, "if (");
       codegen(s, tree->car);
-      append_sym(s, ") then ");
+      append_str(s, ") then ");
       codegen(s, tree->cdr->car);
       if (e) {
-        append_str(s, " else ")
+        append_str(s, " else ");
         codegen(s, e);
       }
-      append_str(s, " end ")
+      append_str(s, " end ");
     }
     break;
 
   case NODE_AND:
-    append_str(s, "((")
+    append_str(s, "((");
     codegen(s, tree->car);
     append_str(s, ") and (");
     codegen(s, tree->cdr);
@@ -256,75 +288,42 @@ codegen(code_generator *s, node *tree)
 
   case NODE_FOR:
     for_body(s, tree);
-    if (val) push();
     break;
 
   case NODE_CASE:
     {
-      int head = 0;
-      int pos1, pos2, pos3, tmp;
-      node *n;
+      node *n, *expr = NULL;
 
-      pos3 = 0;
+      append_str(s, " do\n");
       if (tree->car) {
-        head = cursp();
+        append_str(s, "local _exp = ");
         codegen(s, tree->car);
+        append_str(s, ";\n");
+        expr = tree->car;
       }
+
       tree = tree->cdr;
       while (tree) {
         n = tree->car->car;
-        pos1 = pos2 = 0;
         while (n) {
           codegen(s, n->car);
-          if (head) {
-            genop(s, MKOP_AB(OP_MOVE, cursp(), head));
-            push_n(2); pop_n(2); // space for one arg and a block
-            pop();
-            if (nint(n->car->car) == NODE_SPLAT) {
-              genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "__case_eqq")), 1));
-            }
-            else {
-              genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "===")), 1));
-            }
+          if (nint(n->car->car) == NODE_SPLAT) {
+            genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "__case_eqq")), 1));
           }
           else {
-            pop();
+            genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "===")), 1));
           }
-          distcheck(s, pos2);
-          tmp = genop(s, MKOP_AsBx(OP_JMPIF, cursp(), pos2));
-          pos2 = tmp;
           n = n->cdr;
         }
+
         if (tree->car->car) {
           pos1 = genop(s, MKOP_sBx(OP_JMP, 0));
           dispatch_linked(s, pos2);
         }
         codegen(s, tree->car->cdr);
-        if (val) pop();
-        distcheck(s, pos3);
-        tmp = genop(s, MKOP_sBx(OP_JMP, pos3));
-        pos3 = tmp;
-        if (pos1) dispatch(s, pos1);
         tree = tree->cdr;
       }
-      if (val) {
-        int pos = cursp();
-        genop(s, MKOP_A(OP_LOADNIL, cursp()));
-        if (pos3) dispatch_linked(s, pos3);
-        if (head) pop();
-        if (cursp() != pos) {
-          genop(s, MKOP_AB(OP_MOVE, cursp(), pos));
-        }
-        push();
-      }
-      else {
-        if (pos3) {
-          dispatch_linked(s, pos3);
-        }
-        if (head) {
-          pop();
-        }
-      }
+      append_str(s, " end\n");
     }
     break;
 
@@ -349,11 +348,11 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_DOT3:
-    append_str(s, "Range.new((")
+    append_str(s, "Range.new((");
     codegen(s, tree->car);
     append_str(s, "), (");
     codegen(s, tree->cdr);
-    append_sym(s, "), true)");
+    append_str(s, "), true)");
     break;
 
   case NODE_COLON2:
@@ -365,75 +364,43 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_COLON3:
-    {
-      int sym = new_sym(s, nsym(tree));
-
-      genop(s, MKOP_A(OP_OCLASS, cursp()));
-      genop(s, MKOP_ABx(OP_GETMCNST, cursp(), sym));
-      if (val) push();
-    }
+    append_str(s, "(Object.\"");
+    append_sym(s, nsym(tree));
+    append_str(s, "\")");
     break;
 
   case NODE_ARRAY:
-    {
-      int n;
-
-      n = gen_values(s, tree, val, 0);
-      if (n >= 0) {
-        if (val) {
-          pop_n(n);
-          genop(s, MKOP_ABC(OP_ARRAY, cursp(), cursp(), n));
-          push();
-        }
-      }
-      else if (val) {
-        push();
-      }
+    append_str(s, "{");
+    for (int n = 0; tree; tree = tree->cdr, ++n) {
+      if (n > 0) { append_str(s, ", "); }
+      codegen(s, tree->car);
     }
+    append_str(s, "}");
     break;
 
   case NODE_HASH:
-    {
-      int len = 0;
-      mrb_bool update = FALSE;
-
-      while (tree) {
-        codegen(s, tree->car->car);
-        codegen(s, tree->car->cdr);
-        len++;
-        tree = tree->cdr;
-        if (val && len == 126) {
-          pop_n(len*2);
-          genop(s, MKOP_ABC(OP_HASH, cursp(), cursp(), len));
-          if (update) {
-            pop();
-            genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "__update")), 1));
-          }
-          push();
-          update = TRUE;
-          len = 0;
-        }
-      }
-      if (val) {
-        pop_n(len*2);
-        genop(s, MKOP_ABC(OP_HASH, cursp(), cursp(), len));
-        if (update) {
-          pop();
-          genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "__update")), 1));
-        }
-        push();
-      }
+    append_str(s, "{");
+    for (int n = 0; tree; tree = tree->cdr, ++n) {
+      if (n > 0) { append_str(s, ", "); }
+      append_str(s, "[");
+      codegen(s, tree->car->car);
+      append_str(s, "] = ");
+      codegen(s, tree->car->cdr);
     }
+    append_str(s, "}");
     break;
 
   case NODE_SPLAT:
+    append_str(s, "{");
     codegen(s, tree);
+    append_str(s, "}");
     break;
 
   case NODE_ASGN:
+    gen_assignment(s, tree->car);
+    append_str(s, " = ");
     codegen(s, tree->cdr);
-    pop();
-    gen_assignment(s, tree->car, cursp());
+    append_str(s, ";\n");
     break;
 
   case NODE_MASGN:
@@ -456,12 +423,12 @@ codegen(code_generator *s, node *tree)
           n = 0;
           while (t) {
             if (n < len) {
-              gen_assignment(s, t->car, rhs+n);
+              gen_assignment(s, t->car);
               n++;
             }
             else {
               genop(s, MKOP_A(OP_LOADNIL, rhs+n));
-              gen_assignment(s, t->car, rhs+n);
+              gen_assignment(s, t->car);
             }
             t = t->cdr;
           }
@@ -485,13 +452,13 @@ codegen(code_generator *s, node *tree)
               rn = len - post - n;
             }
             genop(s, MKOP_ABC(OP_ARRAY, cursp(), rhs+n, rn));
-            gen_assignment(s, t->car, cursp());
+            gen_assignment(s, t->car);
             n += rn;
           }
           if (t->cdr && t->cdr->car) {
             t = t->cdr->car;
             while (n<len) {
-              gen_assignment(s, t->car, rhs+n);
+              gen_assignment(s, t->car);
               t = t->cdr;
               n++;
             }
@@ -610,7 +577,7 @@ codegen(code_generator *s, node *tree)
           genop(s, MKOP_ABC(OP_SEND, cursp(), idx, callargs));
         }
         else {
-          gen_assignment(s, tree->car, cursp());
+          gen_assignment(s, tree->car);
         }
         dispatch(s, pos);
         return;
@@ -648,7 +615,7 @@ codegen(code_generator *s, node *tree)
         genop(s, MKOP_ABC(OP_SEND, cursp(), idx, 1));
       }
       if (callargs < 0) {
-        gen_assignment(s, tree->car, cursp());
+        gen_assignment(s, tree->car);
       }
       else {
         if (val && vsp >= 0) {
@@ -710,72 +677,26 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_ZSUPER:
-    {
-      codegen_scope *s2 = s;
-      int lv = 0, ainfo = 0;
-
-      push();        // room for receiver
-      while (!s2->mscope) {
-        lv++;
-        s2 = s2->prev;
-        if (!s2) break;
-      }
-      if (s2) ainfo = s2->ainfo;
-      genop(s, MKOP_ABx(OP_ARGARY, cursp(), (ainfo<<4)|(lv & 0xf)));
-      push(); push(); pop();    // ARGARY pushes two values
-      if (tree && tree->cdr) {
-        codegen(s, tree->cdr);
-        pop();
-      }
-      pop(); pop();
-      genop(s, MKOP_ABC(OP_SUPER, cursp(), 0, CALL_MAXARGS));
-      if (val) push();
-    }
+    append_str(s, "self:super()(self, ..., _blk)");
     break;
 
   case NODE_RETURN:
+    append_str(s, "return (");
     if (tree) {
       gen_retval(s, tree);
     }
     else {
-      genop(s, MKOP_A(OP_LOADNIL, cursp()));
+      append_str(s, "nil");
     }
-    if (s->loop) {
-      genop(s, MKOP_AB(OP_RETURN, cursp(), OP_R_RETURN));
-    }
-    else {
-      genop_peep(s, MKOP_AB(OP_RETURN, cursp(), OP_R_NORMAL));
-    }
-    if (val) push();
+    append_str(s, ")");
     break;
 
   case NODE_YIELD:
-    {
-      codegen_scope *s2 = s;
-      int lv = 0, ainfo = 0;
-      int n = 0, sendv = 0;
-
-      while (!s2->mscope) {
-        lv++;
-        s2 = s2->prev;
-        if (!s2) break;
-      }
-      if (s2) ainfo = s2->ainfo;
-      push();
-      if (tree) {
-        n = gen_values(s, tree, 0);
-        if (n < 0) {
-          n = sendv = 1;
-          push();
-        }
-      }
-      push();pop(); // space for a block
-      pop_n(n+1);
-      genop(s, MKOP_ABx(OP_BLKPUSH, cursp(), (ainfo<<4)|(lv & 0xf)));
-      if (sendv) n = CALL_MAXARGS;
-      genop(s, MKOP_ABC(OP_SEND, cursp(), new_msym(s, mrb_intern_lit(s->mrb, "call")), n));
-      if (val) push();
+    append_str(s, " _blk(");
+    if (tree) {
+      gen_values(s, tree, 0);
     }
+    append_str(s, ")");
     break;
 
   case NODE_BREAK:
@@ -783,102 +704,23 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_NEXT:
-    if (!s->loop) {
-      raise_error(s, "unexpected next");
-    }
-    else if (s->loop->type == LOOP_NORMAL) {
-      if (s->ensure_level > s->loop->ensure_level) {
-        genop_peep(s, MKOP_A(OP_EPOP, s->ensure_level - s->loop->ensure_level));
-      }
-      codegen(s, tree);
-      distcheck(s, s->loop->pc1 - s->pc);
-      genop(s, MKOP_sBx(OP_JMP, s->loop->pc1 - s->pc));
-    }
-    else {
-      if (tree) {
-        codegen(s, tree);
-        pop();
-      }
-      else {
-        genop(s, MKOP_A(OP_LOADNIL, cursp()));
-      }
-      genop_peep(s, MKOP_AB(OP_RETURN, cursp(), OP_R_NORMAL));
-    }
-    if (val) push();
+    append_str(s, " return (");
+    codegen(s, tree);
+    append_str(s, ");");
     break;
 
   case NODE_REDO:
-    if (!s->loop || s->loop->type == LOOP_BEGIN || s->loop->type == LOOP_RESCUE) {
-      raise_error(s, "unexpected redo");
-    }
-    else {
-      if (s->ensure_level > s->loop->ensure_level) {
-        genop_peep(s, MKOP_A(OP_EPOP, s->ensure_level - s->loop->ensure_level));
-      }
-      distcheck(s, s->loop->pc2 - s->pc);
-      genop(s, MKOP_sBx(OP_JMP, s->loop->pc2 - s->pc));
-    }
-    if (val) push();
+    append_str(s, "error(\"redo\");\n");
     break;
 
   case NODE_RETRY:
-    {
-      const char *msg = "unexpected retry";
-
-      if (!s->loop) {
-        raise_error(s, msg);
-      }
-      else {
-        struct loopinfo *lp = s->loop;
-        int n = 0;
-
-        while (lp && lp->type != LOOP_RESCUE) {
-          if (lp->type == LOOP_BEGIN) {
-            n++;
-          }
-          lp = lp->prev;
-        }
-        if (!lp) {
-          raise_error(s, msg);
-        }
-        else {
-          if (n > 0) {
-            genop_peep(s, MKOP_A(OP_POPERR, n));
-          }
-          if (s->ensure_level > lp->ensure_level) {
-            genop_peep(s, MKOP_A(OP_EPOP, s->ensure_level - lp->ensure_level));
-          }
-          distcheck(s, s->loop->pc1 - s->pc);
-          genop(s, MKOP_sBx(OP_JMP, lp->pc1 - s->pc));
-        }
-      }
-      if (val) push();
-    }
+    append_str(s, "error(\"retry\");\n");
     break;
 
   case NODE_LVAR:
-    if (val) {
-      int idx = lv_idx(s, nsym(tree));
-
-      if (idx > 0) {
-        genop_peep(s, MKOP_AB(OP_MOVE, cursp(), idx));
-      }
-      else {
-        int lv = 0;
-        codegen_scope *up = s->prev;
-
-        while (up) {
-          idx = lv_idx(up, nsym(tree));
-          if (idx > 0) {
-            genop_peep(s, MKOP_ABC(OP_GETUPVAR, cursp(), idx, lv));
-            break;
-          }
-          lv++;
-          up = up->prev;
-        }
-      }
-      push();
-    }
+    append_str(s, "(");
+    append_sym(s, nsym(tree));
+    append_str(s, ")");
     break;
 
   case NODE_GVAR:
@@ -894,12 +736,9 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_CVAR:
-    if (val) {
-      int sym = new_sym(s, nsym(tree));
-
-      genop(s, MKOP_ABx(OP_GETCV, cursp(), sym));
-      push();
-    }
+    append_str(s, "getmetatable(self)[\"");
+    append_sym(s, nsym(tree));
+    append_str(s, "\"]");
     break;
 
   case NODE_CONST:
@@ -915,7 +754,6 @@ codegen(code_generator *s, node *tree)
   case NODE_BACK_REF:
     {
       char buf[3];
-      int sym;
 
       buf[0] = '$';
       buf[1] = nchar(tree);
@@ -930,11 +768,10 @@ codegen(code_generator *s, node *tree)
     {
       mrb_state *mrb = s->mrb;
       mrb_value str;
-      int sym;
 
       str = mrb_format(mrb, "$%S", mrb_fixnum_value(nint(tree)));
       append_str(s, "_G[\"");
-      append_sym(s, mrb_intern_cstr(s->mrb, str));
+      append_sym(s, mrb_intern_str(s->mrb, str));
       append_str(s, "\"]");
     }
     break;
@@ -948,129 +785,37 @@ codegen(code_generator *s, node *tree)
     break;
 
   case NODE_INT:
-    if (val) {
-      char *p = (char*)tree->car;
+    {
+      char buf[10];
       int base = nint(tree->cdr->car);
-      mrb_int i;
-      mrb_code co;
-      mrb_bool overflow;
-
-      i = readint_mrb_int(s, p, base, FALSE, &overflow);
-#ifndef MRB_WITHOUT_FLOAT
-      if (overflow) {
-        double f = readint_float(s, p, base);
-        int off = new_lit(s, mrb_float_value(s->mrb, f));
-
-        genop(s, MKOP_ABx(OP_LOADL, cursp(), off));
-      }
-      else
-#endif
-      {
-        if (i < MAXARG_sBx && i > -MAXARG_sBx) {
-          co = MKOP_AsBx(OP_LOADI, cursp(), i);
-        }
-        else {
-          int off = new_lit(s, mrb_fixnum_value(i));
-          co = MKOP_ABx(OP_LOADL, cursp(), off);
-        }
-        genop(s, co);
-      }
-      push();
+      sprintf(buf, "%d", base);
+      append_str(s, " tonumber(\"");
+      append_str(s, (char*)tree->car);
+      append_str(s, "\", ");
+      append_str(s, buf);
+      append_str(s, ")");
     }
     break;
 
-#ifndef MRB_WITHOUT_FLOAT
   case NODE_FLOAT:
-    if (val) {
-      char *p = (char*)tree;
-      mrb_float f = mrb_float_read(p, NULL);
-      int off = new_lit(s, mrb_float_value(s->mrb, f));
-
-      genop(s, MKOP_ABx(OP_LOADL, cursp(), off));
-      push();
-    }
+    append_str(s, (char*)tree);
     break;
-#endif
 
   case NODE_NEGATE:
-    {
-      nt = nint(tree->car);
-      tree = tree->cdr;
-      switch (nt) {
-#ifndef MRB_WITHOUT_FLOAT
-      case NODE_FLOAT:
-        if (val) {
-          char *p = (char*)tree;
-          mrb_float f = mrb_float_read(p, NULL);
-          int off = new_lit(s, mrb_float_value(s->mrb, -f));
-
-          genop(s, MKOP_ABx(OP_LOADL, cursp(), off));
-          push();
-        }
-        break;
-#endif
-
-      case NODE_INT:
-        if (val) {
-          char *p = (char*)tree->car;
-          int base = nint(tree->cdr->car);
-          mrb_int i;
-          mrb_code co;
-          mrb_bool overflow;
-
-          i = readint_mrb_int(s, p, base, TRUE, &overflow);
-#ifndef MRB_WITHOUT_FLOAT
-          if (overflow) {
-            double f = readint_float(s, p, base);
-            int off = new_lit(s, mrb_float_value(s->mrb, -f));
-
-            genop(s, MKOP_ABx(OP_LOADL, cursp(), off));
-          }
-          else {
-#endif
-            if (i < MAXARG_sBx && i > -MAXARG_sBx) {
-              co = MKOP_AsBx(OP_LOADI, cursp(), i);
-            }
-            else {
-              int off = new_lit(s, mrb_fixnum_value(i));
-              co = MKOP_ABx(OP_LOADL, cursp(), off);
-            }
-            genop(s, co);
-#ifndef MRB_WITHOUT_FLOAT
-          }
-#endif
-          push();
-        }
-        break;
-
-      default:
-        if (val) {
-          int sym = new_msym(s, mrb_intern_lit(s->mrb, "-"));
-
-          genop(s, MKOP_ABx(OP_LOADI, cursp(), 0));
-          push();
-          codegen(s, tree);
-          pop(); pop();
-          genop(s, MKOP_ABC(OP_SUB, cursp(), sym, 2));
-        }
-        else {
-          codegen(s, tree);
-        }
-        break;
-      }
-    }
+    append_str(s, " -(");
+    codegen(s, tree);
+    append_str(s, ")");
+    nt = nint(tree->car);
+    tree = tree->cdr;
     break;
 
   case NODE_STR:
-    if (val) {
+    {
       char *p = (char*)tree->car;
       size_t len = (intptr_t)tree->cdr;
-      int ai = mrb_gc_arena_save(s->mrb);
-      int off = new_lit(s, mrb_str_new(s->mrb, p, len));
-
-      mrb_gc_arena_restore(s->mrb, ai);
-      genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-      push();
+      append_str(s, "(\"");
+      append_str_len(s, p, len);
+      append_str(s, "\").to_s()");
     }
     break;
 
@@ -1078,33 +823,18 @@ codegen(code_generator *s, node *tree)
     tree = ((struct mrb_parser_heredoc_info *)tree)->doc;
     // fall through
   case NODE_DSTR:
-    if (val) {
+    {
       node *n = tree;
 
-      if (!n) {
-        genop(s, MKOP_A(OP_LOADNIL, cursp()));
-        push();
-        break;
-      }
+      append_str(s, "(\"");
       codegen(s, n->car);
       n = n->cdr;
       while (n) {
+        append_str(s, "..");
         codegen(s, n->car);
-        pop(); pop();
-        genop_peep(s, MKOP_AB(OP_STRCAT, cursp(), cursp()+1));
-        push();
         n = n->cdr;
       }
-    }
-    else {
-      node *n = tree;
-
-      while (n) {
-        if (nint(n->car->car) != NODE_STR) {
-          codegen(s, n->car);
-        }
-        n = n->cdr;
-      }
+      append_str(s, "\").to_s()");
     }
     break;
 
@@ -1119,155 +849,86 @@ codegen(code_generator *s, node *tree)
   case NODE_DXSTR:
     {
       node *n;
-      int ai = mrb_gc_arena_save(s->mrb);
-      int sym = new_sym(s, mrb_intern_lit(s->mrb, "Kernel"));
 
-      genop(s, MKOP_A(OP_LOADSELF, cursp()));
-      push();
+      append_str(s, "(Kernel[\"`\"](\"");
       codegen(s, tree->car);
       n = tree->cdr;
       while (n) {
+        append_str(s, "..");
         if (nint(n->car->car) == NODE_XSTR) {
           n->car->car = (struct mrb_ast_node*)(intptr_t)NODE_STR;
           mrb_assert(!n->cdr); // must be the end
         }
         codegen(s, n->car);
-        pop(); pop();
-        genop_peep(s, MKOP_AB(OP_STRCAT, cursp(), cursp()+1));
-        push();
         n = n->cdr;
       }
-      push();                   // for block
-      pop_n(3);
-      sym = new_sym(s, mrb_intern_lit(s->mrb, "`"));
-      genop(s, MKOP_ABC(OP_SEND, cursp(), sym, 1));
-      if (val) push();
-      mrb_gc_arena_restore(s->mrb, ai);
+      append_str(s, "\"))");
     }
     break;
 
   case NODE_XSTR:
     {
       char *p = (char*)tree->car;
-      size_t len = (intptr_t)tree->cdr;
-      int ai = mrb_gc_arena_save(s->mrb);
-      int off = new_lit(s, mrb_str_new(s->mrb, p, len));
-      int sym;
-
-      genop(s, MKOP_A(OP_LOADSELF, cursp()));
-      push();
-      genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-      push(); push();
-      pop_n(3);
-      sym = new_sym(s, mrb_intern_lit(s->mrb, "`"));
-      genop(s, MKOP_ABC(OP_SEND, cursp(), sym, 1));
-      if (val) push();
-      mrb_gc_arena_restore(s->mrb, ai);
+      append_str(s, "(Kernel[\"`\"](\"");
+      append_str(s, p);
+      append_str(s, "\"))");
     }
     break;
 
   case NODE_REGX:
-    if (val) {
+    {
       char *p1 = (char*)tree->car;
       char *p2 = (char*)tree->cdr->car;
       char *p3 = (char*)tree->cdr->cdr;
-      int ai = mrb_gc_arena_save(s->mrb);
-      int sym = new_sym(s, mrb_intern_lit(s->mrb, REGEXP_CLASS));
-      int off = new_lit(s, mrb_str_new_cstr(s->mrb, p1));
-      int argc = 1;
 
-      genop(s, MKOP_A(OP_OCLASS, cursp()));
-      genop(s, MKOP_ABx(OP_GETMCNST, cursp(), sym));
-      push();
-      genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-      push();
-      if (p2 || p3) {
-        if (p2) { // opt
-          off = new_lit(s, mrb_str_new_cstr(s->mrb, p2));
-          genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-        }
-        else {
-          genop(s, MKOP_A(OP_LOADNIL, cursp()));
-        }
-        push();
-        argc++;
-        if (p3) { // enc
-          off = new_lit(s, mrb_str_new(s->mrb, p3, 1));
-          genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-          push();
-          argc++;
+      append_str(s, "(Regexp.compile(\"");
+      append_str(s, p1);
+      append_str(s, "\"");
+      if (p2) {
+        append_str(s, ", \"");
+        append_str(s, p2);
+        append_str(s, "\"");
+
+        if (p3) {
+          append_str(s, ", \"");
+          append_str(s, p3);
+          append_str(s, "\"");
         }
       }
-      push(); // space for a block
-      pop_n(argc+2);
-      sym = new_sym(s, mrb_intern_lit(s->mrb, "compile"));
-      genop(s, MKOP_ABC(OP_SEND, cursp(), sym, argc));
-      mrb_gc_arena_restore(s->mrb, ai);
-      push();
+      append_str(s, "))");
     }
     break;
 
   case NODE_DREGX:
-    if (val) {
-      node *n = tree->car;
-      int ai = mrb_gc_arena_save(s->mrb);
-      int sym = new_sym(s, mrb_intern_lit(s->mrb, REGEXP_CLASS));
-      int argc = 1;
-      int off;
-      char *p;
-
-      genop(s, MKOP_A(OP_OCLASS, cursp()));
-      genop(s, MKOP_ABx(OP_GETMCNST, cursp(), sym));
-      push();
-      codegen(s, n->car);
-      n = n->cdr;
-      while (n) {
+    {
+      append_str(s, "(Regexp.compile(");
+      int num = 0;
+      append_str(s, "(");
+      for (node *n = tree; n; n = n->cdr, ++num) {
+        if (num > 0) { append_str(s, ".."); }
         codegen(s, n->car);
-        pop(); pop();
-        genop_peep(s, MKOP_AB(OP_STRCAT, cursp(), cursp()+1));
-        push();
-        n = n->cdr;
       }
-      n = tree->cdr->cdr;
+      node *n = tree->cdr->cdr;
       if (n->car) { // tail
-        p = (char*)n->car;
-        off = new_lit(s, mrb_str_new_cstr(s->mrb, p));
-        codegen(s, tree->car);
-        genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-        pop();
-        genop_peep(s, MKOP_AB(OP_STRCAT, cursp(), cursp()+1));
-        push();
+        append_str(s, "..");
+        codegen(s, tree->cdr->cdr->car);
       }
+      append_str(s, ")");
+
       if (n->cdr->car) { // opt
         char *p2 = (char*)n->cdr->car;
-        off = new_lit(s, mrb_str_new_cstr(s->mrb, p2));
-        genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-        push();
-        argc++;
-      }
-      if (n->cdr->cdr) { // enc
-        char *p2 = (char*)n->cdr->cdr;
-        off = new_lit(s, mrb_str_new_cstr(s->mrb, p2));
-        genop(s, MKOP_ABx(OP_STRING, cursp(), off));
-        push();
-        argc++;
-      }
-      push(); // space for a block
-      pop_n(argc+2);
-      sym = new_sym(s, mrb_intern_lit(s->mrb, "compile"));
-      genop(s, MKOP_ABC(OP_SEND, cursp(), sym, argc));
-      mrb_gc_arena_restore(s->mrb, ai);
-      push();
-    }
-    else {
-      node *n = tree->car;
+        append_str(s, ", \"");
+        append_str(s, p2);
+        append_str(s, "\"");
 
-      while (n) {
-        if (nint(n->car->car) != NODE_STR) {
-          codegen(s, n->car);
+        if (n->cdr->cdr) { // enc
+          char *p2 = (char*)n->cdr->cdr;
+          append_str(s, ", \"");
+          append_str(s, p2);
+          append_str(s, "\"");
         }
-        n = n->cdr;
       }
+      append_str(s, "))");
     }
     break;
 
