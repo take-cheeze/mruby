@@ -2,7 +2,7 @@ MRuby::Toolchain.new(:visualcpp) do |conf, _params|
   conf.cc do |cc|
     cc.command = ENV['CC'] || 'cl.exe'
     # C4013: implicit function declaration
-    cc.flags = [ENV['CFLAGS'] || %w(/c /nologo /W3 /we4013 /Zi /MD /O2 /D_CRT_SECURE_NO_WARNINGS)]
+    cc.flags = [ENV['CFLAGS'] || %w(/c /nologo /W3 /we4013 /Zi /MD /MP /FS /O2 /D_CRT_SECURE_NO_WARNINGS)]
     cc.defines = %w(DISABLE_GEMS MRB_STACK_EXTEND_DOUBLING)
     cc.option_include_path = '/I%s'
     cc.option_define = '/D%s'
@@ -13,7 +13,7 @@ MRuby::Toolchain.new(:visualcpp) do |conf, _params|
 
   conf.cxx do |cxx|
     cxx.command = ENV['CXX'] || 'cl.exe'
-    cxx.flags = [ENV['CXXFLAGS'] || ENV['CFLAGS'] || %w(/c /nologo /W3 /Zi /MD /O2 /EHs /D_CRT_SECURE_NO_WARNINGS)]
+    cxx.flags = [ENV['CXXFLAGS'] || ENV['CFLAGS'] || %w(/c /nologo /W3 /Zi /MD /MP /FS /O2 /EHs /D_CRT_SECURE_NO_WARNINGS)]
     cxx.defines = %w(DISABLE_GEMS MRB_STACK_EXTEND_DOUBLING)
     cxx.option_include_path = '/I%s'
     cxx.option_define = '/D%s'
@@ -23,13 +23,13 @@ MRuby::Toolchain.new(:visualcpp) do |conf, _params|
   end
 
   conf.linker do |linker|
-    linker.command = ENV['LD'] || 'link.exe'
-    linker.flags = [ENV['LDFLAGS'] || %w(/NOLOGO /DEBUG /INCREMENTAL:NO /OPT:ICF /OPT:REF)]
+    linker.command = ENV['LD'] || 'cl.exe'
+    linker.flags = [ENV['LDFLAGS'] || %w(/nologo /MP /FS)]
     linker.libraries = %w()
     linker.library_paths = %w()
     linker.option_library = '%s.lib'
-    linker.option_library_path = '/LIBPATH:%s'
-    linker.link_options = "%{flags} /OUT:%{outfile} %{objs} %{flags_before_libraries} %{libs} %{flags_after_libraries}"
+    linker.option_library_path = '/link LIBPATH:%s'
+    linker.link_options = "%{flags} /Fe%{outfile} %{objs} %{flags_before_libraries} %{libs} %{flags_after_libraries}"
   end
 
   conf.archiver do |archiver|
