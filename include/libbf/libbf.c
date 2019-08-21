@@ -2073,11 +2073,11 @@ void bf_logic_and(bf_t *r, const bf_t *a, const bf_t *b)
 /* conversion between fixed size types */
 
 typedef union {
-    double d;
+    bf_double_t d;
     uint64_t u;
 } Float64Union;
 
-int bf_get_float64(const bf_t *a, double *pres, bf_rnd_t rnd_mode)
+int bf_get_float64(const bf_t *a, bf_double_t *pres, bf_rnd_t rnd_mode)
 {
     Float64Union u;
     int e, ret;
@@ -2126,7 +2126,7 @@ int bf_get_float64(const bf_t *a, double *pres, bf_rnd_t rnd_mode)
     return ret;
 }
 
-void bf_set_float64(bf_t *a, double d)
+void bf_set_float64(bf_t *a, bf_double_t d)
 {
     Float64Union u;
     uint64_t m;

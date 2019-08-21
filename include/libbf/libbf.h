@@ -120,6 +120,12 @@ typedef struct bf_context_t {
     struct BFNTTState *ntt_state;
 } bf_context_t;
 
+#if BF_DOUBLE_AS_UINT64
+typedef uint64_t bf_double_t;
+#else
+typedef double bf_double_t;
+#endif
+
 static inline int bf_get_exp_bits(bf_flags_t flags)
 {
     return BF_EXP_BITS_MAX - ((flags >> BF_EXP_BITS_SHIFT) & BF_EXP_BITS_MASK);
@@ -207,8 +213,8 @@ void bf_set_zero(bf_t *r, int is_neg);
 void bf_set_inf(bf_t *r, int is_neg);
 void bf_set(bf_t *r, const bf_t *a);
 void bf_move(bf_t *r, bf_t *a);
-int bf_get_float64(const bf_t *a, double *pres, bf_rnd_t rnd_mode);
-void bf_set_float64(bf_t *a, double d);
+int bf_get_float64(const bf_t *a, bf_double_t *pres, bf_rnd_t rnd_mode);
+void bf_set_float64(bf_t *a, bf_double_t d);
 
 int bf_cmpu(const bf_t *a, const bf_t *b);
 int bf_cmp_full(const bf_t *a, const bf_t *b);
