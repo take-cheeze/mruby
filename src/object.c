@@ -557,7 +557,19 @@ mrb_Float(mrb_state *mrb, mrb_value val)
       return val;
 
     case MRB_TT_STRING:
+#if MRB_BF_FLOAT
+      {
+        bf_t f;
+        mrb_float ret;
+        bf_init(&mrb->bf_ctx, &f);
+        bf_atof(&f, mrb_str_to_cstr(mrb, val), NULL, 10, 53, 0);
+        bf_get_float64(&f, &ret, BF_RNDN);
+        bf_delete(&f);
+        return mrb_float_value(mrb, ret);
+      }
+#else
       return mrb_float_value(mrb, mrb_str_to_dbl(mrb, val, TRUE));
+#endif
 
     default:
       return mrb_convert_type(mrb, val, MRB_TT_FLOAT, "Float", "to_f");

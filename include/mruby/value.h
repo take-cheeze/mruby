@@ -63,12 +63,20 @@ struct mrb_state;
 #endif
 
 
+#ifdef MRB_BF_FLOAT
+#define BF_DOUBLE_AS_UINT64 1
+#include <libbf/libbf.h>
+typedef uint64_t mrb_float;
+MRB_API mrb_float mrb_float_read(struct mrb_state *mrb, const char*, char**);
+#define mrb_float_read(s, end) mrb_float_read(mrb, (s), (end))
+#else
 #ifndef MRB_WITHOUT_FLOAT
 MRB_API double mrb_float_read(const char*, char**);
 #ifdef MRB_USE_FLOAT
   typedef float mrb_float;
 #else
   typedef double mrb_float;
+#endif
 #endif
 #endif
 

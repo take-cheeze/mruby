@@ -42,7 +42,11 @@ offset_crc_body(void)
 }
 
 #ifndef MRB_WITHOUT_FLOAT
+#if MRB_BF_FLOAT
+static mrb_float
+#else
 static double
+#endif
 str_to_double(mrb_state *mrb, mrb_value str)
 {
   const char *p = RSTRING_PTR(str);

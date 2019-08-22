@@ -105,6 +105,10 @@ integral_pow(mrb_state *mrb, mrb_value x)
   }
 #ifdef MRB_WITHOUT_FLOAT
   mrb_raise(mrb, E_TYPE_ERROR, "non fixnum value");
+#elif MRB_BF_FLOAT
+ float_pow:
+  mrb_float f;
+  
 #else
  float_pow:
   d = pow(mrb_to_flo(mrb, x), mrb_to_flo(mrb, y));

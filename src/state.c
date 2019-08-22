@@ -19,6 +19,13 @@ void mrb_init_mrbgems(mrb_state*);
 void mrb_gc_init(mrb_state*, mrb_gc *gc);
 void mrb_gc_destroy(mrb_state*, mrb_gc *gc);
 
+#if MRB_BF_FLOAT
+void *mrb_bf_realloc_func(void* opaque, void* ptr, size_t size) {
+  mrb_state *mrb = (mrb_state*)opaque;
+  return mrb_realloc(mrb, ptr, size);
+}
+#endif
+
 MRB_API mrb_state*
 mrb_open_core(mrb_allocf f, void *ud)
 {
@@ -34,6 +41,10 @@ mrb_open_core(mrb_allocf f, void *ud)
   mrb->allocf_ud = ud;
   mrb->allocf = f;
   mrb->atexit_stack_len = 0;
+
+#if MRB_BF_FLOAT
+  bf_context_init(&mrb->bf_ctx, mrb_bf_realloc_func, mrb);
+#endif
 
   mrb_gc_init(mrb, &mrb->gc);
   mrb->c = (struct mrb_context*)mrb_malloc(mrb, sizeof(struct mrb_context));
@@ -225,6 +236,9 @@ mrb_close(mrb_state *mrb)
   mrb_free_context(mrb, mrb->root_c);
   mrb_gc_free_gv(mrb);
   mrb_free_symtbl(mrb);
+#if MRB_BF_FLOAT
+  bf_context_end(&mrb->bf_ctx);
+#endif
   mrb_free(mrb, mrb);
 }
 

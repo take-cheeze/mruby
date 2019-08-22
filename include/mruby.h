@@ -268,6 +268,10 @@ typedef struct mrb_state {
 #endif
   uint16_t atexit_stack_len;
   uint16_t ecall_nest;                    /* prevent infinite recursive ecall() */
+
+#if MRB_BF_FLOAT
+  bf_context_t bf_ctx;
+#endif
 } mrb_state;
 
 /**

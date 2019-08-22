@@ -2425,7 +2425,19 @@ mrb_str_to_i(mrb_state *mrb, mrb_value self)
   return mrb_str_to_inum(mrb, self, base, FALSE);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifdef MRB_BF_FLOAT
+mrb_value
+mrb_str_to_f(mrb_state* mrb, mrb_value self)
+{
+  bf_t f;
+  mrb_float ret;
+  bf_init(&mrb->bf_ctx, &f);
+  bf_atof(&f, mrb_str_to_cstr(mrb, self), NULL, 10, 53, 0);
+  bf_get_float64(&f, &ret, BF_RNDN);
+  bf_delete(&f);
+  return mrb_float_value(mrb, ret);
+}
+#elif !defined(MRB_WITHOUT_FLOAT)
 MRB_API double
 mrb_cstr_to_dbl(mrb_state *mrb, const char * p, mrb_bool badcheck)
 {
@@ -2940,7 +2952,21 @@ mrb_init_string(mrb_state *mrb)
   mrb_define_method(mrb, s, "bytes",           mrb_str_bytes,           MRB_ARGS_NONE());
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#if MRB_BF_FLOAT
+#undef mrb_float_read
+MRB_API mrb_float
+mrb_float_read(mrb_state *mrb, const char *string, char **endPtr)
+{
+  bf_t f;
+  mrb_float ret;
+
+  bf_init(&mrb->bf_ctx, &f);
+  bf_atof(&f, string, endPtr, 10, 53, 0);
+  bf_get_float64(&f, &ret, BF_RNDN);
+  bf_delete(&f);
+  return ret;
+}
+#elif !defined(MRB_WITHOUT_FLOAT)
 /*
  * Source code for the "strtod" library procedure.
  *

@@ -573,7 +573,24 @@ new_lit(codegen_scope *s, mrb_value val)
       if (mrb_type(*pv) != MRB_TT_FLOAT) continue;
       f1 = mrb_float(*pv);
       f2 = mrb_float(val);
+#ifdef MRB_BF_FLOAT
+      {
+        bf_t f1_, f2_;
+        bf_init(&s->mrb->bf_ctx, &f1_);
+        bf_init(&s->mrb->bf_ctx, &f2_);
+        bf_set_float64(&f1_, f1);
+        bf_set_float64(&f2_, f2);
+        if (bf_cmp_eq(&f1_, &f2_) && !f1_.sign == !f2_.sign) {
+          bf_delete(&f1_);
+          bf_delete(&f2_);
+          return i;
+        }
+        bf_delete(&f1_);
+        bf_delete(&f2_);
+      }
+#else
       if (f1 == f2 && !signbit(f1) == !signbit(f2)) return i;
+#endif
     }
     break;
 #endif
@@ -1391,6 +1408,9 @@ codegen(codegen_scope *s, node *tree, int val)
 {
   int nt;
   int rlev = s->rlev;
+#if MRB_BF_FLOAT
+  mrb_state *mrb = s->mrb;
+#endif
 
   if (!tree) {
     if (val) {
