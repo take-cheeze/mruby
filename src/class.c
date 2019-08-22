@@ -674,7 +674,8 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
           }
         }
         if (i < argc) {
-          *p = mrb_to_str(mrb, ARGV[arg_i++]);
+          *p = ARGV[arg_i++];
+          mrb_to_str(mrb, *p);
           i++;
         }
       }
@@ -735,7 +736,8 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
           }
         }
         if (i < argc) {
-          ss = mrb_to_str(mrb, ARGV[arg_i++]);
+          ss = ARGV[arg_i++];
+          mrb_to_str(mrb, ss);
           *ps = RSTRING_PTR(ss);
           *pl = RSTRING_LEN(ss);
           i++;
@@ -757,7 +759,8 @@ mrb_get_args(mrb_state *mrb, const char *format, ...)
           }
         }
         if (i < argc) {
-          ss = mrb_to_str(mrb, ARGV[arg_i++]);
+          ss = ARGV[arg_i++];
+          mrb_to_str(mrb, ss);
           *ps = RSTRING_CSTR(mrb, ss);
           i++;
         }
@@ -1537,7 +1540,10 @@ mrb_class_new_class(mrb_state *mrb, mrb_value cv)
   }
   new_class = mrb_obj_value(mrb_class_new(mrb, mrb_class_ptr(super)));
   mid = mrb_intern_lit(mrb, "initialize");
-  if (!mrb_func_basic_p(mrb, new_class, mid, mrb_bob_init)) {
+  if (mrb_func_basic_p(mrb, new_class, mid, mrb_class_initialize)) {
+    mrb_class_initialize(mrb, new_class);
+  }
+  else {
     mrb_funcall_with_block(mrb, new_class, mid, n, &super, blk);
   }
   mrb_class_inherited(mrb, mrb_class_ptr(super), mrb_class_ptr(new_class));
@@ -2117,7 +2123,7 @@ inspect_main(mrb_state *mrb, mrb_value mod)
   return mrb_str_new_lit(mrb, "main");
 }
 
-static mrb_code new_iseq[] = {
+static const mrb_code new_iseq[] = {
   OP_ENTER, 0x0, 0x10, 0x1,  /* OP_ENTER     0:0:1:0:0:0:1 */
   OP_LOADSELF, 0x3,          /* OP_LOADSELF  R3 */
   OP_SEND, 0x3, 0x0, 0x0,    /* OP_SEND      R3  :allocate  0 */

@@ -291,7 +291,7 @@ on_eval(codegen_scope *s)
 }
 
 struct mrb_insn_data
-mrb_decode_insn(mrb_code *pc)
+mrb_decode_insn(const mrb_code *pc)
 {
   struct mrb_insn_data data = { 0 };
   mrb_code insn = READ_B();
@@ -1598,18 +1598,17 @@ codegen(codegen_scope *s, node *tree, int val)
       }
       codegen(s, tree->car, VAL);
       pop();
-      pos1 = genjmp2(s, OP_JMPNOT, cursp(), 0, val);
-
-      codegen(s, tree->cdr->car, val);
-      if (elsepart) {
-        if (val) pop();
-        pos2 = genjmp(s, OP_JMP, 0);
-        dispatch(s, pos1);
-        codegen(s, elsepart, val);
-        dispatch(s, pos2);
-      }
-      else {
-        if (val) {
+      if (val || tree->cdr->car) {
+        pos1 = genjmp2(s, OP_JMPNOT, cursp(), 0, val);
+        codegen(s, tree->cdr->car, val);
+        if (elsepart) {
+          if (val) pop();
+          pos2 = genjmp(s, OP_JMP, 0);
+          dispatch(s, pos1);
+          codegen(s, elsepart, val);
+          dispatch(s, pos2);
+        }
+        else if (val) {
           pop();
           pos2 = genjmp(s, OP_JMP, 0);
           dispatch(s, pos1);
@@ -1619,6 +1618,17 @@ codegen(codegen_scope *s, node *tree, int val)
         }
         else {
           dispatch(s, pos1);
+        }
+      }
+      else {                    /* empty then-part */
+        if (elsepart) {
+          pos1 = genjmp2(s, OP_JMPIF, cursp(), 0, val);
+          codegen(s, elsepart, val);
+          dispatch(s, pos1);
+        }
+        else if (val) {
+          genop_1(s, OP_LOADNIL, cursp());
+          push();
         }
       }
     }

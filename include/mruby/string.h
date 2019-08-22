@@ -1,5 +1,5 @@
-/*
-** mruby/string.h - String class
+/**
+** @file mruby/string.h - String class
 **
 ** See Copyright Notice in mruby.h
 */
@@ -16,7 +16,8 @@ MRB_BEGIN_DECL
 
 extern const char mrb_digitmap[];
 
-#define RSTRING_EMBED_LEN_MAX ((mrb_int)(sizeof(void*) * 3 - 1))
+#define RSTRING_EMBED_LEN_MAX \
+  ((mrb_int)(sizeof(void*) * 3 + sizeof(void*) - 32 / CHAR_BIT - 1))
 
 struct RString {
   MRB_OBJECT_HEADER;
@@ -30,9 +31,15 @@ struct RString {
       } aux;
       char *ptr;
     } heap;
-    char ary[RSTRING_EMBED_LEN_MAX + 1];
   } as;
 };
+struct RStringEmbed {
+  MRB_OBJECT_HEADER;
+  char ary[];
+};
+
+#define RSTR_SET_TYPE_FLAG(s, type) (RSTR_UNSET_TYPE_FLAG(s), (s)->flags |= MRB_STR_##type)
+#define RSTR_UNSET_TYPE_FLAG(s) ((s)->flags &= ~(MRB_STR_TYPE_MASK|MRB_STR_EMBED_LEN_MASK))
 
 #define RSTR_EMBED_P(s) ((s)->flags & MRB_STR_EMBED)
 #define RSTR_SET_EMBED_FLAG(s) ((s)->flags |= MRB_STR_EMBED)
@@ -50,11 +57,12 @@ struct RString {
     (s)->as.heap.len = (mrb_int)(n);\
   }\
 } while (0)
+#define RSTR_EMBED_PTR(s) (((struct RStringEmbed*)(s))->ary)
 #define RSTR_EMBED_LEN(s)\
   (mrb_int)(((s)->flags & MRB_STR_EMBED_LEN_MASK) >> MRB_STR_EMBED_LEN_SHIFT)
 #define RSTR_EMBEDDABLE_P(len) ((len) <= RSTRING_EMBED_LEN_MAX)
 
-#define RSTR_PTR(s) ((RSTR_EMBED_P(s)) ? (s)->as.ary : (s)->as.heap.ptr)
+#define RSTR_PTR(s) ((RSTR_EMBED_P(s)) ? RSTR_EMBED_PTR(s) : (s)->as.heap.ptr)
 #define RSTR_LEN(s) ((RSTR_EMBED_P(s)) ? RSTR_EMBED_LEN(s) : (s)->as.heap.len)
 #define RSTR_CAPA(s) (RSTR_EMBED_P(s) ? RSTRING_EMBED_LEN_MAX : (s)->as.heap.aux.capa)
 
@@ -87,7 +95,7 @@ struct RString {
 #define RSTR_POOL_P(s) ((s)->flags & MRB_STR_POOL)
 #define RSTR_SET_POOL_FLAG(s) ((s)->flags |= MRB_STR_POOL)
 
-/*
+/**
  * Returns a pointer from a Ruby string
  */
 #define mrb_str_ptr(s)       ((struct RString*)(mrb_ptr(s)))
@@ -103,11 +111,14 @@ MRB_API mrb_int mrb_str_strlen(mrb_state*, struct RString*);
 #define MRB_STR_SHARED    1
 #define MRB_STR_FSHARED   2
 #define MRB_STR_NOFREE    4
-#define MRB_STR_POOL      8
-#define MRB_STR_ASCII    16
-#define MRB_STR_EMBED    32
-#define MRB_STR_EMBED_LEN_MASK 0x7c0
+#define MRB_STR_EMBED     8  /* type flags up to here */
+#define MRB_STR_POOL     16  /* status flags from here */
+#define MRB_STR_ASCII    32
 #define MRB_STR_EMBED_LEN_SHIFT 6
+#define MRB_STR_EMBED_LEN_BITSIZE 5
+#define MRB_STR_EMBED_LEN_MASK (((1 << MRB_STR_EMBED_LEN_BITSIZE) - 1) << MRB_STR_EMBED_LEN_SHIFT)
+#define MRB_STR_TYPE_MASK (MRB_STR_POOL - 1)
+
 
 void mrb_gc_free_str(mrb_state*, struct RString*);
 
@@ -115,13 +126,13 @@ MRB_API void mrb_str_modify(mrb_state *mrb, struct RString *s);
 /* mrb_str_modify() with keeping ASCII flag if set */
 MRB_API void mrb_str_modify_keep_ascii(mrb_state *mrb, struct RString *s);
 
-/*
+/**
  * Finds the index of a substring in a string
  */
 MRB_API mrb_int mrb_str_index(mrb_state*, mrb_value, const char*, mrb_int, mrb_int);
 #define mrb_str_index_lit(mrb, str, lit, off) mrb_str_index(mrb, str, lit, mrb_strlen_lit(lit), off);
 
-/*
+/**
  * Appends self to other. Returns self as a concatenated string.
  *
  *
@@ -168,7 +179,7 @@ MRB_API mrb_int mrb_str_index(mrb_state*, mrb_value, const char*, mrb_int, mrb_i
  */
 MRB_API void mrb_str_concat(mrb_state*, mrb_value, mrb_value);
 
-/*
+/**
  * Adds two strings together.
  *
  *
@@ -222,7 +233,7 @@ MRB_API void mrb_str_concat(mrb_state*, mrb_value, mrb_value);
  */
 MRB_API mrb_value mrb_str_plus(mrb_state*, mrb_value, mrb_value);
 
-/*
+/**
  * Converts pointer into a Ruby string.
  *
  * @param [mrb_state] mrb The current mruby state.
@@ -231,7 +242,7 @@ MRB_API mrb_value mrb_str_plus(mrb_state*, mrb_value, mrb_value);
  */
 MRB_API mrb_value mrb_ptr_to_str(mrb_state *, void*);
 
-/*
+/**
  * Returns an object as a Ruby string.
  *
  * @param [mrb_state] mrb The current mruby state.
@@ -240,7 +251,7 @@ MRB_API mrb_value mrb_ptr_to_str(mrb_state *, void*);
  */
 MRB_API mrb_value mrb_obj_as_string(mrb_state *mrb, mrb_value obj);
 
-/*
+/**
  * Resizes the string's length. Returns the amount of characters
  * in the specified by len.
  *
@@ -280,7 +291,7 @@ MRB_API mrb_value mrb_obj_as_string(mrb_state *mrb, mrb_value obj);
  */
 MRB_API mrb_value mrb_str_resize(mrb_state *mrb, mrb_value str, mrb_int len);
 
-/*
+/**
  * Returns a sub string.
  *
  *  Example:
@@ -323,7 +334,7 @@ MRB_API mrb_value mrb_str_resize(mrb_state *mrb, mrb_value str, mrb_int len);
  */
 MRB_API mrb_value mrb_str_substr(mrb_state *mrb, mrb_value str, mrb_int beg, mrb_int len);
 
-/*
+/**
  * Returns a Ruby string type.
  *
  *
@@ -349,7 +360,7 @@ MRB_API const char *mrb_string_value_ptr(mrb_state *mrb, mrb_value str);
 /* obslete: use RSTRING_LEN() */
 MRB_API mrb_int mrb_string_value_len(mrb_state *mrb, mrb_value str);
 
-/*
+/**
  * Duplicates a string object.
  *
  *
@@ -359,7 +370,7 @@ MRB_API mrb_int mrb_string_value_len(mrb_state *mrb, mrb_value str);
  */
 MRB_API mrb_value mrb_str_dup(mrb_state *mrb, mrb_value str);
 
-/*
+/**
  * Returns a symbol from a passed in Ruby string.
  *
  * @param [mrb_state] mrb The current mruby state.
@@ -378,13 +389,13 @@ MRB_API double mrb_str_to_dbl(mrb_state *mrb, mrb_value str, mrb_bool badcheck);
 MRB_API double mrb_cstr_to_dbl(mrb_state *mrb, const char *s, mrb_bool badcheck);
 #endif
 
-/*
+/**
  * Returns a converted string type.
  * For type checking, non converting `mrb_to_str` is recommended.
  */
 MRB_API mrb_value mrb_str_to_str(mrb_state *mrb, mrb_value str);
 
-/*
+/**
  * Returns true if the strings match and false if the strings don't match.
  *
  * @param [mrb_state] mrb The current mruby state.
@@ -394,8 +405,8 @@ MRB_API mrb_value mrb_str_to_str(mrb_state *mrb, mrb_value str);
  */
 MRB_API mrb_bool mrb_str_equal(mrb_state *mrb, mrb_value str1, mrb_value str2);
 
-/*
- * Returns a concated string comprised of a Ruby string and a C string.
+/**
+ * Returns a concatenated string comprised of a Ruby string and a C string.
  *
  * @param [mrb_state] mrb The current mruby state.
  * @param [mrb_value] str Ruby string.
@@ -406,8 +417,8 @@ MRB_API mrb_bool mrb_str_equal(mrb_state *mrb, mrb_value str1, mrb_value str2);
  */
 MRB_API mrb_value mrb_str_cat(mrb_state *mrb, mrb_value str, const char *ptr, size_t len);
 
-/*
- * Returns a concated string comprised of a Ruby string and a C string.
+/**
+ * Returns a concatenated string comprised of a Ruby string and a C string.
  *
  * @param [mrb_state] mrb The current mruby state.
  * @param [mrb_value] str Ruby string.
@@ -419,17 +430,17 @@ MRB_API mrb_value mrb_str_cat_cstr(mrb_state *mrb, mrb_value str, const char *pt
 MRB_API mrb_value mrb_str_cat_str(mrb_state *mrb, mrb_value str, mrb_value str2);
 #define mrb_str_cat_lit(mrb, str, lit) mrb_str_cat(mrb, str, lit, mrb_strlen_lit(lit))
 
-/*
+/**
  * Adds str2 to the end of str1.
  */
 MRB_API mrb_value mrb_str_append(mrb_state *mrb, mrb_value str, mrb_value str2);
 
-/*
+/**
  * Returns 0 if both Ruby strings are equal. Returns a value < 0 if Ruby str1 is less than Ruby str2. Returns a value > 0 if Ruby str2 is greater than Ruby str1.
  */
 MRB_API int mrb_str_cmp(mrb_state *mrb, mrb_value str1, mrb_value str2);
 
-/*
+/**
  * Returns a newly allocated C string from a Ruby string.
  * This is an utility function to pass a Ruby string to C library functions.
  *
@@ -450,7 +461,7 @@ mrb_value mrb_str_pool(mrb_state *mrb, mrb_value str);
 uint32_t mrb_str_hash(mrb_state *mrb, mrb_value str);
 mrb_value mrb_str_dump(mrb_state *mrb, mrb_value str);
 
-/*
+/**
  * Returns a printable version of str, surrounded by quote marks, with special characters escaped.
  */
 mrb_value mrb_str_inspect(mrb_state *mrb, mrb_value str);

@@ -1,3 +1,4 @@
+*.lock
 *.bak
 *.bc
 *.d
@@ -30,5 +31,6 @@ tags
 /benchmark/*.png
 
 /doc/api
+/doxygen/
 
 /src/y.tab.c
