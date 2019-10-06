@@ -451,12 +451,16 @@ assert('String#index', '15.2.10.5.22') do
   assert_equal 3, 'abcabc'.index('a', 1)
   assert_equal 5, "hello".index("", 5)
   assert_equal nil, "hello".index("", 6)
+  assert_equal 3, "hello".index("l", -2)
+  assert_raise(ArgumentError) { "hello".index }
+  assert_raise(TypeError) { "hello".index(101) }
 end
 
 assert('String#index(UTF-8)', '15.2.10.5.22') do
   assert_equal 0, '⓿➊➋➌➍➎'.index('⓿')
   assert_nil '⓿➊➋➌➍➎'.index('➓')
   assert_equal 6, '⓿➊➋➌➍➎⓿➊➋➌➍➎'.index('⓿', 1)
+  assert_equal 6, '⓿➊➋➌➍➎⓿➊➋➌➍➎'.index('⓿', -7)
   assert_equal 6, "⓿➊➋➌➍➎".index("", 6)
   assert_equal nil, "⓿➊➋➌➍➎".index("", 7)
   assert_equal 0, '⓿➊➋➌➍➎'.index("\xe2")
@@ -550,17 +554,31 @@ end if UTF8STRING
 
 assert('String#rindex', '15.2.10.5.31') do
   assert_equal 0, 'abc'.rindex('a')
+  assert_equal 0, 'abc'.rindex('a', 3)
+  assert_nil 'abc'.rindex('a', -4)
   assert_nil 'abc'.rindex('d')
+  assert_equal 6, 'abcabc'.rindex('')
+  assert_equal 3, 'abcabc'.rindex('a')
   assert_equal 0, 'abcabc'.rindex('a', 1)
   assert_equal 3, 'abcabc'.rindex('a', 4)
+  assert_equal 0, 'abcabc'.rindex('a', -4)
+  assert_raise(ArgumentError) { "hello".rindex }
+  assert_raise(TypeError) { "hello".rindex(101) }
 end
 
 assert('String#rindex(UTF-8)', '15.2.10.5.31') do
   str = "こんにちは世界!\nこんにちは世界!"
-  assert_nil str.index('さ')
-  assert_equal 3, str.index('ち')
-  assert_equal 12, str.index('ち', 10)
-  assert_equal nil, str.index("さ")
+  assert_nil str.rindex('さ')
+  assert_equal 12, str.rindex('ち')
+  assert_equal 3, str.rindex('ち', 10)
+  assert_equal 3, str.rindex('ち', -6)
+
+  broken = "\xf0☀\xf1☁\xf2☂\xf3☃\xf0☀\xf1☁\xf2☂\xf3☃"
+  assert_nil broken.rindex("\x81") # "\x81" is a part of "☁" ("\xe2\x98\x81")
+  assert_equal 11, broken.rindex("☁")
+  assert_equal 11, broken.rindex("☁", 12)
+  assert_equal 11, broken.rindex("☁", 11)
+  assert_equal  3, broken.rindex("☁", 10)
 end if UTF8STRING
 
 # assert('String#scan', '15.2.10.5.32') do
@@ -777,4 +795,83 @@ assert('String literal concatenation') do
   assert_equal 2, ("A" "B").size
   assert_equal 3, ('A' "B" 'C').size
   assert_equal 4, (%(A) "B#{?C}" "D").size
+end
+
+assert('String#getbyte') do
+  str1 = "hello"
+  bytes1 = [104, 101, 108, 108, 111]
+  assert_equal bytes1[0], str1.getbyte(0)
+  assert_equal bytes1[-1], str1.getbyte(-1)
+  assert_equal bytes1[6], str1.getbyte(6)
+
+  str2 = "\xFF"
+  bytes2 = [0xFF]
+  assert_equal bytes2[0], str2.getbyte(0)
+end
+
+assert('String#setbyte') do
+  str1 = "hello"
+  h = "H".getbyte(0)
+  str1.setbyte(0, h)
+  assert_equal(h, str1.getbyte(0))
+  assert_equal("Hello", str1)
+end
+
+assert('String#byteslice') do
+  str1 = "hello"
+  str2 = "\u3042ab"  # "\xE3\x81\x82ab"
+
+  assert_equal("h", str1.byteslice(0))
+  assert_equal("e", str1.byteslice(1))
+  assert_equal(nil, str1.byteslice(5))
+  assert_equal("o", str1.byteslice(-1))
+  assert_equal(nil, str1.byteslice(-6))
+  assert_equal("\xE3", str2.byteslice(0))
+  assert_equal("\x81", str2.byteslice(1))
+  assert_equal(nil, str2.byteslice(5))
+  assert_equal("b", str2.byteslice(-1))
+  assert_equal(nil, str2.byteslice(-6))
+
+  assert_equal("", str1.byteslice(0, 0))
+  assert_equal(str1, str1.byteslice(0, 6))
+  assert_equal("el", str1.byteslice(1, 2))
+  assert_equal("", str1.byteslice(5, 1))
+  assert_equal("o", str1.byteslice(-1, 6))
+  assert_equal(nil, str1.byteslice(-6, 1))
+  assert_equal(nil, str1.byteslice(0, -1))
+  assert_equal("", str2.byteslice(0, 0))
+  assert_equal(str2, str2.byteslice(0, 6))
+  assert_equal("\x81\x82", str2.byteslice(1, 2))
+  assert_equal("", str2.byteslice(5, 1))
+  assert_equal("b", str2.byteslice(-1, 6))
+  assert_equal(nil, str2.byteslice(-6, 1))
+  assert_equal(nil, str2.byteslice(0, -1))
+
+  assert_equal("ell", str1.byteslice(1..3))
+  assert_equal("el", str1.byteslice(1...3))
+  assert_equal("h", str1.byteslice(0..0))
+  assert_equal("", str1.byteslice(5..0))
+  assert_equal("o", str1.byteslice(4..5))
+  assert_equal(nil, str1.byteslice(6..0))
+  assert_equal("", str1.byteslice(-1..0))
+  assert_equal("llo", str1.byteslice(-3..5))
+  assert_equal("\x81\x82a", str2.byteslice(1..3))
+  assert_equal("\x81\x82", str2.byteslice(1...3))
+  assert_equal("\xE3", str2.byteslice(0..0))
+  assert_equal("", str2.byteslice(5..0))
+  assert_equal("b", str2.byteslice(4..5))
+  assert_equal(nil, str2.byteslice(6..0))
+  assert_equal("", str2.byteslice(-1..0))
+  assert_equal("\x82ab", str2.byteslice(-3..5))
+
+  assert_raise(ArgumentError) { str1.byteslice }
+  assert_raise(ArgumentError) { str1.byteslice(1, 2, 3) }
+  assert_raise(TypeError) { str1.byteslice("1") }
+  assert_raise(TypeError) { str1.byteslice("1", 2) }
+  assert_raise(TypeError) { str1.byteslice(1, "2") }
+  assert_raise(TypeError) { str1.byteslice(1..2, 3) }
+
+  skip unless Object.const_defined?(:Float)
+  assert_equal("o", str1.byteslice(4.0))
+  assert_equal("\x82ab", str2.byteslice(2.0, 3.0))
 end

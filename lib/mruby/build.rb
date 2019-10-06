@@ -1,7 +1,11 @@
+require "mruby-core-ext"
 require "mruby/build/load_gems"
 require "mruby/build/command"
 
 module MRuby
+  autoload :Gem, "mruby/gem"
+  autoload :Lockfile, "mruby/lockfile"
+
   class << self
     def targets
       @targets ||= {}
@@ -64,7 +68,7 @@ module MRuby
 
         @file_separator = '/'
         @build_dir = "#{build_dir}/#{@name}"
-        @gem_clone_dir = "#{build_dir}/mrbgems"
+        @gem_clone_dir = "#{build_dir}/repos/#{@name}"
         @cc = Command::Compiler.new(self, %w(.c))
         @cxx = Command::Compiler.new(self, %w(.cc .cxx .cpp))
         @objc = Command::Compiler.new(self, %w(.m))
@@ -84,6 +88,7 @@ module MRuby
         @cxx_abi_enabled = false
         @enable_bintest = false
         @enable_test = false
+        @enable_lock = true
         @toolchains = []
 
         MRuby.targets[@name] = self
@@ -110,6 +115,14 @@ module MRuby
       @mrbc.compile_options += ' -g'
 
       @enable_debug = true
+    end
+
+    def disable_lock
+      @enable_lock = false
+    end
+
+    def lock_enabled?
+      Lockfile.enabled? && @enable_lock
     end
 
     def disable_cxx_exception
@@ -149,8 +162,8 @@ module MRuby
       compilers.each { |c|
         c.defines += %w(MRB_ENABLE_CXX_EXCEPTION MRB_ENABLE_CXX_ABI)
         c.flags << c.cxx_compile_flag
+        c.flags = c.flags.flatten - c.cxx_invalid_flags.flatten
       }
-      compilers.each { |c| c.flags << c.cxx_compile_flag }
       linker.command = cxx.command if toolchains.find { |v| v == 'gcc' }
       @cxx_abi_enabled = true
     end
@@ -223,6 +236,10 @@ EOS
 
     def build_mrbc_exec
       gem :core => 'mruby-bin-mrbc'
+    end
+
+    def locks
+      Lockfile.build(@name)
     end
 
     def mrbcfile

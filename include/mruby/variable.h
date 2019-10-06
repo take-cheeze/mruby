@@ -1,5 +1,5 @@
-/*
-** mruby/variable.h - mruby variables
+/**
+** @file mruby/variable.h - mruby variables
 **
 ** See Copyright Notice in mruby.h
 */
@@ -97,18 +97,15 @@ MRB_API void mrb_gv_set(mrb_state *mrb, mrb_sym sym, mrb_value val);
  *
  * Example:
  *
- *     !!!ruby
  *     # Ruby style
  *     $value = nil
  *
- *     !!!c
  *     // C style
  *     mrb_sym sym = mrb_intern_lit(mrb, "$value");
  *     mrb_gv_remove(mrb, sym);
  *
  * @param mrb The mruby state reference
  * @param sym The name of the global variable
- * @param val The value of the global variable
  */
 MRB_API void mrb_gv_remove(mrb_state *mrb, mrb_sym sym);
 
