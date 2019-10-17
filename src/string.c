@@ -521,12 +521,12 @@ mrb_memsearch(const void *x0, mrb_int m, const void *y0, mrb_int n)
 }
 
 static void
-str_make_shared(mrb_state *mrb, struct RString *orig, struct RString *s)
+str_share(mrb_state *mrb, struct RString *orig, struct RString *s)
 {
   size_t len = (size_t)orig->as.heap.len;
 
   mrb_assert(!RSTR_EMBED_P(orig));
-  if (RSTR_NOFREE_P(orig)) {
+  if (RSTR_NOFREE_P(orig) || RSTR_POOL_P(orig)) {
     str_init_nofree(s, orig->as.heap.ptr, len);
   }
   else if (RSTR_SHARED_P(orig)) {
@@ -535,7 +535,7 @@ str_make_shared(mrb_state *mrb, struct RString *orig, struct RString *s)
   else if (RSTR_FSHARED_P(orig)) {
     str_init_fshared(orig, s, orig->as.heap.aux.fshared);
   }
-  else if (mrb_frozen_p(orig) && !RSTR_POOL_P(orig)) {
+  else if (mrb_frozen_p(orig)) {
     str_init_fshared(orig, s, orig);
   }
   else {
@@ -585,7 +585,7 @@ mrb_str_byte_subseq(mrb_state *mrb, mrb_value str, mrb_int beg, mrb_int len)
     str_init_embed(s, RSTR_PTR(orig)+beg, len);
   }
   else {
-    str_make_shared(mrb, orig, s);
+    str_share(mrb, orig, s);
     s->as.heap.ptr += beg;
     s->as.heap.len = len;
   }
@@ -691,7 +691,7 @@ str_replace(mrb_state *mrb, struct RString *s1, struct RString *s2)
     str_init_embed(s1, RSTR_PTR(s2), len);
   }
   else {
-    str_make_shared(mrb, s2, s1);
+    str_share(mrb, s2, s1);
   }
 
   return mrb_obj_value(s1);
@@ -1316,6 +1316,83 @@ str_replace_partial(mrb_state *mrb, mrb_value src, mrb_int pos, mrb_int end, mrb
   }
 
   return src;
+}
+
+#define IS_EVSTR(p,e) ((p) < (e) && (*(p) == '$' || *(p) == '@' || *(p) == '{'))
+
+static mrb_value
+str_escape(mrb_state *mrb, mrb_value str, mrb_bool inspect)
+{
+  const char *p, *pend;
+  char buf[4];  /* `\x??` or UTF-8 character */
+  mrb_value result = mrb_str_new_lit(mrb, "\"");
+#ifdef MRB_UTF8_STRING
+  uint32_t ascii_flag = MRB_STR_ASCII;
+#endif
+
+  p = RSTRING_PTR(str); pend = RSTRING_END(str);
+  for (;p < pend; p++) {
+    unsigned char c, cc;
+#ifdef MRB_UTF8_STRING
+    if (inspect) {
+      mrb_int clen = utf8len(p, pend);
+      if (clen > 1) {
+        mrb_int i;
+
+        for (i=0; i<clen; i++) {
+          buf[i] = p[i];
+        }
+        mrb_str_cat(mrb, result, buf, clen);
+        p += clen-1;
+        ascii_flag = 0;
+        continue;
+      }
+    }
+#endif
+    c = *p;
+    if (c == '"'|| c == '\\' || (c == '#' && IS_EVSTR(p+1, pend))) {
+      buf[0] = '\\'; buf[1] = c;
+      mrb_str_cat(mrb, result, buf, 2);
+      continue;
+    }
+    if (ISPRINT(c)) {
+      buf[0] = c;
+      mrb_str_cat(mrb, result, buf, 1);
+      continue;
+    }
+    switch (c) {
+      case '\n': cc = 'n'; break;
+      case '\r': cc = 'r'; break;
+      case '\t': cc = 't'; break;
+      case '\f': cc = 'f'; break;
+      case '\013': cc = 'v'; break;
+      case '\010': cc = 'b'; break;
+      case '\007': cc = 'a'; break;
+      case 033: cc = 'e'; break;
+      default: cc = 0; break;
+    }
+    if (cc) {
+      buf[0] = '\\';
+      buf[1] = (char)cc;
+      mrb_str_cat(mrb, result, buf, 2);
+      continue;
+    }
+    else {
+      buf[0] = '\\';
+      buf[1] = 'x';
+      buf[3] = mrb_digitmap[c % 16]; c /= 16;
+      buf[2] = mrb_digitmap[c % 16];
+      mrb_str_cat(mrb, result, buf, 4);
+      continue;
+    }
+  }
+  mrb_str_cat_lit(mrb, result, "\"");
+#ifdef MRB_UTF8_STRING
+  mrb_str_ptr(str)->flags |= ascii_flag;
+  mrb_str_ptr(result)->flags |= ascii_flag;
+#endif
+
+  return result;
 }
 
 static void
@@ -2586,8 +2663,6 @@ mrb_str_upcase(mrb_state *mrb, mrb_value self)
   return str;
 }
 
-#define IS_EVSTR(p,e) ((p) < (e) && (*(p) == '$' || *(p) == '@' || *(p) == '{'))
-
 /*
  *  call-seq:
  *     str.dump   -> new_str
@@ -2598,113 +2673,7 @@ mrb_str_upcase(mrb_state *mrb, mrb_value self)
 mrb_value
 mrb_str_dump(mrb_state *mrb, mrb_value str)
 {
-  mrb_int len;
-  const char *p, *pend;
-  char *q;
-  struct RString *result;
-
-  len = 2;                  /* "" */
-  p = RSTRING_PTR(str); pend = p + RSTRING_LEN(str);
-  while (p < pend) {
-    unsigned char c = *p++;
-    switch (c) {
-      case '"':  case '\\':
-      case '\n': case '\r':
-      case '\t': case '\f':
-      case '\013': case '\010': case '\007': case '\033':
-        len += 2;
-        break;
-
-      case '#':
-        len += IS_EVSTR(p, pend) ? 2 : 1;
-        break;
-
-      default:
-        if (ISPRINT(c)) {
-          len++;
-        }
-        else {
-          len += 4;                /* \NNN */
-        }
-        break;
-    }
-  }
-
-  result = str_new(mrb, 0, len);
-  str_with_class(result, str);
-  p = RSTRING_PTR(str); pend = p + RSTRING_LEN(str);
-  q = RSTR_PTR(result);
-  *q++ = '"';
-  while (p < pend) {
-    unsigned char c = *p++;
-
-    switch (c) {
-      case '"':
-      case '\\':
-        *q++ = '\\';
-        *q++ = c;
-        break;
-
-      case '\n':
-        *q++ = '\\';
-        *q++ = 'n';
-        break;
-
-      case '\r':
-        *q++ = '\\';
-        *q++ = 'r';
-        break;
-
-      case '\t':
-        *q++ = '\\';
-        *q++ = 't';
-        break;
-
-      case '\f':
-        *q++ = '\\';
-        *q++ = 'f';
-        break;
-
-      case '\013':
-        *q++ = '\\';
-        *q++ = 'v';
-        break;
-
-      case '\010':
-        *q++ = '\\';
-        *q++ = 'b';
-        break;
-
-      case '\007':
-        *q++ = '\\';
-        *q++ = 'a';
-        break;
-
-      case '\033':
-        *q++ = '\\';
-        *q++ = 'e';
-        break;
-
-      case '#':
-        if (IS_EVSTR(p, pend)) *q++ = '\\';
-        *q++ = '#';
-        break;
-
-      default:
-        if (ISPRINT(c)) {
-          *q++ = c;
-        }
-        else {
-          *q++ = '\\';
-          *q++ = 'x';
-          q[1] = mrb_digitmap[c % 16]; c /= 16;
-          q[0] = mrb_digitmap[c % 16];
-          q += 2;
-        }
-    }
-  }
-  *q = '"';
-  return mrb_obj_value(result);
+  return str_escape(mrb, str, FALSE);
 }
 
 MRB_API mrb_value
@@ -2774,8 +2743,6 @@ mrb_str_append(mrb_state *mrb, mrb_value str1, mrb_value str2)
   return mrb_str_cat_str(mrb, str1, str2);
 }
 
-#define CHAR_ESC_LEN 13 /* sizeof(\x{ hex of 32bit unsigned int } \0) */
-
 /*
  * call-seq:
  *   str.inspect   -> string
@@ -2790,76 +2757,7 @@ mrb_str_append(mrb_state *mrb, mrb_value str1, mrb_value str2)
 mrb_value
 mrb_str_inspect(mrb_state *mrb, mrb_value str)
 {
-  const char *p, *pend;
-  char buf[CHAR_ESC_LEN + 1];
-  mrb_value result = mrb_str_new_lit(mrb, "\"");
-#ifdef MRB_UTF8_STRING
-  uint32_t ascii_flag = MRB_STR_ASCII;
-#endif
-
-  p = RSTRING_PTR(str); pend = RSTRING_END(str);
-  for (;p < pend; p++) {
-    unsigned char c, cc;
-#ifdef MRB_UTF8_STRING
-    mrb_int clen;
-
-    clen = utf8len(p, pend);
-    if (clen > 1) {
-      mrb_int i;
-
-      for (i=0; i<clen; i++) {
-        buf[i] = p[i];
-      }
-      mrb_str_cat(mrb, result, buf, clen);
-      p += clen-1;
-      ascii_flag = 0;
-      continue;
-    }
-#endif
-    c = *p;
-    if (c == '"'|| c == '\\' || (c == '#' && IS_EVSTR(p+1, pend))) {
-      buf[0] = '\\'; buf[1] = c;
-      mrb_str_cat(mrb, result, buf, 2);
-      continue;
-    }
-    if (ISPRINT(c)) {
-      buf[0] = c;
-      mrb_str_cat(mrb, result, buf, 1);
-      continue;
-    }
-    switch (c) {
-      case '\n': cc = 'n'; break;
-      case '\r': cc = 'r'; break;
-      case '\t': cc = 't'; break;
-      case '\f': cc = 'f'; break;
-      case '\013': cc = 'v'; break;
-      case '\010': cc = 'b'; break;
-      case '\007': cc = 'a'; break;
-      case 033: cc = 'e'; break;
-      default: cc = 0; break;
-    }
-    if (cc) {
-      buf[0] = '\\';
-      buf[1] = (char)cc;
-      mrb_str_cat(mrb, result, buf, 2);
-      continue;
-    }
-    else {
-      buf[0] = '\\';
-      buf[1] = 'x';
-      buf[3] = mrb_digitmap[c % 16]; c /= 16;
-      buf[2] = mrb_digitmap[c % 16];
-      mrb_str_cat(mrb, result, buf, 4);
-      continue;
-    }
-  }
-  mrb_str_cat_lit(mrb, result, "\"");
-#ifdef MRB_UTF8_STRING
-  mrb_str_ptr(str)->flags |= ascii_flag;
-  mrb_str_ptr(result)->flags |= ascii_flag;
-#endif
-
-  return result;
+  return str_escape(mrb, str, TRUE);
 }
 
 /*

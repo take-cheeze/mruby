@@ -704,9 +704,6 @@ for_body(codegen_scope *s, node *tree)
   codegen(s, tree->cdr->car, VAL);
   /* generate loop-block */
   s = scope_new(s->mrb, s, NULL);
-  if (s == NULL) {
-    raise_error(prev, "unexpected scope");
-  }
 
   push();                       /* push for a block parameter */
 
@@ -742,9 +739,6 @@ lambda_body(codegen_scope *s, node *tree, int blk)
 {
   codegen_scope *parent = s;
   s = scope_new(s->mrb, s, tree->car);
-  if (s == NULL) {
-    raise_error(parent, "unexpected scope");
-  }
 
   s->mscope = !blk;
 
@@ -906,9 +900,6 @@ static int
 scope_body(codegen_scope *s, node *tree, int val)
 {
   codegen_scope *scope = scope_new(s->mrb, s, tree->car);
-  if (scope == NULL) {
-    codegen_error(s, "unexpected scope");
-  }
 
   codegen(scope, tree->cdr, VAL);
   gen_return(scope, OP_RETURN, scope->sp-1);
@@ -2990,7 +2981,11 @@ scope_new(mrb_state *mrb, codegen_scope *prev, node *lv)
   mrb_pool *pool = mrb_pool_open(mrb);
   codegen_scope *p = (codegen_scope *)mrb_pool_alloc(pool, sizeof(codegen_scope));
 
-  if (!p) return NULL;
+  if (!p) {
+    if (prev)
+      codegen_error(prev, "unexpected scope");
+    return NULL;
+  }
   *p = codegen_scope_zero;
   p->mrb = mrb;
   p->mpool = pool;
@@ -3183,9 +3178,6 @@ generate_code(mrb_state *mrb, parser_state *p, int val)
   struct RProc *proc;
   struct mrb_jmpbuf *prev_jmp = mrb->jmp;
 
-  if (!scope) {
-    return NULL;
-  }
   scope->mrb = mrb;
   scope->parser = p;
   scope->filename_sym = p->filename_sym;
