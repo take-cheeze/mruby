@@ -91,7 +91,7 @@ struct mrb_state;
 #define BF_DOUBLE_AS_UINT64 1
 #include <libbf/libbf.h>
 typedef uint64_t mrb_float;
-MRB_API mrb_float mrb_float_read(struct mrb_state *mrb, const char*, char**);
+MRB_API mrb_float mrb_float_read(struct mrb_state *mrb, const char*, const char**);
 #define mrb_float_read(s, end) mrb_float_read(mrb, (s), (end))
 #else
 #ifndef MRB_WITHOUT_FLOAT
@@ -275,7 +275,6 @@ typedef void mrb_value;
  *
  * Takes a float and boxes it into an mrb_value
  */
-#ifndef MRB_WITHOUT_FLOAT
 MRB_INLINE mrb_value mrb_float_value(struct mrb_state *mrb, mrb_float f)
 {
   mrb_value v;
@@ -283,7 +282,6 @@ MRB_INLINE mrb_value mrb_float_value(struct mrb_state *mrb, mrb_float f)
   SET_FLOAT_VALUE(mrb, v, f);
   return v;
 }
-#endif
 
 MRB_INLINE mrb_value
 mrb_cptr_value(struct mrb_state *mrb, void *p)

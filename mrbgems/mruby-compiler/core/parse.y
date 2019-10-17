@@ -905,7 +905,6 @@ new_int(parser_state *p, const char *s, int base, int suffix)
   return result;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
 /* (:float . i) */
 static node*
 new_float(parser_state *p, const char *s, int suffix)
@@ -923,7 +922,6 @@ new_float(parser_state *p, const char *s, int suffix)
 #endif
   return result;
 }
-#endif
 
 /* (:str . (s . len)) */
 static node*
@@ -5442,13 +5440,9 @@ parser_yylex(parser_state *p)
     }
     tokfix(p);
     if (is_float) {
-#ifdef MRB_WITHOUT_FLOAT
-      yywarning_s(p, "floating point numbers are not supported", tok(p));
-      pylval.nd = new_int(p, "0", 10, 0);
-      return tINTEGER;
-#else
-      double d;
-      char *endp;
+      mrb_float d;
+      const char *endp;
+      mrb_state* mrb = p->mrb;
 
       errno = 0;
       d = mrb_float_read(tok(p), &endp);
@@ -5464,7 +5458,6 @@ parser_yylex(parser_state *p)
       #endif
       pylval.nd = new_float(p, tok(p), suffix);
       return tFLOAT;
-#endif
     }
     #ifdef MRB_SUFFIX_SUPPORT
     suffix = number_literal_suffix(p, NUM_SUFFIX_ALL);

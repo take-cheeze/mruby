@@ -3049,7 +3049,7 @@ mrb_init_string(mrb_state *mrb)
 #if MRB_BF_FLOAT
 #undef mrb_float_read
 MRB_API mrb_float
-mrb_float_read(mrb_state *mrb, const char *string, char **endPtr)
+mrb_float_read(mrb_state *mrb, const char *string, const char **endPtr)
 {
   bf_t f;
   mrb_float ret;

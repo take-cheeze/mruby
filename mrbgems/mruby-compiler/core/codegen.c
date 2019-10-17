@@ -115,6 +115,7 @@ codegen_error(codegen_scope *s, const char *message)
     fprintf(stderr, "codegen error: %s\n", message);
   }
 #endif
+  abort();
   MRB_THROW(&s->jmp);
 }
 
@@ -1408,9 +1409,6 @@ codegen(codegen_scope *s, node *tree, int val)
 {
   int nt;
   int rlev = s->rlev;
-#if MRB_BF_FLOAT
-  mrb_state *mrb = s->mrb;
-#endif
 
   if (!tree) {
     if (val) {
