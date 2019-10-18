@@ -252,7 +252,9 @@ void bf_set(bf_t *r, const bf_t *a)
     r->sign = a->sign;
     r->expn = a->expn;
     bf_resize(r, a->len);
-    memcpy(r->tab, a->tab, a->len * sizeof(limb_t));
+    if (a->len > 0) {
+        memcpy(r->tab, a->tab, a->len * sizeof(limb_t));
+    }
 }
 
 /* equivalent to bf_set(r, a); bf_delete(a) */ 
