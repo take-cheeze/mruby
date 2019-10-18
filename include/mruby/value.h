@@ -203,10 +203,8 @@ typedef void mrb_value;
 #ifndef mrb_true_p
 #define mrb_true_p(o)  (mrb_type(o) == MRB_TT_TRUE)
 #endif
-#ifndef MRB_WITHOUT_FLOAT
 #ifndef mrb_float_p
 #define mrb_float_p(o) (mrb_type(o) == MRB_TT_FLOAT)
-#endif
 #endif
 #ifndef mrb_array_p
 #define mrb_array_p(o) (mrb_type(o) == MRB_TT_ARRAY)

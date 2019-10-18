@@ -566,7 +566,6 @@ new_lit(codegen_scope *s, mrb_value val)
         return i;
     }
     break;
-#ifndef MRB_WITHOUT_FLOAT
   case MRB_TT_FLOAT:
     for (i=0; i<s->irep->plen; i++) {
       mrb_float f1, f2;
@@ -582,19 +581,18 @@ new_lit(codegen_scope *s, mrb_value val)
         bf_set_float64(&f1_, f1);
         bf_set_float64(&f2_, f2);
         if (bf_cmp_eq(&f1_, &f2_) && !f1_.sign == !f2_.sign) {
-          bf_delete(&f1_);
           bf_delete(&f2_);
+          bf_delete(&f1_);
           return i;
         }
-        bf_delete(&f1_);
         bf_delete(&f2_);
+        bf_delete(&f1_);
       }
 #else
       if (f1 == f2 && !signbit(f1) == !signbit(f2)) return i;
 #endif
     }
     break;
-#endif
   case MRB_TT_FIXNUM:
     for (i=0; i<s->irep->plen; i++) {
       pv = &s->irep->pool[i];
@@ -604,6 +602,7 @@ new_lit(codegen_scope *s, mrb_value val)
     break;
   default:
     /* should not happen */
+    mrb_assert(FALSE);
     return 0;
   }
 
@@ -1310,10 +1309,18 @@ raise_error(codegen_scope *s, const char *msg)
   genop_1(s, OP_ERR, idx);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
-static double
+static mrb_float
 readint_float(codegen_scope *s, const char *p, int base)
 {
+#if MRB_BF_FLOAT
+  bf_t f;
+  mrb_float ret;
+  bf_init(&s->mrb->bf_ctx, &f);
+  bf_atof(&f, p, NULL, 10, 53, 0);
+  bf_get_float64(&f, &ret, BF_RNDN);
+  bf_delete(&f);
+  return ret;
+#else
   const char *e = p + strlen(p);
   double f = 0;
   int n;
@@ -1335,8 +1342,8 @@ readint_float(codegen_scope *s, const char *p, int base)
     p++;
   }
   return f;
-}
 #endif
+}
 
 static mrb_int
 readint_mrb_int(codegen_scope *s, const char *p, int base, mrb_bool neg, mrb_bool *overflow)
@@ -2433,15 +2440,13 @@ codegen(codegen_scope *s, node *tree, int val)
       mrb_bool overflow;
 
       i = readint_mrb_int(s, p, base, FALSE, &overflow);
-#ifndef MRB_WITHOUT_FLOAT
       if (overflow) {
-        double f = readint_float(s, p, base);
+        mrb_float f = readint_float(s, p, base);
         int off = new_lit(s, mrb_float_value(s->mrb, f));
 
         genop_2(s, OP_LOADL, cursp(), off);
       }
       else
-#endif
       {
         if (i == -1) genop_1(s, OP_LOADI__1, cursp());
         else if (i < 0) genop_2(s, OP_LOADINEG, cursp(), (uint16_t)-i);
@@ -2456,10 +2461,10 @@ codegen(codegen_scope *s, node *tree, int val)
     }
     break;
 
-#ifndef MRB_WITHOUT_FLOAT
   case NODE_FLOAT:
     if (val) {
       char *p = (char*)tree;
+      mrb_state *mrb = s->mrb;
       mrb_float f = mrb_float_read(p, NULL);
       int off = new_lit(s, mrb_float_value(s->mrb, f));
 
@@ -2467,16 +2472,15 @@ codegen(codegen_scope *s, node *tree, int val)
       push();
     }
     break;
-#endif
 
   case NODE_NEGATE:
     {
       nt = nint(tree->car);
       switch (nt) {
-#ifndef MRB_WITHOUT_FLOAT
       case NODE_FLOAT:
         if (val) {
           char *p = (char*)tree->cdr;
+          mrb_state *mrb = s->mrb;
           mrb_float f = mrb_float_read(p, NULL);
           int off = new_lit(s, mrb_float_value(s->mrb, -f));
 
@@ -2484,7 +2488,6 @@ codegen(codegen_scope *s, node *tree, int val)
           push();
         }
         break;
-#endif
 
       case NODE_INT:
         if (val) {
@@ -2494,15 +2497,13 @@ codegen(codegen_scope *s, node *tree, int val)
           mrb_bool overflow;
 
           i = readint_mrb_int(s, p, base, TRUE, &overflow);
-#ifndef MRB_WITHOUT_FLOAT
           if (overflow) {
-            double f = readint_float(s, p, base);
+            mrb_float f = readint_float(s, p, base);
             int off = new_lit(s, mrb_float_value(s->mrb, -f));
 
             genop_2(s, OP_LOADL, cursp(), off);
           }
           else {
-#endif
             if (i == -1) genop_1(s, OP_LOADI__1, cursp());
             else if (i >= -0xffff) {
               genop_2(s, OP_LOADINEG, cursp(), (uint16_t)-i);
@@ -2511,9 +2512,7 @@ codegen(codegen_scope *s, node *tree, int val)
               int off = new_lit(s, mrb_fixnum_value(i));
               genop_2(s, OP_LOADL, cursp(), off);
             }
-#ifndef MRB_WITHOUT_FLOAT
           }
-#endif
           push();
         }
         break;
