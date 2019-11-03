@@ -328,16 +328,21 @@ utf8_strlen(mrb_value str)
 static mrb_int
 chars2bytes(mrb_value s, mrb_int off, mrb_int idx)
 {
-  mrb_int i, b, n;
-  const char *p = RSTRING_PTR(s) + off;
-  const char *e = RSTRING_END(s);
-
-  for (b=i=0; p<e && i<idx; i++) {
-    n = utf8len(p, e);
-    b += n;
-    p += n;
+  if (RSTR_ASCII_P(mrb_str_ptr(s))) {
+    return idx;
   }
-  return b;
+  else {
+    mrb_int i, b, n;
+    const char *p = RSTRING_PTR(s) + off;
+    const char *e = RSTRING_END(s);
+
+    for (b=i=0; p<e && i<idx; i++) {
+      n = utf8len(p, e);
+      b += n;
+      p += n;
+    }
+    return b;
+  }
 }
 
 /* map byte offset to character index */
@@ -1221,8 +1226,6 @@ mrb_str_aref(mrb_state *mrb, mrb_value str, mrb_value indx, mrb_value alen)
  *     str[fixnum]                 => fixnum or nil
  *     str[fixnum, fixnum]         => new_str or nil
  *     str[range]                  => new_str or nil
- *     str[regexp]                 => new_str or nil
- *     str[regexp, fixnum]         => new_str or nil
  *     str[other_str]              => new_str or nil
  *     str.slice(fixnum)           => fixnum or nil
  *     str.slice(fixnum, fixnum)   => new_str or nil
@@ -1386,8 +1389,13 @@ str_escape(mrb_state *mrb, mrb_value str, mrb_bool inspect)
   }
   mrb_str_cat_lit(mrb, result, "\"");
 #ifdef MRB_UTF8_STRING
-  mrb_str_ptr(str)->flags |= ascii_flag;
-  mrb_str_ptr(result)->flags |= ascii_flag;
+  if (inspect) {
+    mrb_str_ptr(str)->flags |= ascii_flag;
+    mrb_str_ptr(result)->flags |= ascii_flag;
+  }
+  else {
+    RSTR_SET_ASCII_FLAG(mrb_str_ptr(result));
+  }
 #endif
 
   return result;
@@ -1425,8 +1433,6 @@ mrb_str_aset(mrb_state *mrb, mrb_value str, mrb_value indx, mrb_value alen, mrb_
  *    str[fixnum] = replace
  *    str[fixnum, fixnum] = replace
  *    str[range] = replace
- *    str[regexp] = replace
- *    str[regexp, fixnum] = replace
  *    str[other_str] = replace
  *
  * Modify +self+ by replacing the content of +self+.
@@ -2096,23 +2102,18 @@ mrb_str_rindex(mrb_state *mrb, mrb_value str)
 
 /*
  *  call-seq:
- *     str.split(pattern="\n", [limit])   => anArray
+ *     str.split(separator=nil, [limit])   => anArray
  *
  *  Divides <i>str</i> into substrings based on a delimiter, returning an array
  *  of these substrings.
  *
- *  If <i>pattern</i> is a <code>String</code>, then its contents are used as
- *  the delimiter when splitting <i>str</i>. If <i>pattern</i> is a single
+ *  If <i>separator</i> is a <code>String</code>, then its contents are used as
+ *  the delimiter when splitting <i>str</i>. If <i>separator</i> is a single
  *  space, <i>str</i> is split on whitespace, with leading whitespace and runs
  *  of contiguous whitespace characters ignored.
  *
- *  If <i>pattern</i> is a <code>Regexp</code>, <i>str</i> is divided where the
- *  pattern matches. Whenever the pattern matches a zero-length string,
- *  <i>str</i> is split into individual characters.
- *
- *  If <i>pattern</i> is omitted, the value of <code>$;</code> is used.  If
- *  <code>$;</code> is <code>nil</code> (which is the default), <i>str</i> is
- *  split on whitespace as if ' ' were specified.
+ *  If <i>separator</i> is omitted or <code>nil</code> (which is the default),
+ *  <i>str</i> is split on whitespace as if ' ' were specified.
  *
  *  If the <i>limit</i> parameter is omitted, trailing null fields are
  *  suppressed. If <i>limit</i> is a positive number, at most that number of
@@ -2123,9 +2124,6 @@ mrb_str_rindex(mrb_state *mrb, mrb_value str)
  *
  *     " now's  the time".split        #=> ["now's", "the", "time"]
  *     " now's  the time".split(' ')   #=> ["now's", "the", "time"]
- *     " now's  the time".split(/ /)   #=> ["", "now's", "", "the", "time"]
- *     "hello".split(//)               #=> ["h", "e", "l", "l", "o"]
- *     "hello".split(//, 3)            #=> ["h", "e", "llo"]
  *
  *     "mellow yellow".split("ello")   #=> ["m", "w y", "w"]
  *     "1,2,,3,4,,".split(',')         #=> ["1", "2", "", "3", "4"]
@@ -2138,7 +2136,7 @@ mrb_str_split_m(mrb_state *mrb, mrb_value str)
 {
   mrb_int argc;
   mrb_value spat = mrb_nil_value();
-  enum {awk, string, regexp} split_type = string;
+  enum {awk, string} split_type = string;
   mrb_int i = 0;
   mrb_int beg;
   mrb_int end;

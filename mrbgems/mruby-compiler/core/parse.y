@@ -1618,7 +1618,7 @@ command_asgn    : lhs '=' command_rhs
                     {
                       $$ = new_op_asgn(p, $1, $2, $3);
                     }
-                | primary_value '[' opt_call_args rbracket tOP_ASGN command_rhs
+                | primary_value '[' opt_call_args ']' tOP_ASGN command_rhs
                     {
                       $$ = new_op_asgn(p, new_call(p, $1, intern("[]",2), $3, '.'), $5, $6);
                     }
@@ -1847,7 +1847,7 @@ mlhs_node       : variable
                     {
                       assignable(p, $1);
                     }
-                | primary_value '[' opt_call_args rbracket
+                | primary_value '[' opt_call_args ']'
                     {
                       $$ = new_call(p, $1, intern("[]",2), $3, '.');
                     }
@@ -1886,7 +1886,7 @@ lhs             : variable
                     {
                       assignable(p, $1);
                     }
-                | primary_value '[' opt_call_args rbracket
+                | primary_value '[' opt_call_args ']'
                     {
                       $$ = new_call(p, $1, intern("[]",2), $3, '.');
                     }
@@ -2026,7 +2026,7 @@ arg             : lhs '=' arg_rhs
                     {
                       $$ = new_op_asgn(p, $1, $2, $3);
                     }
-                | primary_value '[' opt_call_args rbracket tOP_ASGN arg_rhs
+                | primary_value '[' opt_call_args ']' tOP_ASGN arg_rhs
                     {
                       $$ = new_op_asgn(p, new_call(p, $1, intern("[]",2), $3, '.'), $5, $6);
                     }
@@ -2224,7 +2224,7 @@ arg_rhs         : arg %prec tOP_ASGN
                     }
                 ;
 
-paren_args      : '(' opt_call_args rparen
+paren_args      : '(' opt_call_args ')'
                     {
                       $$ = $2;
                     }
@@ -2235,18 +2235,18 @@ opt_paren_args  : none
                 ;
 
 opt_call_args   : none
-                | call_args
-                | args ','
+                | call_args opt_terms
+                | args comma
                     {
                       $$ = cons($1,0);
                       NODE_LINENO($$, $1);
                     }
-                | args comma assocs ','
+                | args comma assocs comma
                     {
                       $$ = cons(push($1, new_kw_hash(p, $3)), 0);
                       NODE_LINENO($$, $1);
                     }
-                | assocs ','
+                | assocs comma
                     {
                       $$ = cons(list1(new_kw_hash(p, $1)), 0);
                       NODE_LINENO($$, $1);
@@ -2927,7 +2927,7 @@ method_call     : operation paren_args
                     {
                       $$ = new_zsuper(p);
                     }
-                | primary_value '[' opt_call_args rbracket
+                | primary_value '[' opt_call_args ']'
                     {
                       $$ = new_call(p, $1, intern("[]",2), $3, '.');
                     }
@@ -3723,11 +3723,8 @@ opt_nl          : /* none */
 rparen          : opt_nl ')'
                 ;
 
-rbracket        : opt_nl ']'
-                ;
-
 trailer         : /* none */
-                | nl
+                | terms
                 | comma
                 ;
 
