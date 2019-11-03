@@ -732,9 +732,7 @@ mrb_obj_instance_eval(mrb_state *mrb, mrb_value self)
   switch (mrb_type(self)) {
   case MRB_TT_SYMBOL:
   case MRB_TT_FIXNUM:
-#ifndef MRB_WITHOUT_FLOAT
   case MRB_TT_FLOAT:
-#endif
     c = 0;
     break;
   default:
@@ -1025,11 +1023,9 @@ RETRY_TRY_BLOCK:
     CASE(OP_LOADL, BB) {
 #ifdef MRB_WORD_BOXING
       mrb_value val = pool[b];
-#ifndef MRB_WITHOUT_FLOAT
       if (mrb_float_p(val)) {
         val = mrb_float_value(mrb, mrb_float(val));
       }
-#endif
       regs[a] = val;
 #else
       regs[a] = pool[b];
@@ -2219,10 +2215,6 @@ RETRY_TRY_BLOCK:
         SET_INT_VALUE(regs[a], z);                                          \
     }                                                                       \
     break
-#ifdef MRB_WITHOUT_FLOAT
-#define OP_MATH_CASE_FLOAT(op_name, t1, t2) (void)0
-#define OP_MATH_OVERFLOW_INT(op_name, x, y, z) SET_INT_VALUE(regs[a], z)
-#else
 #define OP_MATH_CASE_FLOAT(op_name, t1, t2)                                     \
   case TYPES2(OP_MATH_TT_##t1, OP_MATH_TT_##t2):                                \
     {                                                                           \
@@ -2232,7 +2224,6 @@ RETRY_TRY_BLOCK:
     break
 #define OP_MATH_OVERFLOW_INT(op_name, x, y, z) \
   SET_FLOAT_VALUE(mrb, regs[a], (mrb_float)x OP_MATH_OP_##op_name (mrb_float)y)
-#endif
 #define OP_MATH_CASE_STRING_add()                                           \
   case TYPES2(MRB_TT_STRING, MRB_TT_STRING):                                \
     regs[a] = mrb_str_plus(mrb, regs[a], regs[a+1]);                        \
@@ -2259,21 +2250,11 @@ RETRY_TRY_BLOCK:
     }
 
     CASE(OP_DIV, B) {
-#ifndef MRB_WITHOUT_FLOAT
-      double x, y, f;
-#endif
+      mrb_float x, y, f;
 
       /* need to check if op is overridden */
       switch (TYPES2(mrb_type(regs[a]),mrb_type(regs[a+1]))) {
       case TYPES2(MRB_TT_FIXNUM,MRB_TT_FIXNUM):
-#ifdef MRB_WITHOUT_FLOAT
-        {
-          mrb_int x = mrb_fixnum(regs[a]);
-          mrb_int y = mrb_fixnum(regs[a+1]);
-          SET_INT_VALUE(regs[a], y ? x / y : 0);
-        }
-        break;
-#else
         x = (mrb_float)mrb_fixnum(regs[a]);
         y = (mrb_float)mrb_fixnum(regs[a+1]);
         break;
@@ -2289,14 +2270,13 @@ RETRY_TRY_BLOCK:
         x = mrb_float(regs[a]);
         y = mrb_float(regs[a+1]);
         break;
-#endif
+
       default:
         c = 1;
         mid = mrb_intern_lit(mrb, "/");
         goto L_SEND_SYM;
       }
 
-#ifndef MRB_WITHOUT_FLOAT
       if (y == 0) {
         if (x > 0) f = INFINITY;
         else if (x < 0) f = -INFINITY;
@@ -2306,7 +2286,6 @@ RETRY_TRY_BLOCK:
         f = x / y;
       }
       SET_FLOAT_VALUE(mrb, regs[a], f);
-#endif
       NEXT;
     }
 
@@ -2332,9 +2311,6 @@ RETRY_TRY_BLOCK:
         SET_INT_VALUE(regs[a], z);                                          \
     }                                                                       \
     break
-#ifdef MRB_WITHOUT_FLOAT
-#define OP_MATHI_CASE_FLOAT(op_name) (void)0
-#else
 #define OP_MATHI_CASE_FLOAT(op_name)                                        \
   case MRB_TT_FLOAT:                                                        \
     {                                                                       \
@@ -2342,7 +2318,6 @@ RETRY_TRY_BLOCK:
       SET_FLOAT_VALUE(mrb, regs[a], z);                                     \
     }                                                                       \
     break
-#endif
 
     CASE(OP_ADDI, BB) {
       OP_MATHI(add);
@@ -2354,27 +2329,6 @@ RETRY_TRY_BLOCK:
 
 #define OP_CMP_BODY(op,v1,v2) (v1(regs[a]) op v2(regs[a+1]))
 
-#ifdef MRB_WITHOUT_FLOAT
-#define OP_CMP(op) do {\
-  int result;\
-  /* need to check if - is overridden */\
-  switch (TYPES2(mrb_type(regs[a]),mrb_type(regs[a+1]))) {\
-  case TYPES2(MRB_TT_FIXNUM,MRB_TT_FIXNUM):\
-    result = OP_CMP_BODY(op,mrb_fixnum,mrb_fixnum);\
-    break;\
-  default:\
-    c = 1;\
-    mid = mrb_intern_lit(mrb, # op);\
-    goto L_SEND_SYM;\
-  }\
-  if (result) {\
-    SET_TRUE_VALUE(regs[a]);\
-  }\
-  else {\
-    SET_FALSE_VALUE(regs[a]);\
-  }\
-} while(0)
-#else
 #define OP_CMP(op) do {\
   int result;\
   /* need to check if - is overridden */\
@@ -2403,7 +2357,6 @@ RETRY_TRY_BLOCK:
     SET_FALSE_VALUE(regs[a]);\
   }\
 } while(0)
-#endif
 
     CASE(OP_EQ, B) {
       if (mrb_obj_eq(mrb, regs[a], regs[a+1])) {

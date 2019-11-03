@@ -1,4 +1,4 @@
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_BF_FLOAT
 #if defined(MRB_DISABLE_STDIO) || defined(_WIN32) || defined(_WIN64)
 /*
 

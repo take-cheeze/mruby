@@ -43,7 +43,6 @@ mrb_f_sleep(mrb_state *mrb, mrb_value self)
 {
     time_t beg = time(0);
     time_t end;
-#ifndef MRB_WITHOUT_FLOAT
     mrb_float sec;
 
     mrb_get_args(mrb, "f", &sec);
@@ -53,16 +52,6 @@ mrb_f_sleep(mrb_state *mrb, mrb_value self)
     else {
         mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
     }
-#else
-    mrb_int sec;
-
-    mrb_get_args(mrb, "i", &sec);
-    if (sec >= 0) {
-        sleep(sec);
-    } else {
-        mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
-    }
-#endif
     end = time(0) - beg;
 
     return mrb_fixnum_value(end);

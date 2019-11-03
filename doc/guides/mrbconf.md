@@ -46,14 +46,6 @@ You can use mrbconfs with following ways:
 
 ## Primitive type configuration.
 
-`MRB_USE_FLOAT`
-* When defined single precision floating point type(C type `float`) is used as `mrb_float`.
-* Else double precision floating point type(C type `double`) is used as `mrb_float`.
-
-`MRB_WITHOUT_FLOAT`
-* When defined removes floating point numbers from mruby.
-* It makes mruby easier to handle in "Microcontroller without FPU" and "Kernel Space".
-
 `MRB_INT16`
 * When defined `int16_t` will be defined as `mrb_int`.
 * Conflicts with `MRB_INT32` and `MRB_INT64`.
@@ -121,7 +113,6 @@ largest value of required alignment.
 
 `MRB_NAN_BOXING`
 * If defined represent `mrb_value` in boxed `double`.
-* Conflicts with `MRB_USE_FLOAT` and `MRB_WITHOUT_FLOAT`.
 
 `MRB_WORD_BOXING`
 * If defined represent `mrb_value` as a word.

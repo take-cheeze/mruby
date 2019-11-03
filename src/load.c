@@ -14,6 +14,7 @@
 #include <mruby/string.h>
 #include <mruby/debug.h>
 #include <mruby/error.h>
+#include <mruby/float.h>
 
 #if SIZE_MAX < UINT32_MAX
 # error size_t must be at least 32 bits wide
@@ -41,22 +42,17 @@ offset_crc_body(void)
   return ((uint8_t *)header.binary_crc - (uint8_t *)&header) + sizeof(header.binary_crc);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
-#if MRB_BF_FLOAT
 static mrb_float
-#else
-static double
-#endif
 str_to_double(mrb_state *mrb, mrb_value str)
 {
   const char *p = RSTRING_PTR(str);
   mrb_int len = RSTRING_LEN(str);
 
   /* `i`, `inf`, `infinity` */
-  if (len > 0 && p[0] == 'i') return INFINITY;
+  if (len > 0 && p[0] == 'i') return mrb_infinity(mrb);
 
   /* `I`, `-inf`, `-infinity` */
-  if (p[0] == 'I' || (len > 1 && p[0] == '-' && p[1] == 'i')) return -INFINITY;
+  if (p[0] == 'I' || (len > 1 && p[0] == '-' && p[1] == 'i')) return mrb_neg(mrb, mrb_infinity(mrb));
 
   return mrb_str_to_dbl(mrb, str, TRUE);
 }
@@ -138,19 +134,12 @@ read_irep_record_1(mrb_state *mrb, const uint8_t *bin, size_t *len, uint8_t flag
       switch (tt) { /* pool data */
       case IREP_TT_FIXNUM: {
         mrb_value num = mrb_str_to_inum(mrb, s, 10, FALSE);
-#ifdef MRB_WITHOUT_FLOAT
-        irep->pool[i] = num;
-#else
         irep->pool[i] = mrb_float_p(num)? mrb_float_pool(mrb, mrb_float(num)) : num;
-#endif
-        }
-        break;
+      } break;
 
-#ifndef MRB_WITHOUT_FLOAT
       case IREP_TT_FLOAT:
         irep->pool[i] = mrb_float_pool(mrb, str_to_double(mrb, s));
         break;
-#endif
 
       case IREP_TT_STRING:
         irep->pool[i] = mrb_str_pool(mrb, s);

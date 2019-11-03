@@ -4,10 +4,6 @@
 ** See Copyright Notice in mruby.h
 */
 
-#ifndef MRB_WITHOUT_FLOAT
-#include <math.h>
-#endif
-
 #include <mruby.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
@@ -30,10 +26,8 @@ double round(double x) {
 }
 #endif
 
-#ifndef MRB_WITHOUT_FLOAT
-# if !defined(__MINGW64__) && defined(_WIN32)
-#  define llround(x) round(x)
-# endif
+#if !defined(__MINGW64__) && defined(_WIN32)
+# define llround(x) round(x)
 #endif
 
 #if defined(__MINGW64__) || defined(__MINGW32__)
@@ -204,14 +198,9 @@ struct mrb_time {
 
 static const struct mrb_data_type mrb_time_type = { "Time", mrb_free };
 
-#ifndef MRB_WITHOUT_FLOAT
 void mrb_check_num_exact(mrb_state *mrb, mrb_float num);
 typedef mrb_float mrb_sec;
 #define mrb_sec_value(mrb, sec) mrb_float_value(mrb, sec)
-#else
-typedef mrb_int mrb_sec;
-#define mrb_sec_value(mrb, sec) mrb_fixnum_value(sec)
-#endif
 
 #ifdef MRB_TIME_T_UINT
 typedef uint64_t mrb_time_int;
@@ -229,7 +218,6 @@ mrb_to_time_t(mrb_state *mrb, mrb_value obj, time_t *usec)
   time_t t;
 
   switch (mrb_type(obj)) {
-#ifndef MRB_WITHOUT_FLOAT
     case MRB_TT_FLOAT:
       {
         mrb_float f = mrb_float(obj);
@@ -248,7 +236,6 @@ mrb_to_time_t(mrb_state *mrb, mrb_value obj, time_t *usec)
         }
       }
       break;
-#endif /* MRB_WITHOUT_FLOAT */
     default:
     case MRB_TT_FIXNUM:
       {
@@ -573,17 +560,10 @@ mrb_time_minus(mrb_state *mrb, mrb_value self)
   tm = time_get_ptr(mrb, self);
   tm2 = DATA_CHECK_GET_PTR(mrb, other, &mrb_time_type, struct mrb_time);
   if (tm2) {
-#ifndef MRB_WITHOUT_FLOAT
     mrb_float f;
     f = (mrb_sec)(tm->sec - tm2->sec)
       + (mrb_sec)(tm->usec - tm2->usec) / 1.0e6;
     return mrb_float_value(mrb, f);
-#else
-    mrb_int f;
-    f = tm->sec - tm2->sec;
-    if (tm->usec < tm2->usec) f--;
-    return mrb_fixnum_value(f);
-#endif
   }
   else {
     time_t sec, usec;
@@ -845,7 +825,6 @@ mrb_time_sec(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(tm->datetime.tm_sec);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
 /* 15.2.19.7.24 */
 /* Returns a Float with the time since the epoch in seconds. */
 static mrb_value
@@ -856,7 +835,6 @@ mrb_time_to_f(mrb_state *mrb, mrb_value self)
   tm = time_get_ptr(mrb, self);
   return mrb_float_value(mrb, (mrb_float)tm->sec + (mrb_float)tm->usec/1.0e6);
 }
-#endif
 
 /* 15.2.19.7.25 */
 /* Returns an Integer with the time since the epoch in seconds. */
@@ -866,11 +844,9 @@ mrb_time_to_i(mrb_state *mrb, mrb_value self)
   struct mrb_time *tm;
 
   tm = time_get_ptr(mrb, self);
-#ifndef MRB_WITHOUT_FLOAT
   if (tm->sec > MRB_INT_MAX || tm->sec < MRB_INT_MIN) {
     return mrb_float_value(mrb, (mrb_float)tm->sec);
   }
-#endif
   return mrb_fixnum_value((mrb_int)tm->sec);
 }
 
@@ -882,12 +858,10 @@ mrb_time_usec(mrb_state *mrb, mrb_value self)
   struct mrb_time *tm;
 
   tm = time_get_ptr(mrb, self);
-#ifndef MRB_WITHOUT_FLOAT
   if (tm->usec > MRB_INT_MAX || tm->usec < MRB_INT_MIN) {
-    return mrb_float_value(mrb, (mrb_float)tm->usec);
+    return mrb_float_value(mrb, tm->usec);
   }
-#endif
-  return mrb_fixnum_value((mrb_int)tm->usec);
+  return mrb_fixnum_value(tm->usec);
 }
 
 /* 15.2.19.7.27 */
@@ -995,9 +969,7 @@ mrb_mruby_time_gem_init(mrb_state* mrb)
 
   mrb_define_method(mrb, tc, "sec" , mrb_time_sec, MRB_ARGS_NONE());        /* 15.2.19.7.23 */
   mrb_define_method(mrb, tc, "to_i", mrb_time_to_i, MRB_ARGS_NONE());       /* 15.2.19.7.25 */
-#ifndef MRB_WITHOUT_FLOAT
   mrb_define_method(mrb, tc, "to_f", mrb_time_to_f, MRB_ARGS_NONE());       /* 15.2.19.7.24 */
-#endif
   mrb_define_method(mrb, tc, "usec", mrb_time_usec, MRB_ARGS_NONE());       /* 15.2.19.7.26 */
   mrb_define_method(mrb, tc, "utc" , mrb_time_utc, MRB_ARGS_NONE());        /* 15.2.19.7.27 */
   mrb_define_method(mrb, tc, "utc?", mrb_time_utc_p,MRB_ARGS_NONE());       /* 15.2.19.7.28 */

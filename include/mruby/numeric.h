@@ -22,24 +22,18 @@ MRB_BEGIN_DECL
 #define POSFIXABLE(f) TYPED_POSFIXABLE(f,mrb_int)
 #define NEGFIXABLE(f) TYPED_NEGFIXABLE(f,mrb_int)
 #define FIXABLE(f) TYPED_FIXABLE(f,mrb_int)
-#ifndef MRB_WITHOUT_FLOAT
 #ifdef MRB_INT64
 #define FIXABLE_FLOAT(f) ((f)>=-9223372036854775808.0 && (f)<9223372036854775808.0)
 #else
 #define FIXABLE_FLOAT(f) TYPED_FIXABLE(f,mrb_float)
 #endif
-#endif
 
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value mrb_flo_to_fixnum(mrb_state *mrb, mrb_value val);
-#endif
 MRB_API mrb_value mrb_fixnum_to_str(mrb_state *mrb, mrb_value x, mrb_int base);
 /* ArgumentError if format string doesn't match /%(\.[0-9]+)?[aAeEfFgG]/ */
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value mrb_float_to_str(mrb_state *mrb, mrb_value x, const char *fmt);
 MRB_API mrb_float mrb_to_flo(mrb_state *mrb, mrb_value x);
 MRB_API mrb_value mrb_int_value(mrb_state *mrb, mrb_float f);
-#endif
 
 MRB_API mrb_value mrb_num_plus(mrb_state *mrb, mrb_value x, mrb_value y);
 MRB_API mrb_value mrb_num_minus(mrb_state *mrb, mrb_value x, mrb_value y);
@@ -160,35 +154,20 @@ mrb_int_mul_overflow(mrb_int multiplier, mrb_int multiplicand, mrb_int *product)
 
 #endif
 
-#ifndef MRB_WITHOUT_FLOAT
-# include <stdint.h>
-# include <float.h>
+#include <stdint.h>
+#include <float.h>
 
-# define MRB_FLT_RADIX          FLT_RADIX
+#define MRB_FLT_RADIX          FLT_RADIX
 
-# ifdef MRB_USE_FLOAT
-#  define MRB_FLT_MANT_DIG      FLT_MANT_DIG
-#  define MRB_FLT_EPSILON       FLT_EPSILON
-#  define MRB_FLT_DIG           FLT_DIG
-#  define MRB_FLT_MIN_EXP       FLT_MIN_EXP
-#  define MRB_FLT_MIN           FLT_MIN
-#  define MRB_FLT_MIN_10_EXP    FLT_MIN_10_EXP
-#  define MRB_FLT_MAX_EXP       FLT_MAX_EXP
-#  define MRB_FLT_MAX           FLT_MAX
-#  define MRB_FLT_MAX_10_EXP    FLT_MAX_10_EXP
-
-# else /* not MRB_USE_FLOAT */
-#  define MRB_FLT_MANT_DIG      DBL_MANT_DIG
-#  define MRB_FLT_EPSILON       DBL_EPSILON
-#  define MRB_FLT_DIG           DBL_DIG
-#  define MRB_FLT_MIN_EXP       DBL_MIN_EXP
-#  define MRB_FLT_MIN           DBL_MIN
-#  define MRB_FLT_MIN_10_EXP    DBL_MIN_10_EXP
-#  define MRB_FLT_MAX_EXP       DBL_MAX_EXP
-#  define MRB_FLT_MAX           DBL_MAX
-#  define MRB_FLT_MAX_10_EXP    DBL_MAX_10_EXP
-# endif /* MRB_USE_FLOAT */
-#endif /* MRB_WITHOUT_FLOAT */
+#define MRB_FLT_MANT_DIG      DBL_MANT_DIG
+#define MRB_FLT_EPSILON       DBL_EPSILON
+#define MRB_FLT_DIG           DBL_DIG
+#define MRB_FLT_MIN_EXP       DBL_MIN_EXP
+#define MRB_FLT_MIN           DBL_MIN
+#define MRB_FLT_MIN_10_EXP    DBL_MIN_10_EXP
+#define MRB_FLT_MAX_EXP       DBL_MAX_EXP
+#define MRB_FLT_MAX           DBL_MAX
+#define MRB_FLT_MAX_10_EXP    DBL_MAX_10_EXP
 
 MRB_END_DECL
 

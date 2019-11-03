@@ -8,6 +8,7 @@
 #include <mruby/string.h>
 #include <mruby/data.h>
 #include <mruby/class.h>
+#include <mruby/float.h>
 
 MRB_API struct RData*
 mrb_data_object_alloc(mrb_state *mrb, struct RClass *klass, void *ptr, const mrb_data_type *type)
@@ -70,20 +71,12 @@ mrb_obj_to_sym(mrb_state *mrb, mrb_value name)
 }
 
 MRB_API mrb_int
-#ifdef MRB_WITHOUT_FLOAT
-mrb_fixnum_id(mrb_int f)
-#else
 mrb_float_id(mrb_float f)
-#endif
 {
   const char *p = (const char*)&f;
   int len = sizeof(f);
   uint32_t id = 0;
 
-#ifndef MRB_WITHOUT_FLOAT
-  /* normalize -0.0 to 0.0 */
-  if (f == 0) f = 0.0;
-#endif
   while (len--) {
     id = id*65599 + *p;
     p++;
@@ -94,7 +87,7 @@ mrb_float_id(mrb_float f)
 }
 
 MRB_API mrb_int
-mrb_obj_id(mrb_value obj)
+mrb_obj_id(mrb_state *mrb, mrb_value obj)
 {
   mrb_int tt = mrb_type(obj);
 
@@ -114,13 +107,9 @@ mrb_obj_id(mrb_value obj)
   case MRB_TT_SYMBOL:
     return MakeID(mrb_symbol(obj));
   case MRB_TT_FIXNUM:
-#ifdef MRB_WITHOUT_FLOAT
-    return MakeID(mrb_fixnum_id(mrb_fixnum(obj)));
-#else
-    return MakeID2(mrb_float_id((mrb_float)mrb_fixnum(obj)), MRB_TT_FLOAT);
+    return MakeID2(mrb_float_id(mrb_int_to_float(mrb, mrb_fixnum(obj))), MRB_TT_FLOAT);
   case MRB_TT_FLOAT:
     return MakeID(mrb_float_id(mrb_float(obj)));
-#endif
   case MRB_TT_STRING:
   case MRB_TT_OBJECT:
   case MRB_TT_CLASS:
@@ -141,7 +130,6 @@ mrb_obj_id(mrb_value obj)
 }
 
 #ifdef MRB_WORD_BOXING
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value
 mrb_word_boxing_float_value(mrb_state *mrb, mrb_float f)
 {
@@ -163,7 +151,6 @@ mrb_word_boxing_float_pool(mrb_state *mrb, mrb_float f)
   MRB_SET_FROZEN_FLAG(nf);
   return mrb_obj_value(nf);
 }
-#endif  /* MRB_WITHOUT_FLOAT */
 
 MRB_API mrb_value
 mrb_word_boxing_cptr_value(mrb_state *mrb, void *p)

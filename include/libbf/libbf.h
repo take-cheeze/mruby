@@ -121,7 +121,7 @@ typedef struct bf_context_t {
 } bf_context_t;
 
 #if 1 // BF_DOUBLE_AS_UINT64
-typedef uint64_t bf_double_t;
+typedef struct bf_double_t { uint64_t v; } bf_double_t;
 #else
 typedef double bf_double_t;
 #endif

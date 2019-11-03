@@ -70,24 +70,6 @@
 
 #include "mrbconf.h"
 
-#ifndef MRB_WITHOUT_FLOAT
-#ifndef FLT_EPSILON
-#define FLT_EPSILON (1.19209290e-07f)
-#endif
-#ifndef DBL_EPSILON
-#define DBL_EPSILON ((double)2.22044604925031308085e-16L)
-#endif
-#ifndef LDBL_EPSILON
-#define LDBL_EPSILON (1.08420217248550443401e-19L)
-#endif
-
-#ifdef MRB_USE_FLOAT
-#define MRB_FLOAT_EPSILON FLT_EPSILON
-#else
-#define MRB_FLOAT_EPSILON DBL_EPSILON
-#endif
-#endif
-
 #include <mruby/common.h>
 #include <mruby/value.h>
 #include <mruby/gc.h>
@@ -234,9 +216,7 @@ typedef struct mrb_state {
   struct RClass *hash_class;
   struct RClass *range_class;
 
-#ifndef MRB_WITHOUT_FLOAT
   struct RClass *float_class;
-#endif
   struct RClass *fixnum_class;
   struct RClass *true_class;
   struct RClass *false_class;
@@ -285,7 +265,7 @@ typedef struct mrb_state {
   uint16_t atexit_stack_len;
   uint16_t ecall_nest;                    /* prevent infinite recursive ecall() */
 
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
   bf_context_t bf_ctx;
 #endif
 } mrb_state;
@@ -1162,7 +1142,7 @@ MRB_API mrb_value mrb_vm_exec(mrb_state *mrb, struct RProc *proc, const mrb_code
 #define mrb_context_run(m,p,s,k) mrb_vm_run((m),(p),(s),(k))
 
 MRB_API void mrb_p(mrb_state*, mrb_value);
-MRB_API mrb_int mrb_obj_id(mrb_value obj);
+MRB_API mrb_int mrb_obj_id(mrb_state *mrb, mrb_value obj);
 MRB_API mrb_sym mrb_obj_to_sym(mrb_state *mrb, mrb_value name);
 
 MRB_API mrb_bool mrb_obj_eq(mrb_state *mrb, mrb_value a, mrb_value b);
@@ -1170,9 +1150,7 @@ MRB_API mrb_bool mrb_obj_equal(mrb_state *mrb, mrb_value a, mrb_value b);
 MRB_API mrb_bool mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
 MRB_API mrb_value mrb_convert_to_integer(mrb_state *mrb, mrb_value val, mrb_int base);
 MRB_API mrb_value mrb_Integer(mrb_state *mrb, mrb_value val);
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value mrb_Float(mrb_state *mrb, mrb_value val);
-#endif
 MRB_API mrb_value mrb_inspect(mrb_state *mrb, mrb_value obj);
 MRB_API mrb_bool mrb_eql(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
 /* mrb_cmp(mrb, obj1, obj2): 1:0:-1; -2 for error */
@@ -1262,9 +1240,7 @@ MRB_API mrb_value mrb_vformat(mrb_state *mrb, const char *format, va_list ap);
 #define E_FROZEN_ERROR              (mrb_exc_get(mrb, "FrozenError"))
 
 #define E_NOTIMP_ERROR              (mrb_exc_get(mrb, "NotImplementedError"))
-#ifndef MRB_WITHOUT_FLOAT
 #define E_FLOATDOMAIN_ERROR         (mrb_exc_get(mrb, "FloatDomainError"))
-#endif
 
 #define E_KEY_ERROR                 (mrb_exc_get(mrb, "KeyError"))
 

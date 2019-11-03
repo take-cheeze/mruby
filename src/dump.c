@@ -12,17 +12,12 @@
 #include <mruby/irep.h>
 #include <mruby/numeric.h>
 #include <mruby/debug.h>
+#include <mruby/float.h>
 
 #define FLAG_BYTEORDER_NATIVE 2
 #define FLAG_BYTEORDER_NONATIVE 0
 
-#ifndef MRB_WITHOUT_FLOAT
-#ifdef MRB_USE_FLOAT
-#define MRB_FLOAT_FMT "%.9g"
-#else
 #define MRB_FLOAT_FMT "%.17g"
-#endif
-#endif
 
 static size_t get_irep_record_size_1(mrb_state *mrb, mrb_irep *irep);
 
@@ -91,18 +86,16 @@ write_iseq_block(mrb_state *mrb, mrb_irep *irep, uint8_t *buf, uint8_t flags)
   return cur - buf;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
 static mrb_value
 float_to_str(mrb_state *mrb, mrb_value flt)
 {
   mrb_float f = mrb_float(flt);
 
-  if (isinf(f)) {
-    return f < 0 ? mrb_str_new_lit(mrb, "I") : mrb_str_new_lit(mrb, "i");
+  if (mrb_isinf(mrb, f)) {
+    return mrb_isneg(mrb, f) ? mrb_str_new_lit(mrb, "I") : mrb_str_new_lit(mrb, "i");
   }
   return  mrb_float_to_str(mrb, flt, MRB_FLOAT_FMT);
 }
-#endif
 
 static size_t
 get_pool_block_size(mrb_state *mrb, mrb_irep *irep)
@@ -127,7 +120,6 @@ get_pool_block_size(mrb_state *mrb, mrb_irep *irep)
       }
       break;
 
-#ifndef MRB_WITHOUT_FLOAT
     case MRB_TT_FLOAT:
       str = float_to_str(mrb, irep->pool[pool_no]);
       {
@@ -136,7 +128,6 @@ get_pool_block_size(mrb_state *mrb, mrb_irep *irep)
         size += (size_t)len;
       }
       break;
-#endif
 
     case MRB_TT_STRING:
       {
@@ -175,12 +166,10 @@ write_pool_block(mrb_state *mrb, mrb_irep *irep, uint8_t *buf)
       str = mrb_fixnum_to_str(mrb, irep->pool[pool_no], 10);
       break;
 
-#ifndef MRB_WITHOUT_FLOAT
     case MRB_TT_FLOAT:
       cur += uint8_to_bin(IREP_TT_FLOAT, cur); /* data type */
       str = float_to_str(mrb, irep->pool[pool_no]);
       break;
-#endif
 
     case MRB_TT_STRING:
       cur += uint8_to_bin(IREP_TT_STRING, cur); /* data type */

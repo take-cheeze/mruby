@@ -19,6 +19,7 @@
 #include <mruby/opcode.h>
 #include <mruby/re.h>
 #include <mruby/throw.h>
+#include <mruby/float.h>
 
 #ifndef MRB_CODEGEN_LEVEL_MAX
 #define MRB_CODEGEN_LEVEL_MAX 1024
@@ -576,10 +577,11 @@ new_lit(codegen_scope *s, mrb_value val)
 #ifdef MRB_BF_FLOAT
       {
         bf_t f1_, f2_;
+        bf_double_t f1_src = {f1.v}, f2_src = {f2.v};
         bf_init(&s->mrb->bf_ctx, &f1_);
         bf_init(&s->mrb->bf_ctx, &f2_);
-        bf_set_float64(&f1_, f1);
-        bf_set_float64(&f2_, f2);
+        bf_set_float64(&f1_, f1_src);
+        bf_set_float64(&f2_, f2_src);
         if (bf_cmp_eq(&f1_, &f2_) && !f1_.sign == !f2_.sign) {
           bf_delete(&f2_);
           bf_delete(&f1_);
@@ -619,12 +621,10 @@ new_lit(codegen_scope *s, mrb_value val)
     *pv = mrb_str_pool(s->mrb, val);
     break;
 
-#ifndef MRB_WITHOUT_FLOAT
   case MRB_TT_FLOAT:
 #ifdef MRB_WORD_BOXING
     *pv = mrb_float_pool(s->mrb, mrb_float(val));
     break;
-#endif
 #endif
   case MRB_TT_FIXNUM:
     *pv = val;
@@ -1312,13 +1312,15 @@ raise_error(codegen_scope *s, const char *msg)
 static mrb_float
 readint_float(codegen_scope *s, const char *p, int base)
 {
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
   bf_t f;
   mrb_float ret;
+  bf_double_t f_res;
   bf_init(&s->mrb->bf_ctx, &f);
   bf_atof(&f, p, NULL, 10, 53, 0);
-  bf_get_float64(&f, &ret, BF_RNDN);
+  bf_get_float64(&f, &f_res, BF_RNDN);
   bf_delete(&f);
+  ret.v = f_res.v;
   return ret;
 #else
   const char *e = p + strlen(p);
@@ -2482,7 +2484,7 @@ codegen(codegen_scope *s, node *tree, int val)
           char *p = (char*)tree->cdr;
           mrb_state *mrb = s->mrb;
           mrb_float f = mrb_float_read(p, NULL);
-          int off = new_lit(s, mrb_float_value(s->mrb, -f));
+          int off = new_lit(s, mrb_float_value(s->mrb, mrb_float_neg(mrb, f)));
 
           genop_2(s, OP_LOADL, cursp(), off);
           push();
@@ -2499,7 +2501,7 @@ codegen(codegen_scope *s, node *tree, int val)
           i = readint_mrb_int(s, p, base, TRUE, &overflow);
           if (overflow) {
             mrb_float f = readint_float(s, p, base);
-            int off = new_lit(s, mrb_float_value(s->mrb, -f));
+            int off = new_lit(s, mrb_float_value(s->mrb, mrb_float_neg(s->mrb, f)));
 
             genop_2(s, OP_LOADL, cursp(), off);
           }

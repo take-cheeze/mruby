@@ -8,9 +8,7 @@
 # define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
-#ifndef MRB_WITHOUT_FLOAT
 #include <float.h>
-#endif
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -2380,12 +2378,10 @@ mrb_str_len_to_inum(mrb_state *mrb, const char *str, mrb_int len, mrb_int base, 
     n *= base;
     n += c;
     if (n > (uint64_t)MRB_INT_MAX + (sign ? 0 : 1)) {
-#ifndef MRB_WITHOUT_FLOAT
       if (base == 10) {
         return mrb_float_value(mrb, mrb_str_to_dbl(mrb, mrb_str_new(mrb, str, len), badcheck));
       }
       else
-#endif
       {
         mrb_raisef(mrb, E_RANGE_ERROR, "string (%l) too big for integer", str, pend-str);
       }
@@ -2505,13 +2501,13 @@ mrb_str_to_f(mrb_state* mrb, mrb_value self)
   bf_delete(&f);
   return mrb_float_value(mrb, ret);
 }
-#elif !defined(MRB_WITHOUT_FLOAT)
-MRB_API double
+
+MRB_API mrb_float
 mrb_cstr_to_dbl(mrb_state *mrb, const char * p, mrb_bool badcheck)
 {
   char *end;
   char buf[DBL_DIG * 4 + 10];
-  double d;
+  mrb_float d;
 
   enum {max_width = 20};
 
@@ -2594,7 +2590,6 @@ mrb_str_to_f(mrb_state *mrb, mrb_value self)
 {
   return mrb_float_value(mrb, mrb_str_to_dbl(mrb, self, FALSE));
 }
-#endif
 
 /* 15.2.10.5.40 */
 /*
@@ -2927,9 +2922,7 @@ mrb_init_string(mrb_state *mrb)
   mrb_define_method(mrb, s, "slice",           mrb_str_aref_m,          MRB_ARGS_ANY());  /* 15.2.10.5.34 */
   mrb_define_method(mrb, s, "split",           mrb_str_split_m,         MRB_ARGS_ANY());  /* 15.2.10.5.35 */
 
-#ifndef MRB_WITHOUT_FLOAT
   mrb_define_method(mrb, s, "to_f",            mrb_str_to_f,            MRB_ARGS_NONE()); /* 15.2.10.5.38 */
-#endif
   mrb_define_method(mrb, s, "to_i",            mrb_str_to_i,            MRB_ARGS_ANY());  /* 15.2.10.5.39 */
   mrb_define_method(mrb, s, "to_s",            mrb_str_to_s,            MRB_ARGS_NONE()); /* 15.2.10.5.40 */
   mrb_define_method(mrb, s, "to_str",          mrb_str_to_s,            MRB_ARGS_NONE());
@@ -2944,7 +2937,7 @@ mrb_init_string(mrb_state *mrb)
   mrb_define_method(mrb, s, "byteslice",       mrb_str_byteslice,       MRB_ARGS_ARG(1,1));
 }
 
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
 #undef mrb_float_read
 MRB_API mrb_float
 mrb_float_read(mrb_state *mrb, const char *string, const char **endPtr)
@@ -2958,7 +2951,7 @@ mrb_float_read(mrb_state *mrb, const char *string, const char **endPtr)
   bf_delete(&f);
   return ret;
 }
-#elif !defined(MRB_WITHOUT_FLOAT)
+#else
 /*
  * Source code for the "strtod" library procedure.
  *

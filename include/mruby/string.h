@@ -376,7 +376,7 @@ MRB_API mrb_value mrb_str_intern(mrb_state *mrb, mrb_value self);
 
 MRB_API mrb_value mrb_str_to_inum(mrb_state *mrb, mrb_value str, mrb_int base, mrb_bool badcheck);
 MRB_API mrb_value mrb_cstr_to_inum(mrb_state *mrb, const char *s, mrb_int base, mrb_bool badcheck);
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
 MRB_API mrb_float mrb_str_to_dbl(mrb_state *mrb, mrb_value str, mrb_bool badcheck);
 MRB_API mrb_float mrb_cstr_to_dbl(mrb_state *mrb, const char *s, mrb_bool badcheck);
 #else

@@ -19,7 +19,7 @@ void mrb_init_mrbgems(mrb_state*);
 void mrb_gc_init(mrb_state*, mrb_gc *gc);
 void mrb_gc_destroy(mrb_state*, mrb_gc *gc);
 
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
 void *mrb_bf_realloc_func(void* opaque, void* ptr, size_t size) {
   mrb_state *mrb = (mrb_state*)opaque;
   return mrb_realloc(mrb, ptr, size);
@@ -42,7 +42,7 @@ mrb_open_core(mrb_allocf f, void *ud)
   mrb->allocf = f;
   mrb->atexit_stack_len = 0;
 
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
   bf_context_init(&mrb->bf_ctx, mrb_bf_realloc_func, mrb);
 #endif
 
@@ -134,7 +134,7 @@ mrb_irep_free(mrb_state *mrb, mrb_irep *irep)
       mrb_gc_free_str(mrb, RSTRING(irep->pool[i]));
       mrb_free(mrb, mrb_obj_ptr(irep->pool[i]));
     }
-#if defined(MRB_WORD_BOXING) && !defined(MRB_WITHOUT_FLOAT)
+#if defined(MRB_WORD_BOXING)
     else if (mrb_float_p(irep->pool[i])) {
       mrb_free(mrb, mrb_obj_ptr(irep->pool[i]));
     }
@@ -184,7 +184,7 @@ mrb_close(mrb_state *mrb)
   mrb_free_context(mrb, mrb->root_c);
   mrb_gc_free_gv(mrb);
   mrb_free_symtbl(mrb);
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
   bf_context_end(&mrb->bf_ctx);
 #endif
   mrb_free(mrb, mrb);

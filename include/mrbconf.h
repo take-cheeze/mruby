@@ -24,13 +24,6 @@
 #error Cannot build for 32 and 64 bit architecture at the same time
 #endif
 
-/* configuration options: */
-/* add -DMRB_USE_FLOAT to use float instead of double for floating point numbers */
-//#define MRB_USE_FLOAT
-
-/* exclude floating point numbers */
-//#define MRB_WITHOUT_FLOAT
-
 /* add -DMRB_METHOD_CACHE to use method cache to improve performance */
 //#define MRB_METHOD_CACHE
 /* size of the method cache (need to be the power of 2) */
@@ -73,7 +66,7 @@
 # endif
 #endif
 
-/* represent mrb_value in boxed double; conflict with MRB_USE_FLOAT and MRB_WITHOUT_FLOAT */
+/* represent mrb_value in boxed double */
 //#define MRB_NAN_BOXING
 
 /* represent mrb_value as a word (natural unit of data for the processor) */

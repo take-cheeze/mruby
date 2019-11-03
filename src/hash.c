@@ -7,14 +7,13 @@
 #include <mruby.h>
 #include <mruby/array.h>
 #include <mruby/class.h>
+#include <mruby/float.h>
 #include <mruby/hash.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
 
-#ifndef MRB_WITHOUT_FLOAT
 /* a function to get hash value of a float number */
 mrb_int mrb_float_id(mrb_float f);
-#endif
 
 #ifndef MRB_HT_INIT_SIZE
 #define MRB_HT_INIT_SIZE 4
@@ -65,10 +64,8 @@ ht_hash_func(mrb_state *mrb, htable *t, mrb_value key)
   case MRB_TT_FALSE:
   case MRB_TT_SYMBOL:
   case MRB_TT_FIXNUM:
-#ifndef MRB_WITHOUT_FLOAT
   case MRB_TT_FLOAT:
-#endif
-    h = (size_t)mrb_obj_id(key);
+    h = (size_t)mrb_obj_id(mrb, key);
     break;
 
   default:
@@ -99,25 +96,21 @@ ht_hash_equal(mrb_state *mrb, htable *t, mrb_value a, mrb_value b)
     switch (mrb_type(b)) {
     case MRB_TT_FIXNUM:
       return mrb_fixnum(a) == mrb_fixnum(b);
-#ifndef MRB_WITHOUT_FLOAT
     case MRB_TT_FLOAT:
-      return (mrb_float)mrb_fixnum(a) == mrb_float(b);
-#endif
+      return mrb_float_equal(mrb, mrb_int_to_float(mrb, mrb_fixnum(a)), mrb_float(b));
     default:
       return FALSE;
     }
 
-#ifndef MRB_WITHOUT_FLOAT
   case MRB_TT_FLOAT:
     switch (mrb_type(b)) {
     case MRB_TT_FIXNUM:
-      return mrb_float(a) == (mrb_float)mrb_fixnum(b);
+      return mrb_float_equal(mrb, mrb_float(a), mrb_int_to_float(mrb, mrb_fixnum(b)));
     case MRB_TT_FLOAT:
-      return mrb_float(a) == mrb_float(b);
+      return mrb_float_equal(mrb, mrb_float(a), mrb_float(b));
     default:
       return FALSE;
     }
-#endif
 
   default:
     {

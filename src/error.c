@@ -336,11 +336,9 @@ mrb_vformat(mrb_state *mrb, const char *format, va_list ap)
 #endif
           obj = mrb_fixnum_value(i);
           goto L_cat_obj;
-#ifndef MRB_WITHOUT_FLOAT
         case 'f':
-          obj = mrb_float_value(mrb, (mrb_float)va_arg(ap, double));
+          obj = mrb_float_value(mrb, va_arg(ap, mrb_float));
           goto L_cat_obj;
-#endif
         case 'l':
           chars = va_arg(ap, char*);
           len = va_arg(ap, size_t);

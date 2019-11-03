@@ -9,6 +9,7 @@
 #include <mruby/numeric.h>
 #include <mruby/string.h>
 #include <mruby/class.h>
+#include <mruby/float.h>
 
 MRB_API mrb_bool
 mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
@@ -24,10 +25,8 @@ mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
   case MRB_TT_SYMBOL:
     return (mrb_symbol(v1) == mrb_symbol(v2));
 
-#ifndef MRB_WITHOUT_FLOAT
   case MRB_TT_FLOAT:
-    return (mrb_float(v1) == mrb_float(v2));
-#endif
+    return mrb_float_equal(mrb, mrb_float(v1), mrb_float(v2));
 
   default:
     return (mrb_ptr(v1) == mrb_ptr(v2));
@@ -350,9 +349,7 @@ static const struct types {
   {MRB_TT_ICLASS, "iClass"},  /* internal use: mixed-in module holder */
   {MRB_TT_SCLASS, "SClass"},
   {MRB_TT_PROC,   "Proc"},
-#ifndef MRB_WITHOUT_FLOAT
   {MRB_TT_FLOAT,  "Float"},
-#endif
   {MRB_TT_ARRAY,  "Array"},
   {MRB_TT_HASH,   "Hash"},
   {MRB_TT_STRING, "String"},
@@ -486,11 +483,9 @@ mrb_to_int(mrb_state *mrb, mrb_value val)
 {
 
   if (!mrb_fixnum_p(val)) {
-#ifndef MRB_WITHOUT_FLOAT
     if (mrb_float_p(val)) {
       return mrb_flo_to_fixnum(mrb, val);
     }
-#endif
     mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %Y to Integer", val);
   }
   return val;
@@ -506,11 +501,9 @@ mrb_convert_to_integer(mrb_state *mrb, mrb_value val, mrb_int base)
     mrb_raise(mrb, E_TYPE_ERROR, "can't convert nil into Integer");
   }
   switch (mrb_type(val)) {
-#ifndef MRB_WITHOUT_FLOAT
     case MRB_TT_FLOAT:
       if (base != 0) goto arg_error;
       return mrb_flo_to_fixnum(mrb, val);
-#endif
 
     case MRB_TT_FIXNUM:
       if (base != 0) goto arg_error;
@@ -542,7 +535,6 @@ mrb_Integer(mrb_state *mrb, mrb_value val)
   return mrb_convert_to_integer(mrb, val, 0);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value
 mrb_Float(mrb_state *mrb, mrb_value val)
 {
@@ -551,21 +543,23 @@ mrb_Float(mrb_state *mrb, mrb_value val)
   }
   switch (mrb_type(val)) {
     case MRB_TT_FIXNUM:
-      return mrb_float_value(mrb, (mrb_float)mrb_fixnum(val));
+      return mrb_float_value(mrb, mrb_int_to_float(mrb, mrb_fixnum(val)));
 
     case MRB_TT_FLOAT:
       return val;
 
     case MRB_TT_STRING:
-#if MRB_BF_FLOAT
+#ifdef MRB_BF_FLOAT
       {
         bf_t f;
-        mrb_float ret;
+        bf_double_t ret;
+        mrb_float ret_v;
         bf_init(&mrb->bf_ctx, &f);
         bf_atof(&f, mrb_str_to_cstr(mrb, val), NULL, 10, 53, 0);
         bf_get_float64(&f, &ret, BF_RNDN);
         bf_delete(&f);
-        return mrb_float_value(mrb, ret);
+        ret_v.v = ret.v;
+        return mrb_float_value(mrb, ret_v);
       }
 #else
       return mrb_float_value(mrb, mrb_str_to_dbl(mrb, val, TRUE));
@@ -575,7 +569,6 @@ mrb_Float(mrb_state *mrb, mrb_value val)
       return mrb_convert_type(mrb, val, MRB_TT_FLOAT, "Float", "to_f");
   }
 }
-#endif
 
 MRB_API mrb_value
 mrb_to_str(mrb_state *mrb, mrb_value val)

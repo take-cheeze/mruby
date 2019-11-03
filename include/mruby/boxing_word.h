@@ -15,12 +15,10 @@
 #error MRB_INT64 cannot be used with MRB_WORD_BOXING in 32-bit mode.
 #endif
 
-#ifndef MRB_WITHOUT_FLOAT
 struct RFloat {
   MRB_OBJECT_HEADER;
   mrb_float f;
 };
-#endif
 
 struct RCptr {
   MRB_OBJECT_HEADER;
@@ -83,29 +81,21 @@ typedef union mrb_value {
     };
 #endif
     struct RBasic *bp;
-#ifndef MRB_WITHOUT_FLOAT
     struct RFloat *fp;
-#endif
     struct RCptr *vp;
   } value;
   unsigned long w;
 } mrb_value;
 
 MRB_API mrb_value mrb_word_boxing_cptr_value(struct mrb_state*, void*);
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value mrb_word_boxing_float_value(struct mrb_state*, mrb_float);
 MRB_API mrb_value mrb_word_boxing_float_pool(struct mrb_state*, mrb_float);
-#endif
 
-#ifndef MRB_WITHOUT_FLOAT
 #define mrb_float_pool(mrb,f) mrb_word_boxing_float_pool(mrb,f)
-#endif
 
 #define mrb_ptr(o)     (o).value.p
 #define mrb_cptr(o)    (o).value.vp->p
-#ifndef MRB_WITHOUT_FLOAT
 #define mrb_float(o)   (o).value.fp->f
-#endif
 #define mrb_fixnum(o)  BOXWORD_SHIFT_VALUE(o, FIXNUM, mrb_int)
 #ifdef MRB_64BIT
 #define mrb_symbol(o)  (o).value.sym
@@ -125,9 +115,7 @@ MRB_API mrb_value mrb_word_boxing_float_pool(struct mrb_state*, mrb_float);
 #define mrb_nil_p(o)  ((o).w == MRB_Qnil)
 #define mrb_false_p(o) ((o).w == MRB_Qfalse)
 #define mrb_true_p(o)  ((o).w == MRB_Qtrue)
-#ifndef MRB_WITHOUT_FLOAT
 #define mrb_float_p(o) BOXWORD_OBJ_TYPE_P(o, FLOAT)
-#endif
 #define mrb_array_p(o) BOXWORD_OBJ_TYPE_P(o, ARRAY)
 #define mrb_string_p(o) BOXWORD_OBJ_TYPE_P(o, STRING)
 #define mrb_hash_p(o) BOXWORD_OBJ_TYPE_P(o, HASH)
@@ -148,9 +136,7 @@ MRB_API mrb_value mrb_word_boxing_float_pool(struct mrb_state*, mrb_float);
 #define mrb_istruct_p(o) BOXWORD_OBJ_TYPE_P(o, ISTRUCT)
 #define mrb_break_p(o) BOXWORD_OBJ_TYPE_P(o, BREAK)
 
-#ifndef MRB_WITHOUT_FLOAT
 #define SET_FLOAT_VALUE(mrb,r,v) ((r) = mrb_word_boxing_float_value(mrb, v))
-#endif
 #define SET_CPTR_VALUE(mrb,r,v) ((r) = mrb_word_boxing_cptr_value(mrb, v))
 #define SET_UNDEF_VALUE(r) ((r).w = MRB_Qundef)
 #define SET_NIL_VALUE(r) ((r).w = MRB_Qnil)

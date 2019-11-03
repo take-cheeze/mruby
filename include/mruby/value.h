@@ -90,18 +90,12 @@ struct mrb_state;
 #ifdef MRB_BF_FLOAT
 #define BF_DOUBLE_AS_UINT64 1
 #include <libbf/libbf.h>
-typedef uint64_t mrb_float;
+typedef struct mrb_float { uint64_t v; } mrb_float;
 MRB_API mrb_float mrb_float_read(struct mrb_state *mrb, const char*, const char**);
 #define mrb_float_read(s, end) mrb_float_read(mrb, (s), (end))
 #else
-#ifndef MRB_WITHOUT_FLOAT
 MRB_API double mrb_float_read(const char*, char**);
-#ifdef MRB_USE_FLOAT
-  typedef float mrb_float;
-#else
-  typedef double mrb_float;
-#endif
-#endif
+typedef double mrb_float;
 #endif
 
 #if defined _MSC_VER && _MSC_VER < 1900
@@ -110,7 +104,7 @@ MRB_API int mrb_msvc_vsnprintf(char *s, size_t n, const char *format, va_list ar
 MRB_API int mrb_msvc_snprintf(char *s, size_t n, const char *format, ...);
 # define vsnprintf(s, n, format, arg) mrb_msvc_vsnprintf(s, n, format, arg)
 # define snprintf(s, n, format, ...) mrb_msvc_snprintf(s, n, format, __VA_ARGS__)
-# if _MSC_VER < 1800 && !defined MRB_WITHOUT_FLOAT
+# if _MSC_VER < 1800 && !defined MRB_BF_FLOAT
 #  include <float.h>
 #  define isfinite(n) _finite(n)
 #  define isnan _isnan
