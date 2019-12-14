@@ -157,3 +157,11 @@ task :deep_clean => ["clean", "clean_doc"] do
   end
   puts "Cleaned up mrbgems build folder"
 end
+
+desc 'Apply clang-format'
+task :clang_format do
+  Dir.chdir `git rev-parse --show-toplevel`.strip do
+    sh "git ls-files -- '**/*.cc' '**/*.h' '**/*.cpp' '**/*.hpp' '**/*.c' | xargs -P4 clang-format-9 -i"
+    sh "git diff --exit-code"
+  end
+end

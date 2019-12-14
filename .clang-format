@@ -1,0 +1,18 @@
+BasedOnStyle: Google
+
+IndentWidth: 2
+ColumnLimit: 100
+
+AlwaysBreakAfterReturnType: TopLevelDefinitions
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+IndentCaseLabels: false
+DerivePointerAlignment: false
+PointerAlignment: Right
+AlignConsecutiveAssignments: false
+AlignOperands: false
+AlignTrailingComments: true
+
+IndentPPDirectives: AfterHash
+AlignConsecutiveMacros: true
