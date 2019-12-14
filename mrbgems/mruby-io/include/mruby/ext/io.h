@@ -5,6 +5,8 @@
 #ifndef MRUBY_IO_H
 #define MRUBY_IO_H
 
+#include <mruby.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

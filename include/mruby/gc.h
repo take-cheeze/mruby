@@ -7,6 +7,8 @@
 #ifndef MRUBY_GC_H
 #define MRUBY_GC_H
 
+#include <mruby/value.h>
+
 #include "common.h"
 
 /**

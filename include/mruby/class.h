@@ -7,7 +7,7 @@
 #ifndef MRUBY_CLASS_H
 #define MRUBY_CLASS_H
 
-#include "common.h"
+#include <mruby.h>
 
 /**
  * Class class
