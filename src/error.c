@@ -5,18 +5,18 @@
 */
 
 #include <errno.h>
-#include <stdarg.h>
-#include <stdlib.h>
 #include <mruby.h>
 #include <mruby/array.h>
+#include <mruby/class.h>
+#include <mruby/debug.h>
+#include <mruby/error.h>
 #include <mruby/irep.h>
 #include <mruby/proc.h>
 #include <mruby/string.h>
-#include <mruby/variable.h>
-#include <mruby/debug.h>
-#include <mruby/error.h>
-#include <mruby/class.h>
 #include <mruby/throw.h>
+#include <mruby/variable.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 MRB_API mrb_value
 mrb_exc_new(mrb_state *mrb, struct RClass *c, const char *ptr, size_t len)
@@ -26,7 +26,7 @@ mrb_exc_new(mrb_state *mrb, struct RClass *c, const char *ptr, size_t len)
 }
 
 MRB_API mrb_value
-mrb_exc_new_str(mrb_state *mrb, struct RClass* c, mrb_value str)
+mrb_exc_new_str(mrb_state *mrb, struct RClass *c, mrb_value str)
 {
   mrb_to_str(mrb, str);
   return mrb_obj_new(mrb, c, 1, &str);
@@ -150,12 +150,10 @@ exc_inspect(mrb_state *mrb, mrb_value exc)
   if (mrb_string_p(file) && mrb_fixnum_p(line)) {
     if (append_mesg) {
       str = mrb_format(mrb, "%v:%v: %v (%v)", file, line, mesg, str);
-    }
-    else {
+    } else {
       str = mrb_format(mrb, "%v:%v: %v", file, line, str);
     }
-  }
-  else if (append_mesg) {
+  } else if (append_mesg) {
     str = mrb_format(mrb, "%v: %v", str, mesg);
   }
   return str;
@@ -169,8 +167,7 @@ set_backtrace(mrb_state *mrb, mrb_value exc, mrb_value backtrace)
   if (!mrb_array_p(backtrace)) {
   type_err:
     mrb_raise(mrb, E_TYPE_ERROR, "backtrace must be Array of String");
-  }
-  else {
+  } else {
     const mrb_value *p = RARRAY_PTR(backtrace);
     const mrb_value *pend = p + RARRAY_LEN(backtrace);
 
@@ -207,7 +204,7 @@ exc_debug_info(mrb_state *mrb, struct RObject *exc)
       mrb_irep *irep = ci->proc->body.irep;
 
       int32_t const line = mrb_debug_get_line(mrb, irep, err - irep->iseq);
-      char const* file = mrb_debug_get_filename(mrb, irep, err - irep->iseq);
+      char const *file = mrb_debug_get_filename(mrb, irep, err - irep->iseq);
       if (line != -1 && file) {
         mrb_obj_iv_set(mrb, exc, mrb_intern_lit(mrb, "file"), mrb_str_new_cstr(mrb, file));
         mrb_obj_iv_set(mrb, exc, mrb_intern_lit(mrb, "line"), mrb_fixnum_value(line));
@@ -224,11 +221,10 @@ mrb_exc_set(mrb_state *mrb, mrb_value exc)
 {
   if (mrb_nil_p(exc)) {
     mrb->exc = 0;
-  }
-  else {
+  } else {
     mrb->exc = mrb_obj_ptr(exc);
     if (mrb->gc.arena_idx > 0 &&
-        (struct RBasic*)mrb->exc == mrb->gc.arena[mrb->gc.arena_idx-1]) {
+        (struct RBasic *)mrb->exc == mrb->gc.arena[mrb->gc.arena_idx - 1]) {
       mrb->gc.arena_idx--;
     }
     if (!mrb->gc.out_of_memory && !mrb_frozen_p(mrb->exc)) {
@@ -243,8 +239,7 @@ mrb_exc_raise(mrb_state *mrb, mrb_value exc)
 {
   if (mrb_break_p(exc)) {
     mrb->exc = mrb_obj_ptr(exc);
-  }
-  else {
+  } else {
     if (!mrb_obj_is_kind_of(mrb, exc, mrb->eException_class)) {
       mrb_raise(mrb, E_TYPE_ERROR, "exception object expected");
     }
@@ -323,87 +318,86 @@ mrb_vformat(mrb_state *mrb, const char *format, va_list ap)
       }
       if (!*p) break;
       switch (*p) {
-        case 'c':
-          ch = (char)va_arg(ap, int);
-          chars = &ch;
-          len = 1;
-          goto L_cat;
-        case 'd': case 'i':
+      case 'c':
+        ch = (char)va_arg(ap, int);
+        chars = &ch;
+        len = 1;
+        goto L_cat;
+      case 'd':
+      case 'i':
 #if MRB_INT_MAX < INT_MAX
-          i = (mrb_int)va_arg(ap, int);
+        i = (mrb_int)va_arg(ap, int);
 #else
-          i = *p == 'd' ? (mrb_int)va_arg(ap, int) : va_arg(ap, mrb_int);
+        i = *p == 'd' ? (mrb_int)va_arg(ap, int) : va_arg(ap, mrb_int);
 #endif
-          obj = mrb_fixnum_value(i);
-          goto L_cat_obj;
+        obj = mrb_fixnum_value(i);
+        goto L_cat_obj;
 #ifndef MRB_WITHOUT_FLOAT
-        case 'f':
-          obj = mrb_float_value(mrb, (mrb_float)va_arg(ap, double));
-          goto L_cat_obj;
+      case 'f':
+        obj = mrb_float_value(mrb, (mrb_float)va_arg(ap, double));
+        goto L_cat_obj;
 #endif
-        case 'l':
-          chars = va_arg(ap, char*);
-          len = va_arg(ap, size_t);
-        L_cat:
-          if (inspect) {
-            obj = mrb_str_new(mrb, chars, len);
-            goto L_cat_obj;
-          }
-          mrb_str_cat(mrb, result, b,  e - b - 1);
-          mrb_str_cat(mrb, result, chars, len);
-          b = ++p;
-          mrb_gc_arena_restore(mrb, ai);
-          break;
-        case 'n':
-          obj = mrb_symbol_value(va_arg(ap, mrb_sym));
+      case 'l':
+        chars = va_arg(ap, char *);
+        len = va_arg(ap, size_t);
+      L_cat:
+        if (inspect) {
+          obj = mrb_str_new(mrb, chars, len);
           goto L_cat_obj;
-        case 's':
-          chars = va_arg(ap, char*);
-          len = strlen(chars);
-          goto L_cat;
-        case 't':
-          cls = mrb_class(mrb, va_arg(ap, mrb_value));
-          goto L_cat_class;
-        case 'v': case 'S':
-          obj = va_arg(ap, mrb_value);
-        L_cat_obj:
-          str = (inspect ? mrb_inspect : mrb_obj_as_string)(mrb, obj);
-          chars = RSTRING_PTR(str);
-          len = RSTRING_LEN(str);
-          inspect = FALSE;
-          goto L_cat;
-        case 'C':
-          cls = va_arg(ap, struct RClass*);
-        L_cat_class:
-          obj = mrb_obj_value(cls);
+        }
+        mrb_str_cat(mrb, result, b, e - b - 1);
+        mrb_str_cat(mrb, result, chars, len);
+        b = ++p;
+        mrb_gc_arena_restore(mrb, ai);
+        break;
+      case 'n':
+        obj = mrb_symbol_value(va_arg(ap, mrb_sym));
+        goto L_cat_obj;
+      case 's':
+        chars = va_arg(ap, char *);
+        len = strlen(chars);
+        goto L_cat;
+      case 't':
+        cls = mrb_class(mrb, va_arg(ap, mrb_value));
+        goto L_cat_class;
+      case 'v':
+      case 'S':
+        obj = va_arg(ap, mrb_value);
+      L_cat_obj:
+        str = (inspect ? mrb_inspect : mrb_obj_as_string)(mrb, obj);
+        chars = RSTRING_PTR(str);
+        len = RSTRING_LEN(str);
+        inspect = FALSE;
+        goto L_cat;
+      case 'C':
+        cls = va_arg(ap, struct RClass *);
+      L_cat_class:
+        obj = mrb_obj_value(cls);
+        goto L_cat_obj;
+      case 'T':
+        obj = va_arg(ap, mrb_value);
+      L_cat_real_class_of:
+        cls = mrb_obj_class(mrb, obj);
+        goto L_cat_class;
+      case 'Y':
+        obj = va_arg(ap, mrb_value);
+        if (!mrb_test(obj) || mrb_true_p(obj)) {
+          inspect = TRUE;
           goto L_cat_obj;
-        case 'T':
-          obj = va_arg(ap, mrb_value);
-        L_cat_real_class_of:
-          cls = mrb_obj_class(mrb, obj);
-          goto L_cat_class;
-        case 'Y':
-          obj = va_arg(ap, mrb_value);
-          if (!mrb_test(obj) || mrb_true_p(obj)) {
-            inspect = TRUE;
-            goto L_cat_obj;
-          }
-          else {
-            goto L_cat_real_class_of;
-          }
-        case '%':
-        L_cat_current:
-          chars = p;
-          len = 1;
-          goto L_cat;
-        default:
-          mrb_raisef(mrb, E_ARGUMENT_ERROR, "malformed format string - %%%c", *p);
+        } else {
+          goto L_cat_real_class_of;
+        }
+      case '%':
+      L_cat_current:
+        chars = p;
+        len = 1;
+        goto L_cat;
+      default:
+        mrb_raisef(mrb, E_ARGUMENT_ERROR, "malformed format string - %%%c", *p);
       }
-    }
-    else if (c == '\\') {
+    } else if (c == '\\') {
       if (!*p) break;
       goto L_cat_current;
-
     }
   }
 
@@ -432,11 +426,10 @@ raise_va(mrb_state *mrb, struct RClass *c, const char *fmt, va_list ap, int argc
   mesg = mrb_vformat(mrb, fmt, ap);
   if (argv == NULL) {
     argv = &mesg;
-  }
-  else {
+  } else {
     argv[0] = mesg;
   }
-  mrb_exc_raise(mrb, mrb_obj_new(mrb, c, argc+1, argv));
+  mrb_exc_raise(mrb, mrb_obj_new(mrb, c, argc + 1, argv));
 }
 
 MRB_API mrb_noreturn void
@@ -501,43 +494,39 @@ mrb_make_exception(mrb_state *mrb, mrb_int argc, const mrb_value *argv)
 
   mesg = mrb_nil_value();
   switch (argc) {
-    case 0:
+  case 0:
     break;
-    case 1:
-      if (mrb_nil_p(argv[0]))
-        break;
-      if (mrb_string_p(argv[0])) {
-        mesg = mrb_exc_new_str(mrb, E_RUNTIME_ERROR, argv[0]);
-        break;
-      }
-      n = 0;
-      goto exception_call;
-
-    case 2:
-    case 3:
-      n = 1;
-exception_call:
-      {
-        mrb_sym exc = mrb_intern_lit(mrb, "exception");
-        if (mrb_respond_to(mrb, argv[0], exc)) {
-          mesg = mrb_funcall_argv(mrb, argv[0], exc, n, argv+1);
-        }
-        else {
-          /* undef */
-          mrb_raise(mrb, E_TYPE_ERROR, "exception class/object expected");
-        }
-      }
-
+  case 1:
+    if (mrb_nil_p(argv[0])) break;
+    if (mrb_string_p(argv[0])) {
+      mesg = mrb_exc_new_str(mrb, E_RUNTIME_ERROR, argv[0]);
       break;
-    default:
-      mrb_raisef(mrb, E_ARGUMENT_ERROR, "wrong number of arguments (%i for 0..3)", argc);
-      break;
+    }
+    n = 0;
+    goto exception_call;
+
+  case 2:
+  case 3:
+    n = 1;
+  exception_call : {
+    mrb_sym exc = mrb_intern_lit(mrb, "exception");
+    if (mrb_respond_to(mrb, argv[0], exc)) {
+      mesg = mrb_funcall_argv(mrb, argv[0], exc, n, argv + 1);
+    } else {
+      /* undef */
+      mrb_raise(mrb, E_TYPE_ERROR, "exception class/object expected");
+    }
+  }
+
+  break;
+  default:
+    mrb_raisef(mrb, E_ARGUMENT_ERROR, "wrong number of arguments (%i for 0..3)", argc);
+    break;
   }
   if (argc > 0) {
     if (!mrb_obj_is_kind_of(mrb, mesg, mrb->eException_class))
       mrb_raise(mrb, mrb->eException_class, "exception object expected");
-    if (argc > 2)
-      set_backtrace(mrb, mesg, argv[2]);
+    if (argc > 2) set_backtrace(mrb, mesg, argv[2]);
   }
 
   return mesg;
@@ -553,19 +542,18 @@ mrb_sys_fail(mrb_state *mrb, const char *mesg)
   if (mrb_class_defined(mrb, "SystemCallError")) {
     sce = mrb_class_get(mrb, "SystemCallError");
     if (mesg != NULL) {
-      mrb_funcall(mrb, mrb_obj_value(sce), "_sys_fail", 2, mrb_fixnum_value(no), mrb_str_new_cstr(mrb, mesg));
-    }
-    else {
+      mrb_funcall(mrb, mrb_obj_value(sce), "_sys_fail", 2, mrb_fixnum_value(no),
+                  mrb_str_new_cstr(mrb, mesg));
+    } else {
       mrb_funcall(mrb, mrb_obj_value(sce), "_sys_fail", 1, mrb_fixnum_value(no));
     }
-  }
-  else {
+  } else {
     mrb_raise(mrb, E_RUNTIME_ERROR, mesg);
   }
 }
 
 MRB_API mrb_noreturn void
-mrb_no_method_error(mrb_state *mrb, mrb_sym id, mrb_value args, char const* fmt, ...)
+mrb_no_method_error(mrb_state *mrb, mrb_sym id, mrb_value args, char const *fmt, ...)
 {
   mrb_value exc;
   mrb_value argv[3];
@@ -591,21 +579,23 @@ mrb_init_exception(mrb_state *mrb)
 {
   struct RClass *exception, *script_error, *stack_error, *nomem_error;
 
-  mrb->eException_class = exception = mrb_define_class(mrb, "Exception", mrb->object_class); /* 15.2.22 */
+  mrb->eException_class = exception =
+      mrb_define_class(mrb, "Exception", mrb->object_class); /* 15.2.22 */
   MRB_SET_INSTANCE_TT(exception, MRB_TT_EXCEPTION);
-  mrb_define_class_method(mrb, exception, "exception", mrb_instance_new,  MRB_ARGS_OPT(1));
-  mrb_define_method(mrb, exception, "exception",       exc_exception,     MRB_ARGS_OPT(1));
-  mrb_define_method(mrb, exception, "initialize",      exc_initialize,    MRB_ARGS_OPT(1));
-  mrb_define_method(mrb, exception, "to_s",            exc_to_s,          MRB_ARGS_NONE());
-  mrb_define_method(mrb, exception, "message",         exc_message,       MRB_ARGS_NONE());
-  mrb_define_method(mrb, exception, "inspect",         exc_inspect,       MRB_ARGS_NONE());
-  mrb_define_method(mrb, exception, "backtrace",       mrb_exc_backtrace, MRB_ARGS_NONE());
-  mrb_define_method(mrb, exception, "set_backtrace",   exc_set_backtrace, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, exception, "exception", mrb_instance_new, MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, exception, "exception", exc_exception, MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, exception, "initialize", exc_initialize, MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, exception, "to_s", exc_to_s, MRB_ARGS_NONE());
+  mrb_define_method(mrb, exception, "message", exc_message, MRB_ARGS_NONE());
+  mrb_define_method(mrb, exception, "inspect", exc_inspect, MRB_ARGS_NONE());
+  mrb_define_method(mrb, exception, "backtrace", mrb_exc_backtrace, MRB_ARGS_NONE());
+  mrb_define_method(mrb, exception, "set_backtrace", exc_set_backtrace, MRB_ARGS_REQ(1));
 
-  mrb->eStandardError_class = mrb_define_class(mrb, "StandardError", mrb->eException_class); /* 15.2.23 */
-  mrb_define_class(mrb, "RuntimeError", mrb->eStandardError_class);          /* 15.2.28 */
-  script_error = mrb_define_class(mrb, "ScriptError", mrb->eException_class);                /* 15.2.37 */
-  mrb_define_class(mrb, "SyntaxError", script_error);                                        /* 15.2.38 */
+  mrb->eStandardError_class =
+      mrb_define_class(mrb, "StandardError", mrb->eException_class);          /* 15.2.23 */
+  mrb_define_class(mrb, "RuntimeError", mrb->eStandardError_class);           /* 15.2.28 */
+  script_error = mrb_define_class(mrb, "ScriptError", mrb->eException_class); /* 15.2.37 */
+  mrb_define_class(mrb, "SyntaxError", script_error);                         /* 15.2.38 */
   stack_error = mrb_define_class(mrb, "SystemStackError", exception);
   mrb->stack_err = mrb_obj_ptr(mrb_exc_new_str_lit(mrb, stack_error, "stack level too deep"));
 

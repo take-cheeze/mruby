@@ -5,34 +5,33 @@
 #include "mruby.h"
 #include "mruby/class.h"
 #include "mruby/data.h"
-#include "mruby/string.h"
 #include "mruby/ext/io.h"
+#include "mruby/string.h"
 
 #if MRUBY_RELEASE_NO < 10000
-#include "error.h"
+#  include "error.h"
 #else
-#include "mruby/error.h"
+#  include "mruby/error.h"
 #endif
 
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #if defined(_WIN32) || defined(_WIN64)
-  #define LSTAT stat
-  #include <winsock.h>
+#  define LSTAT stat
+#  include <winsock.h>
 #else
-  #define LSTAT lstat
-  #include <sys/file.h>
-  #include <sys/param.h>
-  #include <sys/wait.h>
-  #include <libgen.h>
-  #include <pwd.h>
-  #include <unistd.h>
+#  define LSTAT lstat
+#  include <libgen.h>
+#  include <pwd.h>
+#  include <sys/file.h>
+#  include <sys/param.h>
+#  include <sys/wait.h>
+#  include <unistd.h>
 #endif
 
-#include <fcntl.h>
-
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,8 +51,7 @@ mrb_stat0(mrb_state *mrb, mrb_value obj, struct stat *st, int do_lstat)
 
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
     return -1;
-  }
-  else {
+  } else {
     char *path = mrb_locale_from_utf8(RSTRING_CSTR(mrb, obj), -1);
     int ret;
     if (do_lstat) {
@@ -95,7 +93,7 @@ mrb_value
 mrb_filetest_s_directory_p(mrb_state *mrb, mrb_value klass)
 {
 #ifndef S_ISDIR
-#   define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#  define S_ISDIR(m) (((m)&S_IFMT) == S_IFDIR)
 #endif
 
   struct stat st;
@@ -103,10 +101,8 @@ mrb_filetest_s_directory_p(mrb_state *mrb, mrb_value klass)
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_false_value();
-  if (S_ISDIR(st.st_mode))
-    return mrb_true_value();
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_false_value();
+  if (S_ISDIR(st.st_mode)) return mrb_true_value();
 
   return mrb_false_value();
 }
@@ -124,22 +120,20 @@ mrb_filetest_s_pipe_p(mrb_state *mrb, mrb_value klass)
 #if defined(_WIN32) || defined(_WIN64)
   mrb_raise(mrb, E_NOTIMP_ERROR, "pipe is not supported on this platform");
 #else
-#ifdef S_IFIFO
-#  ifndef S_ISFIFO
-#    define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
-#  endif
+#  ifdef S_IFIFO
+#    ifndef S_ISFIFO
+#      define S_ISFIFO(m) (((m)&S_IFMT) == S_IFIFO)
+#    endif
 
   struct stat st;
   mrb_value obj;
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_false_value();
-  if (S_ISFIFO(st.st_mode))
-    return mrb_true_value();
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_false_value();
+  if (S_ISFIFO(st.st_mode)) return mrb_true_value();
 
-#endif
+#  endif
   return mrb_false_value();
 #endif
 }
@@ -157,31 +151,29 @@ mrb_filetest_s_symlink_p(mrb_state *mrb, mrb_value klass)
 #if defined(_WIN32) || defined(_WIN64)
   mrb_raise(mrb, E_NOTIMP_ERROR, "symlink is not supported on this platform");
 #else
-#ifndef S_ISLNK
-#  ifdef _S_ISLNK
-#    define S_ISLNK(m) _S_ISLNK(m)
-#  else
-#    ifdef _S_IFLNK
-#      define S_ISLNK(m) (((m) & S_IFMT) == _S_IFLNK)
+#  ifndef S_ISLNK
+#    ifdef _S_ISLNK
+#      define S_ISLNK(m) _S_ISLNK(m)
 #    else
-#      ifdef S_IFLNK
-#        define S_ISLNK(m) (((m) & S_IFMT) == S_IFLNK)
+#      ifdef _S_IFLNK
+#        define S_ISLNK(m) (((m)&S_IFMT) == _S_IFLNK)
+#      else
+#        ifdef S_IFLNK
+#          define S_ISLNK(m) (((m)&S_IFMT) == S_IFLNK)
+#        endif
 #      endif
 #    endif
 #  endif
-#endif
 
-#ifdef S_ISLNK
+#  ifdef S_ISLNK
   struct stat st;
   mrb_value obj;
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_lstat(mrb, obj, &st) == -1)
-    return mrb_false_value();
-  if (S_ISLNK(st.st_mode))
-    return mrb_true_value();
-#endif
+  if (mrb_lstat(mrb, obj, &st) == -1) return mrb_false_value();
+  if (S_ISLNK(st.st_mode)) return mrb_true_value();
+#  endif
 
   return mrb_false_value();
 #endif
@@ -200,31 +192,29 @@ mrb_filetest_s_socket_p(mrb_state *mrb, mrb_value klass)
 #if defined(_WIN32) || defined(_WIN64)
   mrb_raise(mrb, E_NOTIMP_ERROR, "socket is not supported on this platform");
 #else
-#ifndef S_ISSOCK
-#  ifdef _S_ISSOCK
-#    define S_ISSOCK(m) _S_ISSOCK(m)
-#  else
-#    ifdef _S_IFSOCK
-#      define S_ISSOCK(m) (((m) & S_IFMT) == _S_IFSOCK)
+#  ifndef S_ISSOCK
+#    ifdef _S_ISSOCK
+#      define S_ISSOCK(m) _S_ISSOCK(m)
 #    else
-#      ifdef S_IFSOCK
-#        define S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)
+#      ifdef _S_IFSOCK
+#        define S_ISSOCK(m) (((m)&S_IFMT) == _S_IFSOCK)
+#      else
+#        ifdef S_IFSOCK
+#          define S_ISSOCK(m) (((m)&S_IFMT) == S_IFSOCK)
+#        endif
 #      endif
 #    endif
 #  endif
-#endif
 
-#ifdef S_ISSOCK
+#  ifdef S_ISSOCK
   struct stat st;
   mrb_value obj;
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_false_value();
-  if (S_ISSOCK(st.st_mode))
-    return mrb_true_value();
-#endif
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_false_value();
+  if (S_ISSOCK(st.st_mode)) return mrb_true_value();
+#  endif
 
   return mrb_false_value();
 #endif
@@ -245,8 +235,7 @@ mrb_filetest_s_exist_p(mrb_state *mrb, mrb_value klass)
   mrb_value obj;
 
   mrb_get_args(mrb, "o", &obj);
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_false_value();
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_false_value();
 
   return mrb_true_value();
 }
@@ -263,7 +252,7 @@ mrb_value
 mrb_filetest_s_file_p(mrb_state *mrb, mrb_value klass)
 {
 #ifndef S_ISREG
-#   define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#  define S_ISREG(m) (((m)&S_IFMT) == S_IFREG)
 #endif
 
   struct stat st;
@@ -271,10 +260,8 @@ mrb_filetest_s_file_p(mrb_state *mrb, mrb_value klass)
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_false_value();
-  if (S_ISREG(st.st_mode))
-    return mrb_true_value();
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_false_value();
+  if (S_ISREG(st.st_mode)) return mrb_true_value();
 
   return mrb_false_value();
 }
@@ -295,10 +282,8 @@ mrb_filetest_s_zero_p(mrb_state *mrb, mrb_value klass)
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_false_value();
-  if (st.st_size == 0)
-    return mrb_true_value();
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_false_value();
+  if (st.st_size == 0) return mrb_true_value();
 
   return mrb_false_value();
 }
@@ -320,8 +305,7 @@ mrb_filetest_s_size(mrb_state *mrb, mrb_value klass)
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    mrb_sys_fail(mrb, "mrb_stat");
+  if (mrb_stat(mrb, obj, &st) < 0) mrb_sys_fail(mrb, "mrb_stat");
 
   return mrb_fixnum_value(st.st_size);
 }
@@ -342,10 +326,8 @@ mrb_filetest_s_size_p(mrb_state *mrb, mrb_value klass)
 
   mrb_get_args(mrb, "o", &obj);
 
-  if (mrb_stat(mrb, obj, &st) < 0)
-    return mrb_nil_value();
-  if (st.st_size == 0)
-    return mrb_nil_value();
+  if (mrb_stat(mrb, obj, &st) < 0) return mrb_nil_value();
+  if (st.st_size == 0) return mrb_nil_value();
 
   return mrb_fixnum_value(st.st_size);
 }
@@ -358,13 +340,13 @@ mrb_init_file_test(mrb_state *mrb)
   f = mrb_define_class(mrb, "FileTest", mrb->object_class);
 
   mrb_define_class_method(mrb, f, "directory?", mrb_filetest_s_directory_p, MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "exist?",     mrb_filetest_s_exist_p,     MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "exists?",    mrb_filetest_s_exist_p,     MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "file?",      mrb_filetest_s_file_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "pipe?",      mrb_filetest_s_pipe_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "size",       mrb_filetest_s_size,        MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "size?",      mrb_filetest_s_size_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "socket?",    mrb_filetest_s_socket_p,    MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "symlink?",   mrb_filetest_s_symlink_p,   MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, f, "zero?",      mrb_filetest_s_zero_p,      MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "exist?", mrb_filetest_s_exist_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "exists?", mrb_filetest_s_exist_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "file?", mrb_filetest_s_file_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "pipe?", mrb_filetest_s_pipe_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "size", mrb_filetest_s_size, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "size?", mrb_filetest_s_size_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "socket?", mrb_filetest_s_socket_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "symlink?", mrb_filetest_s_symlink_p, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, f, "zero?", mrb_filetest_s_zero_p, MRB_ARGS_REQ(1));
 }

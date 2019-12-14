@@ -1,6 +1,6 @@
 #include <mruby.h>
-#include <mruby/khash.h>
 #include <mruby/array.h>
+#include <mruby/khash.h>
 #include <mruby/string.h>
 
 /*
@@ -25,8 +25,8 @@ mrb_sym_all_symbols(mrb_state *mrb, mrb_value self)
   mrb_sym i, lim;
   mrb_value ary = mrb_ary_new_capa(mrb, mrb->symidx);
 
-  for (i=1, lim=mrb->symidx+1; i<lim; i++) {
-    mrb_sym sym = i<<1;
+  for (i = 1, lim = mrb->symidx + 1; i < lim; i++) {
+    mrb_sym sym = i << 1;
     mrb_ary_push(mrb, ary, mrb_symbol_value(sym));
   }
 
@@ -55,7 +55,7 @@ mrb_sym_length(mrb_state *mrb, mrb_value self)
 }
 
 void
-mrb_mruby_symbol_ext_gem_init(mrb_state* mrb)
+mrb_mruby_symbol_ext_gem_init(mrb_state *mrb)
 {
   struct RClass *s = mrb->symbol_class;
 #ifdef MRB_ENABLE_ALL_SYMBOLS
@@ -66,6 +66,6 @@ mrb_mruby_symbol_ext_gem_init(mrb_state* mrb)
 }
 
 void
-mrb_mruby_symbol_ext_gem_final(mrb_state* mrb)
+mrb_mruby_symbol_ext_gem_final(mrb_state *mrb)
 {
 }

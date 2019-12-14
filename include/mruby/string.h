@@ -16,8 +16,7 @@ MRB_BEGIN_DECL
 
 extern const char mrb_digitmap[];
 
-#define RSTRING_EMBED_LEN_MAX \
-  ((mrb_int)(sizeof(void*) * 3 + sizeof(void*) - 32 / CHAR_BIT - 1))
+#define RSTRING_EMBED_LEN_MAX ((mrb_int)(sizeof(void *) * 3 + sizeof(void *) - 32 / CHAR_BIT - 1))
 
 struct RString {
   MRB_OBJECT_HEADER;
@@ -39,88 +38,88 @@ struct RStringEmbed {
 };
 
 #define RSTR_SET_TYPE_FLAG(s, type) (RSTR_UNSET_TYPE_FLAG(s), (s)->flags |= MRB_STR_##type)
-#define RSTR_UNSET_TYPE_FLAG(s) ((s)->flags &= ~(MRB_STR_TYPE_MASK|MRB_STR_EMBED_LEN_MASK))
+#define RSTR_UNSET_TYPE_FLAG(s)     ((s)->flags &= ~(MRB_STR_TYPE_MASK | MRB_STR_EMBED_LEN_MASK))
 
-#define RSTR_EMBED_P(s) ((s)->flags & MRB_STR_EMBED)
-#define RSTR_SET_EMBED_FLAG(s) ((s)->flags |= MRB_STR_EMBED)
-#define RSTR_UNSET_EMBED_FLAG(s) ((s)->flags &= ~(MRB_STR_EMBED|MRB_STR_EMBED_LEN_MASK))
-#define RSTR_SET_EMBED_LEN(s, n) do {\
-  size_t tmp_n = (n);\
-  (s)->flags &= ~MRB_STR_EMBED_LEN_MASK;\
-  (s)->flags |= (tmp_n) << MRB_STR_EMBED_LEN_SHIFT;\
-} while (0)
-#define RSTR_SET_LEN(s, n) do {\
-  if (RSTR_EMBED_P(s)) {\
-    RSTR_SET_EMBED_LEN((s),(n));\
-  }\
-  else {\
-    (s)->as.heap.len = (mrb_ssize)(n);\
-  }\
-} while (0)
-#define RSTR_EMBED_PTR(s) (((struct RStringEmbed*)(s))->ary)
-#define RSTR_EMBED_LEN(s)\
+#define RSTR_EMBED_P(s)          ((s)->flags & MRB_STR_EMBED)
+#define RSTR_SET_EMBED_FLAG(s)   ((s)->flags |= MRB_STR_EMBED)
+#define RSTR_UNSET_EMBED_FLAG(s) ((s)->flags &= ~(MRB_STR_EMBED | MRB_STR_EMBED_LEN_MASK))
+#define RSTR_SET_EMBED_LEN(s, n)                      \
+  do {                                                \
+    size_t tmp_n = (n);                               \
+    (s)->flags &= ~MRB_STR_EMBED_LEN_MASK;            \
+    (s)->flags |= (tmp_n) << MRB_STR_EMBED_LEN_SHIFT; \
+  } while (0)
+#define RSTR_SET_LEN(s, n)               \
+  do {                                   \
+    if (RSTR_EMBED_P(s)) {               \
+      RSTR_SET_EMBED_LEN((s), (n));      \
+    } else {                             \
+      (s)->as.heap.len = (mrb_ssize)(n); \
+    }                                    \
+  } while (0)
+#define RSTR_EMBED_PTR(s) (((struct RStringEmbed *)(s))->ary)
+#define RSTR_EMBED_LEN(s) \
   (mrb_int)(((s)->flags & MRB_STR_EMBED_LEN_MASK) >> MRB_STR_EMBED_LEN_SHIFT)
 #define RSTR_EMBEDDABLE_P(len) ((len) <= RSTRING_EMBED_LEN_MAX)
 
-#define RSTR_PTR(s) ((RSTR_EMBED_P(s)) ? RSTR_EMBED_PTR(s) : (s)->as.heap.ptr)
-#define RSTR_LEN(s) ((RSTR_EMBED_P(s)) ? RSTR_EMBED_LEN(s) : (s)->as.heap.len)
+#define RSTR_PTR(s)  ((RSTR_EMBED_P(s)) ? RSTR_EMBED_PTR(s) : (s)->as.heap.ptr)
+#define RSTR_LEN(s)  ((RSTR_EMBED_P(s)) ? RSTR_EMBED_LEN(s) : (s)->as.heap.len)
 #define RSTR_CAPA(s) (RSTR_EMBED_P(s) ? RSTRING_EMBED_LEN_MAX : (s)->as.heap.aux.capa)
 
-#define RSTR_SHARED_P(s) ((s)->flags & MRB_STR_SHARED)
-#define RSTR_SET_SHARED_FLAG(s) ((s)->flags |= MRB_STR_SHARED)
+#define RSTR_SHARED_P(s)          ((s)->flags & MRB_STR_SHARED)
+#define RSTR_SET_SHARED_FLAG(s)   ((s)->flags |= MRB_STR_SHARED)
 #define RSTR_UNSET_SHARED_FLAG(s) ((s)->flags &= ~MRB_STR_SHARED)
 
-#define RSTR_FSHARED_P(s) ((s)->flags & MRB_STR_FSHARED)
-#define RSTR_SET_FSHARED_FLAG(s) ((s)->flags |= MRB_STR_FSHARED)
+#define RSTR_FSHARED_P(s)          ((s)->flags & MRB_STR_FSHARED)
+#define RSTR_SET_FSHARED_FLAG(s)   ((s)->flags |= MRB_STR_FSHARED)
 #define RSTR_UNSET_FSHARED_FLAG(s) ((s)->flags &= ~MRB_STR_FSHARED)
 
-#define RSTR_NOFREE_P(s) ((s)->flags & MRB_STR_NOFREE)
-#define RSTR_SET_NOFREE_FLAG(s) ((s)->flags |= MRB_STR_NOFREE)
+#define RSTR_NOFREE_P(s)          ((s)->flags & MRB_STR_NOFREE)
+#define RSTR_SET_NOFREE_FLAG(s)   ((s)->flags |= MRB_STR_NOFREE)
 #define RSTR_UNSET_NOFREE_FLAG(s) ((s)->flags &= ~MRB_STR_NOFREE)
 
 #ifdef MRB_UTF8_STRING
-# define RSTR_ASCII_P(s) ((s)->flags & MRB_STR_ASCII)
-# define RSTR_SET_ASCII_FLAG(s) ((s)->flags |= MRB_STR_ASCII)
-# define RSTR_UNSET_ASCII_FLAG(s) ((s)->flags &= ~MRB_STR_ASCII)
-# define RSTR_WRITE_ASCII_FLAG(s, v) (RSTR_UNSET_ASCII_FLAG(s), (s)->flags |= v)
-# define RSTR_COPY_ASCII_FLAG(dst, src) RSTR_WRITE_ASCII_FLAG(dst, RSTR_ASCII_P(src))
+#  define RSTR_ASCII_P(s)                ((s)->flags & MRB_STR_ASCII)
+#  define RSTR_SET_ASCII_FLAG(s)         ((s)->flags |= MRB_STR_ASCII)
+#  define RSTR_UNSET_ASCII_FLAG(s)       ((s)->flags &= ~MRB_STR_ASCII)
+#  define RSTR_WRITE_ASCII_FLAG(s, v)    (RSTR_UNSET_ASCII_FLAG(s), (s)->flags |= v)
+#  define RSTR_COPY_ASCII_FLAG(dst, src) RSTR_WRITE_ASCII_FLAG(dst, RSTR_ASCII_P(src))
 #else
-# define RSTR_ASCII_P(s) (void)0
-# define RSTR_SET_ASCII_FLAG(s) (void)0
-# define RSTR_UNSET_ASCII_FLAG(s) (void)0
-# define RSTR_WRITE_ASCII_FLAG(s, v) (void)0
-# define RSTR_COPY_ASCII_FLAG(dst, src) (void)0
+#  define RSTR_ASCII_P(s)                (void)0
+#  define RSTR_SET_ASCII_FLAG(s)         (void)0
+#  define RSTR_UNSET_ASCII_FLAG(s)       (void)0
+#  define RSTR_WRITE_ASCII_FLAG(s, v)    (void)0
+#  define RSTR_COPY_ASCII_FLAG(dst, src) (void)0
 #endif
 
-#define RSTR_POOL_P(s) ((s)->flags & MRB_STR_POOL)
+#define RSTR_POOL_P(s)        ((s)->flags & MRB_STR_POOL)
 #define RSTR_SET_POOL_FLAG(s) ((s)->flags |= MRB_STR_POOL)
 
 /**
  * Returns a pointer from a Ruby string
  */
-#define mrb_str_ptr(s)       ((struct RString*)(mrb_ptr(s)))
+#define mrb_str_ptr(s)       ((struct RString *)(mrb_ptr(s)))
 #define RSTRING(s)           mrb_str_ptr(s)
 #define RSTRING_PTR(s)       RSTR_PTR(RSTRING(s))
 #define RSTRING_EMBED_LEN(s) RSTR_EMBED_LEN(RSTRING(s))
 #define RSTRING_LEN(s)       RSTR_LEN(RSTRING(s))
 #define RSTRING_CAPA(s)      RSTR_CAPA(RSTRING(s))
 #define RSTRING_END(s)       (RSTRING_PTR(s) + RSTRING_LEN(s))
-MRB_API mrb_int mrb_str_strlen(mrb_state*, struct RString*);
-#define RSTRING_CSTR(mrb,s)  mrb_string_cstr(mrb, s)
+MRB_API mrb_int mrb_str_strlen(mrb_state *, struct RString *);
+#define RSTRING_CSTR(mrb, s) mrb_string_cstr(mrb, s)
 
-#define MRB_STR_SHARED    1
-#define MRB_STR_FSHARED   2
-#define MRB_STR_NOFREE    4
-#define MRB_STR_EMBED     8  /* type flags up to here */
-#define MRB_STR_POOL     16  /* status flags from here */
-#define MRB_STR_ASCII    32
+#define MRB_STR_SHARED          1
+#define MRB_STR_FSHARED         2
+#define MRB_STR_NOFREE          4
+#define MRB_STR_EMBED           8  /* type flags up to here */
+#define MRB_STR_POOL            16 /* status flags from here */
+#define MRB_STR_ASCII           32
 #define MRB_STR_EMBED_LEN_SHIFT 6
-#define MRB_STR_EMBED_LEN_BIT 5
-#define MRB_STR_EMBED_LEN_MASK (((1 << MRB_STR_EMBED_LEN_BIT) - 1) << MRB_STR_EMBED_LEN_SHIFT)
-#define MRB_STR_TYPE_MASK (MRB_STR_POOL - 1)
+#define MRB_STR_EMBED_LEN_BIT   5
+#define MRB_STR_EMBED_LEN_MASK  (((1 << MRB_STR_EMBED_LEN_BIT) - 1) << MRB_STR_EMBED_LEN_SHIFT)
+#define MRB_STR_TYPE_MASK       (MRB_STR_POOL - 1)
 
-
-void mrb_gc_free_str(mrb_state*, struct RString*);
+void mrb_gc_free_str(mrb_state *, struct RString *);
 
 MRB_API void mrb_str_modify(mrb_state *mrb, struct RString *s);
 /* mrb_str_modify() with keeping ASCII flag if set */
@@ -129,8 +128,10 @@ MRB_API void mrb_str_modify_keep_ascii(mrb_state *mrb, struct RString *s);
 /**
  * Finds the index of a substring in a string
  */
-MRB_API mrb_int mrb_str_index(mrb_state *mrb, mrb_value str, const char *p, mrb_int len, mrb_int offset);
-#define mrb_str_index_lit(mrb, str, lit, off) mrb_str_index(mrb, str, lit, mrb_strlen_lit(lit), off);
+MRB_API mrb_int mrb_str_index(mrb_state *mrb, mrb_value str, const char *p, mrb_int len,
+                              mrb_int offset);
+#define mrb_str_index_lit(mrb, str, lit, off) \
+  mrb_str_index(mrb, str, lit, mrb_strlen_lit(lit), off);
 
 /**
  * Appends self to other. Returns self as a concatenated string.
@@ -164,7 +165,7 @@ MRB_API mrb_int mrb_str_index(mrb_state *mrb, mrb_value str, const char *p, mrb_
  *
  *       mrb_close(mrb);
  *       return 0;
- *     } 
+ *     }
  *
  * Result:
  *
@@ -342,7 +343,6 @@ MRB_API mrb_value mrb_check_string_type(mrb_state *mrb, mrb_value str);
 /* obsolete: use mrb_ensure_string_type() instead */
 MRB_API mrb_value mrb_string_type(mrb_state *mrb, mrb_value str);
 
-
 MRB_API mrb_value mrb_str_new_capa(mrb_state *mrb, size_t capa);
 MRB_API mrb_value mrb_str_buf_new(mrb_state *mrb, size_t capa);
 
@@ -426,7 +426,8 @@ MRB_API mrb_value mrb_str_cat_str(mrb_state *mrb, mrb_value str, mrb_value str2)
 MRB_API mrb_value mrb_str_append(mrb_state *mrb, mrb_value str, mrb_value str2);
 
 /**
- * Returns 0 if both Ruby strings are equal. Returns a value < 0 if Ruby str1 is less than Ruby str2. Returns a value > 0 if Ruby str2 is greater than Ruby str1.
+ * Returns 0 if both Ruby strings are equal. Returns a value < 0 if Ruby str1 is less than Ruby
+ * str2. Returns a value > 0 if Ruby str2 is greater than Ruby str1.
  */
 MRB_API int mrb_str_cmp(mrb_state *mrb, mrb_value str1, mrb_value str2);
 
@@ -457,9 +458,9 @@ mrb_value mrb_str_dump(mrb_state *mrb, mrb_value str);
 mrb_value mrb_str_inspect(mrb_state *mrb, mrb_value str);
 
 /* For backward compatibility */
-#define mrb_str_cat2(mrb, str, ptr) mrb_str_cat_cstr(mrb, str, ptr)
+#define mrb_str_cat2(mrb, str, ptr)         mrb_str_cat_cstr(mrb, str, ptr)
 #define mrb_str_buf_cat(mrb, str, ptr, len) mrb_str_cat(mrb, str, ptr, len)
-#define mrb_str_buf_append(mrb, str, str2) mrb_str_cat_str(mrb, str, str2)
+#define mrb_str_buf_append(mrb, str, str2)  mrb_str_cat_str(mrb, str, str2)
 
 mrb_bool mrb_str_beg_len(mrb_int str_len, mrb_int *begp, mrb_int *lenp);
 mrb_value mrb_str_byte_subseq(mrb_state *mrb, mrb_value str, mrb_int beg, mrb_int len);
@@ -470,4 +471,4 @@ mrb_int mrb_utf8_len(const char *str, mrb_int byte_len);
 
 MRB_END_DECL
 
-#endif  /* MRUBY_STRING_H */
+#endif /* MRUBY_STRING_H */

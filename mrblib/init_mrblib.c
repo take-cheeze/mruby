@@ -8,4 +8,3 @@ mrb_init_mrblib(mrb_state *mrb)
 {
   mrb_load_irep(mrb, mrblib_irep);
 }
-

@@ -3,15 +3,17 @@
 **
 */
 
-#include <string.h>
-#include "mrdb.h"
-#include <mruby/value.h>
+#include "apiprint.h"
+
 #include <mruby/class.h>
 #include <mruby/compile.h>
 #include <mruby/error.h>
 #include <mruby/numeric.h>
 #include <mruby/string.h>
-#include "apiprint.h"
+#include <mruby/value.h>
+#include <string.h>
+
+#include "mrdb.h"
 
 static void
 mrdb_check_syntax(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size_t len)
@@ -21,7 +23,7 @@ mrdb_check_syntax(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size
   c = mrbc_context_new(mrb);
   c->no_exec = TRUE;
   c->capture_errors = TRUE;
-  mrbc_filename(mrb, c, (const char*)dbg->prvfile);
+  mrbc_filename(mrb, c, (const char *)dbg->prvfile);
   c->lineno = dbg->prvline;
 
   /* Load program */
@@ -31,7 +33,8 @@ mrdb_check_syntax(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size
 }
 
 mrb_value
-mrb_debug_eval(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size_t len, mrb_bool *exc, int direct_eval)
+mrb_debug_eval(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size_t len, mrb_bool *exc,
+               int direct_eval)
 {
   void (*tmp)(struct mrb_state *, struct mrb_irep *, const mrb_code *, mrb_value *);
   mrb_value ruby_code;
@@ -47,13 +50,11 @@ mrb_debug_eval(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size_t 
   if (mrb->exc) {
     v = mrb_obj_value(mrb->exc);
     mrb->exc = 0;
-  }
-  else if (direct_eval) {
+  } else if (direct_eval) {
     recv = dbg->regs[0];
 
     v = mrb_funcall(mrb, recv, expr, 0);
-  }
-  else {
+  } else {
     /*
      * begin
      *   expr
@@ -67,7 +68,7 @@ mrb_debug_eval(mrb_state *mrb, mrb_debug_context *dbg, const char *expr, size_t 
 
     recv = dbg->regs[0];
 
-    v =  mrb_funcall(mrb, recv, "instance_eval", 1, ruby_code);
+    v = mrb_funcall(mrb, recv, "instance_eval", 1, ruby_code);
   }
 
   if (exc) {

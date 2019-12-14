@@ -5,23 +5,21 @@
 ** against the current mruby implementation.
 */
 
-
+#include <mruby.h>
+#include <mruby/array.h>
+#include <mruby/compile.h>
+#include <mruby/data.h>
+#include <mruby/proc.h>
+#include <mruby/string.h>
+#include <mruby/variable.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <mruby.h>
-#include <mruby/proc.h>
-#include <mruby/data.h>
-#include <mruby/compile.h>
-#include <mruby/string.h>
-#include <mruby/variable.h>
-#include <mruby/array.h>
-
 extern const uint8_t mrbtest_assert_irep[];
 
-void mrbgemtest_init(mrb_state* mrb);
-void mrb_init_test_vformat(mrb_state* mrb);
+void mrbgemtest_init(mrb_state *mrb);
+void mrb_init_test_vformat(mrb_state *mrb);
 
 /* Print a short remark for the user */
 static void
@@ -40,8 +38,7 @@ eval_test(mrb_state *mrb)
     mrb_print_error(mrb);
     mrb->exc = 0;
     return EXIT_FAILURE;
-  }
-  else {
+  } else {
     return mrb_bool(result) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 }
@@ -64,12 +61,11 @@ t_print(mrb_state *mrb, mrb_value self)
   return mrb_nil_value();
 }
 
-#define UNESCAPE(p, endp) ((p) != (endp) && *(p) == '\\' ? (p)+1 : (p))
-#define CHAR_CMP(c1, c2) ((unsigned char)(c1) - (unsigned char)(c2))
+#define UNESCAPE(p, endp) ((p) != (endp) && *(p) == '\\' ? (p) + 1 : (p))
+#define CHAR_CMP(c1, c2)  ((unsigned char)(c1) - (unsigned char)(c2))
 
 static const char *
-str_match_bracket(const char *p, const char *pat_end,
-                  const char *s, const char *str_end)
+str_match_bracket(const char *p, const char *pat_end, const char *s, const char *str_end)
 {
   mrb_bool ok = FALSE, negated = FALSE;
 
@@ -88,8 +84,7 @@ str_match_bracket(const char *p, const char *pat_end,
       if ((t2 = UNESCAPE(t2, pat_end)) == pat_end) return NULL;
       p = t2 + 1;
       if (!ok && CHAR_CMP(*t1, *s) <= 0 && CHAR_CMP(*s, *t2) <= 0) ok = TRUE;
-    }
-    else {
+    } else {
       if (!ok && CHAR_CMP(*t1, *s) == 0) ok = TRUE;
     }
   }
@@ -98,8 +93,7 @@ str_match_bracket(const char *p, const char *pat_end,
 }
 
 static mrb_bool
-str_match_no_brace_p(const char *pat, mrb_int pat_len,
-                     const char *str, mrb_int str_len)
+str_match_no_brace_p(const char *pat, mrb_int pat_len, const char *str, mrb_int str_len)
 {
   const char *p = pat, *s = str;
   const char *pat_end = pat + pat_len, *str_end = str + str_len;
@@ -108,28 +102,30 @@ str_match_no_brace_p(const char *pat, mrb_int pat_len,
   for (;;) {
     if (p == pat_end) return s == str_end;
     switch (*p) {
-      case '*':
-        do { ++p; } while (p != pat_end && *p == '*');
-        if (UNESCAPE(p, pat_end) == pat_end) return TRUE;
-        if (s == str_end) return FALSE;
-        p_tmp = p;
-        s_tmp = s;
-        continue;
-      case '?':
-        if (s == str_end) return FALSE;
+    case '*':
+      do {
         ++p;
+      } while (p != pat_end && *p == '*');
+      if (UNESCAPE(p, pat_end) == pat_end) return TRUE;
+      if (s == str_end) return FALSE;
+      p_tmp = p;
+      s_tmp = s;
+      continue;
+    case '?':
+      if (s == str_end) return FALSE;
+      ++p;
+      ++s;
+      continue;
+    case '[': {
+      const char *t;
+      if (s == str_end) return FALSE;
+      if ((t = str_match_bracket(p + 1, pat_end, s, str_end))) {
+        p = t;
         ++s;
         continue;
-      case '[': {
-        const char *t;
-        if (s == str_end) return FALSE;
-        if ((t = str_match_bracket(p+1, pat_end, s, str_end))) {
-          p = t;
-          ++s;
-          continue;
-        }
-        goto L_failed;
       }
+      goto L_failed;
+    }
     }
 
     /* ordinary */
@@ -139,7 +135,7 @@ str_match_no_brace_p(const char *pat, mrb_int pat_len,
     if (*p++ != *s++) goto L_failed;
     continue;
 
-    L_failed:
+  L_failed:
     if (p_tmp && s_tmp) {
       /* try next '*' position */
       p = p_tmp;
@@ -152,12 +148,13 @@ str_match_no_brace_p(const char *pat, mrb_int pat_len,
 }
 
 #define COPY_AND_INC(dst, src, len) \
-  do { memcpy(dst, src, len); dst += len; } while (0)
+  do {                              \
+    memcpy(dst, src, len);          \
+    dst += len;                     \
+  } while (0)
 
 static mrb_bool
-str_match_p(mrb_state *mrb,
-            const char *pat, mrb_int pat_len,
-            const char *str, mrb_int str_len)
+str_match_p(mrb_state *mrb, const char *pat, mrb_int pat_len, const char *str, mrb_int str_len)
 {
   const char *p = pat, *pat_end = pat + pat_len;
   const char *lbrace = NULL, *rbrace = NULL;
@@ -165,34 +162,40 @@ str_match_p(mrb_state *mrb,
   mrb_bool ret = FALSE;
 
   for (; p != pat_end; ++p) {
-    if (*p == '{' && nest++ == 0) lbrace = p;
-    else if (*p == '}' && lbrace && --nest == 0) { rbrace = p; break; }
-    else if (*p == '\\' && ++p == pat_end) break;
+    if (*p == '{' && nest++ == 0)
+      lbrace = p;
+    else if (*p == '}' && lbrace && --nest == 0) {
+      rbrace = p;
+      break;
+    } else if (*p == '\\' && ++p == pat_end)
+      break;
   }
 
   if (lbrace && rbrace) {
     /* expand brace */
-    char *ex_pat = (char *)mrb_malloc(mrb, pat_len-2);  /* expanded pattern */
+    char *ex_pat = (char *)mrb_malloc(mrb, pat_len - 2); /* expanded pattern */
     char *ex_p = ex_pat;
 
-    COPY_AND_INC(ex_p, pat, lbrace-pat);
+    COPY_AND_INC(ex_p, pat, lbrace - pat);
     p = lbrace;
     while (p < rbrace) {
       char *orig_ex_p = ex_p;
       const char *t = ++p;
       for (nest = 0; p < rbrace && !(*p == ',' && nest == 0); ++p) {
-        if (*p == '{') ++nest;
-        else if (*p == '}') --nest;
-        else if (*p == '\\' && ++p == rbrace) break;
+        if (*p == '{')
+          ++nest;
+        else if (*p == '}')
+          --nest;
+        else if (*p == '\\' && ++p == rbrace)
+          break;
       }
-      COPY_AND_INC(ex_p, t, p-t);
-      COPY_AND_INC(ex_p, rbrace+1, pat_end-rbrace-1);
-      if ((ret = str_match_p(mrb, ex_pat, ex_p-ex_pat, str, str_len))) break;
+      COPY_AND_INC(ex_p, t, p - t);
+      COPY_AND_INC(ex_p, rbrace + 1, pat_end - rbrace - 1);
+      if ((ret = str_match_p(mrb, ex_pat, ex_p - ex_pat, str, str_len))) break;
       ex_p = orig_ex_p;
     }
     mrb_free(mrb, ex_pat);
-  }
-  else if (!lbrace && !rbrace) {
+  } else if (!lbrace && !rbrace) {
     ret = str_match_no_brace_p(pat, pat_len, str, str_len);
   }
 
@@ -225,11 +228,11 @@ mrb_init_test_driver(mrb_state *mrb, mrb_bool verbose)
   mrb_define_const(mrb, mrbtest, "FIXNUM_BIT", mrb_fixnum_value(MRB_INT_BIT));
 
 #ifndef MRB_WITHOUT_FLOAT
-#ifdef MRB_USE_FLOAT
+#  ifdef MRB_USE_FLOAT
   mrb_define_const(mrb, mrbtest, "FLOAT_TOLERANCE", mrb_float_value(mrb, 1e-6));
-#else
+#  else
   mrb_define_const(mrb, mrbtest, "FLOAT_TOLERANCE", mrb_float_value(mrb, 1e-12));
-#endif
+#  endif
 #endif
 
   mrb_init_test_vformat(mrb);
@@ -249,14 +252,15 @@ mrb_t_pass_result(mrb_state *mrb_dst, mrb_state *mrb_src)
     exit(EXIT_FAILURE);
   }
 
-#define TEST_COUNT_PASS(name)                                           \
-  do {                                                                  \
-    res_src = mrb_gv_get(mrb_src, mrb_intern_lit(mrb_src, "$" #name));  \
-    if (mrb_fixnum_p(res_src)) {                                        \
+#define TEST_COUNT_PASS(name)                                                      \
+  do {                                                                             \
+    res_src = mrb_gv_get(mrb_src, mrb_intern_lit(mrb_src, "$" #name));             \
+    if (mrb_fixnum_p(res_src)) {                                                   \
       mrb_value res_dst = mrb_gv_get(mrb_dst, mrb_intern_lit(mrb_dst, "$" #name)); \
-      mrb_gv_set(mrb_dst, mrb_intern_lit(mrb_dst, "$" #name), mrb_fixnum_value(mrb_fixnum(res_dst) + mrb_fixnum(res_src))); \
-    }                                                                   \
-  } while (FALSE)                                                       \
+      mrb_gv_set(mrb_dst, mrb_intern_lit(mrb_dst, "$" #name),                      \
+                 mrb_fixnum_value(mrb_fixnum(res_dst) + mrb_fixnum(res_src)));     \
+    }                                                                              \
+  } while (FALSE)
 
   TEST_COUNT_PASS(ok_test);
   TEST_COUNT_PASS(ko_test);
@@ -273,7 +277,8 @@ mrb_t_pass_result(mrb_state *mrb_dst, mrb_state *mrb_src)
     mrb_value res_dst = mrb_gv_get(mrb_dst, mrb_intern_lit(mrb_dst, "$asserts"));
     for (i = 0; i < RARRAY_LEN(res_src); ++i) {
       mrb_value val_src = RARRAY_PTR(res_src)[i];
-      mrb_ary_push(mrb_dst, res_dst, mrb_str_new(mrb_dst, RSTRING_PTR(val_src), RSTRING_LEN(val_src)));
+      mrb_ary_push(mrb_dst, res_dst,
+                   mrb_str_new(mrb_dst, RSTRING_PTR(val_src), RSTRING_LEN(val_src)));
     }
   }
 }

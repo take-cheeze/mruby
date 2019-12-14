@@ -1,7 +1,7 @@
 #include <mruby.h>
 #include <mruby/class.h>
-#include <mruby/string.h>
 #include <mruby/numeric.h>
+#include <mruby/string.h>
 
 struct mrb_rational {
   mrb_int numerator;
@@ -10,40 +10,40 @@ struct mrb_rational {
 
 #if MRB_INT_MAX <= INTPTR_MAX
 
-#define RATIONAL_USE_ISTRUCT
+#  define RATIONAL_USE_ISTRUCT
 /* use TT_ISTRUCT */
-#include <mruby/istruct.h>
+#  include <mruby/istruct.h>
 
-#define rational_ptr(mrb, v) (struct mrb_rational*)mrb_istruct_ptr(v)
+#  define rational_ptr(mrb, v) (struct mrb_rational *)mrb_istruct_ptr(v)
 
-static struct RBasic*
+static struct RBasic *
 rational_alloc(mrb_state *mrb, struct RClass *c, struct mrb_rational **p)
 {
   struct RIStruct *s;
 
-  s = (struct RIStruct*)mrb_obj_alloc(mrb, MRB_TT_ISTRUCT, c);
-  *p = (struct mrb_rational*)s->inline_data;
+  s = (struct RIStruct *)mrb_obj_alloc(mrb, MRB_TT_ISTRUCT, c);
+  *p = (struct mrb_rational *)s->inline_data;
 
-  return (struct RBasic*)s;
+  return (struct RBasic *)s;
 }
 
 #else
 /* use TT_DATA */
-#include <mruby/data.h>
+#  include <mruby/data.h>
 
 static const struct mrb_data_type mrb_rational_type = {"Rational", mrb_free};
 
-static struct RBasic*
+static struct RBasic *
 rational_alloc(mrb_state *mrb, struct RClass *c, struct mrb_rational **p)
 {
   struct RData *d;
 
   Data_Make_Struct(mrb, c, struct mrb_rational, &mrb_rational_type, *p, d);
 
-  return (struct RBasic*)d;
+  return (struct RBasic *)d;
 }
 
-static struct mrb_rational*
+static struct mrb_rational *
 rational_ptr(mrb_state *mrb, mrb_value v)
 {
   struct mrb_rational *p;
@@ -91,13 +91,13 @@ rational_s_new(mrb_state *mrb, mrb_value self)
   mrb_get_args(mrb, "ii", &numerator, &denominator);
 #else
 
-#define DROP_PRECISION(cond, num, denom) \
-  do { \
-      while (cond) { \
-        num /= 2; \
-        denom /= 2; \
-      } \
-  } while (0)
+#  define DROP_PRECISION(cond, num, denom) \
+    do {                                   \
+      while (cond) {                       \
+        num /= 2;                          \
+        denom /= 2;                        \
+      }                                    \
+    } while (0)
 
   mrb_value numv, denomv;
 
@@ -107,21 +107,18 @@ rational_s_new(mrb_state *mrb, mrb_value self)
 
     if (mrb_fixnum_p(denomv)) {
       denominator = mrb_fixnum(denomv);
-    }
-    else {
+    } else {
       mrb_float denomf = mrb_to_flo(mrb, denomv);
 
       DROP_PRECISION(denomf < MRB_INT_MIN || denomf > MRB_INT_MAX, numerator, denomf);
       denominator = denomf;
     }
-  }
-  else {
+  } else {
     mrb_float numf = mrb_to_flo(mrb, numv);
 
     if (mrb_fixnum_p(denomv)) {
       denominator = mrb_fixnum(denomv);
-    }
-    else {
+    } else {
       mrb_float denomf = mrb_to_flo(mrb, denomv);
 
       DROP_PRECISION(denomf < MRB_INT_MIN || denomf > MRB_INT_MAX, numf, denomf);
@@ -179,7 +176,8 @@ fix_to_r(mrb_state *mrb, mrb_value self)
   return rational_new(mrb, mrb_fixnum(self), 1);
 }
 
-void mrb_mruby_rational_gem_init(mrb_state *mrb)
+void
+mrb_mruby_rational_gem_init(mrb_state *mrb)
 {
   struct RClass *rat;
 
@@ -204,6 +202,6 @@ void mrb_mruby_rational_gem_init(mrb_state *mrb)
 }
 
 void
-mrb_mruby_rational_gem_final(mrb_state* mrb)
+mrb_mruby_rational_gem_final(mrb_state *mrb)
 {
 }

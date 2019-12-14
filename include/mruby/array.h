@@ -14,14 +14,13 @@
  */
 MRB_BEGIN_DECL
 
-
 typedef struct mrb_shared_array {
   int refcnt;
   mrb_ssize len;
   mrb_value *ptr;
 } mrb_shared_array;
 
-#define MRB_ARY_EMBED_LEN_MAX ((mrb_int)(sizeof(void*)*3/sizeof(mrb_value)))
+#define MRB_ARY_EMBED_LEN_MAX ((mrb_int)(sizeof(void *) * 3 / sizeof(mrb_value)))
 struct RArray {
   MRB_OBJECT_HEADER;
   union {
@@ -37,38 +36,39 @@ struct RArray {
   } as;
 };
 
-#define mrb_ary_ptr(v)    ((struct RArray*)(mrb_ptr(v)))
-#define mrb_ary_value(p)  mrb_obj_value((void*)(p))
-#define RARRAY(v)  ((struct RArray*)(mrb_ptr(v)))
+#define mrb_ary_ptr(v)   ((struct RArray *)(mrb_ptr(v)))
+#define mrb_ary_value(p) mrb_obj_value((void *)(p))
+#define RARRAY(v)        ((struct RArray *)(mrb_ptr(v)))
 
-#define MRB_ARY_EMBED_MASK  7
-#define ARY_EMBED_P(a) ((a)->flags & MRB_ARY_EMBED_MASK)
+#define MRB_ARY_EMBED_MASK      7
+#define ARY_EMBED_P(a)          ((a)->flags & MRB_ARY_EMBED_MASK)
 #define ARY_UNSET_EMBED_FLAG(a) ((a)->flags &= ~(MRB_ARY_EMBED_MASK))
-#define ARY_EMBED_LEN(a) ((mrb_int)(((a)->flags & MRB_ARY_EMBED_MASK) - 1))
-#define ARY_SET_EMBED_LEN(a,len) ((a)->flags = ((a)->flags&~MRB_ARY_EMBED_MASK) | ((uint32_t)(len) + 1))
-#define ARY_EMBED_PTR(a) ((mrb_value*)(&(a)->as.ary))
+#define ARY_EMBED_LEN(a)        ((mrb_int)(((a)->flags & MRB_ARY_EMBED_MASK) - 1))
+#define ARY_SET_EMBED_LEN(a, len) \
+  ((a)->flags = ((a)->flags & ~MRB_ARY_EMBED_MASK) | ((uint32_t)(len) + 1))
+#define ARY_EMBED_PTR(a) ((mrb_value *)(&(a)->as.ary))
 
-#define ARY_LEN(a) (ARY_EMBED_P(a)?ARY_EMBED_LEN(a):(a)->as.heap.len)
-#define ARY_PTR(a) (ARY_EMBED_P(a)?ARY_EMBED_PTR(a):(a)->as.heap.ptr)
+#define ARY_LEN(a)    (ARY_EMBED_P(a) ? ARY_EMBED_LEN(a) : (a)->as.heap.len)
+#define ARY_PTR(a)    (ARY_EMBED_P(a) ? ARY_EMBED_PTR(a) : (a)->as.heap.ptr)
 #define RARRAY_LEN(a) ARY_LEN(RARRAY(a))
 #define RARRAY_PTR(a) ARY_PTR(RARRAY(a))
-#define ARY_SET_LEN(a,n) do {\
-  if (ARY_EMBED_P(a)) {\
-    mrb_assert((n) <= MRB_ARY_EMBED_LEN_MAX); \
-    ARY_SET_EMBED_LEN(a,n);\
-  }\
-  else\
-    (a)->as.heap.len = (n);\
-} while (0)
-#define ARY_CAPA(a) (ARY_EMBED_P(a)?MRB_ARY_EMBED_LEN_MAX:(a)->as.heap.aux.capa)
-#define MRB_ARY_SHARED      256
-#define ARY_SHARED_P(a) ((a)->flags & MRB_ARY_SHARED)
-#define ARY_SET_SHARED_FLAG(a) ((a)->flags |= MRB_ARY_SHARED)
+#define ARY_SET_LEN(a, n)                       \
+  do {                                          \
+    if (ARY_EMBED_P(a)) {                       \
+      mrb_assert((n) <= MRB_ARY_EMBED_LEN_MAX); \
+      ARY_SET_EMBED_LEN(a, n);                  \
+    } else                                      \
+      (a)->as.heap.len = (n);                   \
+  } while (0)
+#define ARY_CAPA(a)              (ARY_EMBED_P(a) ? MRB_ARY_EMBED_LEN_MAX : (a)->as.heap.aux.capa)
+#define MRB_ARY_SHARED           256
+#define ARY_SHARED_P(a)          ((a)->flags & MRB_ARY_SHARED)
+#define ARY_SET_SHARED_FLAG(a)   ((a)->flags |= MRB_ARY_SHARED)
 #define ARY_UNSET_SHARED_FLAG(a) ((a)->flags &= ~MRB_ARY_SHARED)
 
-void mrb_ary_decref(mrb_state*, mrb_shared_array*);
-MRB_API void mrb_ary_modify(mrb_state*, struct RArray*);
-MRB_API mrb_value mrb_ary_new_capa(mrb_state*, mrb_int);
+void mrb_ary_decref(mrb_state *, mrb_shared_array *);
+MRB_API void mrb_ary_modify(mrb_state *, struct RArray *);
+MRB_API mrb_value mrb_ary_new_capa(mrb_state *, mrb_int);
 
 /*
  * Initializes a new array.
@@ -241,7 +241,8 @@ MRB_API mrb_value mrb_ary_entry(mrb_value ary, mrb_int offset);
  * @param rpl The array of replacement elements.
  * @return The receiver array.
  */
-MRB_API mrb_value mrb_ary_splice(mrb_state *mrb, mrb_value self, mrb_int head, mrb_int len, mrb_value rpl);
+MRB_API mrb_value mrb_ary_splice(mrb_state *mrb, mrb_value self, mrb_int head, mrb_int len,
+                                 mrb_value rpl);
 
 /*
  * Shifts the first element from the array.
@@ -293,4 +294,4 @@ MRB_API mrb_value mrb_ary_resize(mrb_state *mrb, mrb_value ary, mrb_int new_len)
 
 MRB_END_DECL
 
-#endif  /* MRUBY_ARRAY_H */
+#endif /* MRUBY_ARRAY_H */

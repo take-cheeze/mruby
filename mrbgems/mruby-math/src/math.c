@@ -5,13 +5,12 @@
 */
 
 #ifdef MRB_WITHOUT_FLOAT
-# error Math conflicts 'MRB_WITHOUT_FLOAT' configuration in your 'build_config.rb'
+#  error Math conflicts 'MRB_WITHOUT_FLOAT' configuration in your 'build_config.rb'
 #endif
 
+#include <math.h>
 #include <mruby.h>
 #include <mruby/array.h>
-
-#include <math.h>
 
 static void
 domain_error(mrb_state *mrb, const char *func)
@@ -24,7 +23,7 @@ domain_error(mrb_state *mrb, const char *func)
 /* math functions not provided by Microsoft Visual C++ 2012 or older */
 #if defined _MSC_VER && _MSC_VER <= 1700
 
-#include <float.h>
+#  include <float.h>
 
 double
 asinh(double x)
@@ -36,10 +35,9 @@ asinh(double x)
   if (xa > 3.16227E+18) {
     /* Prevent x*x from overflowing; basic formula reduces to log(2*x) */
     ya = log(xa) + 0.69314718055994530942;
-  }
-  else {
+  } else {
     /* Basic formula for asinh */
-    ya = log(xa + sqrt(xa*xa + 1.0));
+    ya = log(xa + sqrt(xa * xa + 1.0));
   }
 
   y = _copysign(ya, x);
@@ -54,10 +52,9 @@ acosh(double x)
   if (x > 3.16227E+18) {
     /* Prevent x*x from overflowing; basic formula reduces to log(2*x) */
     y = log(x) + 0.69314718055994530942;
-  }
-  else {
+  } else {
     /* Basic formula for acosh */
-    y = log(x + sqrt(x*x - 1.0));
+    y = log(x + sqrt(x * x - 1.0));
   }
 
   return y;
@@ -72,11 +69,10 @@ atanh(double x)
     /* The sums 1+x and 1-x lose precision for small x.  Use the polynomial
        instead. */
     double x2 = x * x;
-    y = x*(1.0 + x2*(1.0/3.0 + x2*(1.0/5.0 + x2*(1.0/7.0))));
-  }
-  else {
+    y = x * (1.0 + x2 * (1.0 / 3.0 + x2 * (1.0 / 5.0 + x2 * (1.0 / 7.0))));
+  } else {
     /* Basic formula for atanh */
-    y = 0.5 * (log(1.0+x) - log(1.0-x));
+    y = 0.5 * (log(1.0 + x) - log(1.0 - x));
   }
 
   return y;
@@ -90,14 +86,13 @@ cbrt(double x)
   /* pow(x, y) is undefined for x < 0 and y not an integer, but cbrt is an
      odd function */
   xa = fabs(x);
-  ya = pow(xa, 1.0/3.0);
+  ya = pow(xa, 1.0 / 3.0);
   y = _copysign(ya, x);
   return y;
 }
 
 /* Declaration of complementary Error function */
-double
-erfc(double x);
+double erfc(double x);
 
 /*
 ** Implementations of error functions
@@ -108,37 +103,37 @@ erfc(double x);
 double
 erf(double x)
 {
-  static const double two_sqrtpi =  1.128379167095512574;
-  double sum  = x;
+  static const double two_sqrtpi = 1.128379167095512574;
+  double sum = x;
   double term = x;
-  double xsqr = x*x;
-  int j= 1;
+  double xsqr = x * x;
+  int j = 1;
   if (fabs(x) > 2.2) {
     return 1.0 - erfc(x);
   }
   do {
-    term *= xsqr/j;
-    sum  -= term/(2*j+1);
+    term *= xsqr / j;
+    sum -= term / (2 * j + 1);
     ++j;
-    term *= xsqr/j;
-    sum  += term/(2*j+1);
+    term *= xsqr / j;
+    sum += term / (2 * j + 1);
     ++j;
     if (sum == 0) break;
-  } while (fabs(term/sum) > DBL_EPSILON);
-  return two_sqrtpi*sum;
+  } while (fabs(term / sum) > DBL_EPSILON);
+  return two_sqrtpi * sum;
 }
 
 /* Implementation of complementary Error function */
 double
 erfc(double x)
 {
-  static const double one_sqrtpi=  0.564189583547756287;
+  static const double one_sqrtpi = 0.564189583547756287;
   double a = 1;
   double b = x;
   double c = x;
-  double d = x*x+0.5;
+  double d = x * x + 0.5;
   double q1;
-  double q2 = b/d;
+  double q2 = b / d;
   double n = 1.0;
   double t;
   if (fabs(x) < 2.2) {
@@ -148,31 +143,32 @@ erfc(double x)
     return 2.0 - erfc(-x);
   }
   do {
-    t  = a*n+b*x;
-    a  = b;
-    b  = t;
-    t  = c*n+d*x;
-    c  = d;
-    d  = t;
+    t = a * n + b * x;
+    a = b;
+    b = t;
+    t = c * n + d * x;
+    c = d;
+    d = t;
     n += 0.5;
     q1 = q2;
-    q2 = b/d;
-  } while (fabs(q1-q2)/q2 > DBL_EPSILON);
-  return one_sqrtpi*exp(-x*x)*q2;
+    q2 = b / d;
+  } while (fabs(q1 - q2) / q2 > DBL_EPSILON);
+  return one_sqrtpi * exp(-x * x) * q2;
 }
 
 #endif
 
 #if defined __FreeBSD__ && !defined __FreeBSD_version
-#include <osreldate.h> /* for __FreeBSD_version */
+#  include <osreldate.h> /* for __FreeBSD_version */
 #endif
 
-#if (defined _MSC_VER && _MSC_VER < 1800) || defined __ANDROID__ || (defined __FreeBSD__  &&  __FreeBSD_version < 803000)
+#if (defined _MSC_VER && _MSC_VER < 1800) || defined __ANDROID__ || \
+    (defined __FreeBSD__ && __FreeBSD_version < 803000)
 
 double
 log2(double x)
 {
-    return log10(x)/log10(2.0);
+  return log10(x) / log10(2.0);
 }
 
 #endif
@@ -326,8 +322,6 @@ math_atan2(mrb_state *mrb, mrb_value obj)
   return mrb_float_value(mrb, x);
 }
 
-
-
 /*
   HYPERBOLIC TRIG FUNCTIONS
 */
@@ -383,7 +377,6 @@ math_tanh(mrb_state *mrb, mrb_value obj)
 
   return mrb_float_value(mrb, x);
 }
-
 
 /*
   INVERSE HYPERBOLIC TRIG FUNCTIONS
@@ -580,7 +573,6 @@ math_sqrt(mrb_state *mrb, mrb_value obj)
   return mrb_float_value(mrb, x);
 }
 
-
 /*
  *  call-seq:
  *     Math.cbrt(numeric)    -> float
@@ -623,7 +615,6 @@ math_cbrt(mrb_state *mrb, mrb_value obj)
   return mrb_float_value(mrb, x);
 }
 
-
 /*
  *  call-seq:
  *     Math.frexp(numeric)    -> [ fraction, exponent ]
@@ -660,7 +651,7 @@ static mrb_value
 math_ldexp(mrb_state *mrb, mrb_value obj)
 {
   mrb_float x;
-  mrb_int   i;
+  mrb_int i;
 
   mrb_get_args(mrb, "fi", &x, &i);
   x = ldexp(x, (int)i);
@@ -705,7 +696,6 @@ math_erf(mrb_state *mrb, mrb_value obj)
   return mrb_float_value(mrb, x);
 }
 
-
 /*
  * call-seq:
  *    Math.erfc(x)  -> float
@@ -725,7 +715,7 @@ math_erfc(mrb_state *mrb, mrb_value obj)
 
 /* ------------------------------------------------------------------------*/
 void
-mrb_mruby_math_gem_init(mrb_state* mrb)
+mrb_mruby_math_gem_init(mrb_state *mrb)
 {
   struct RClass *mrb_math;
   mrb_math = mrb_define_module(mrb, "Math");
@@ -735,7 +725,7 @@ mrb_mruby_math_gem_init(mrb_state* mrb)
 #ifdef M_PI
   mrb_define_const(mrb, mrb_math, "PI", mrb_float_value(mrb, M_PI));
 #else
-  mrb_define_const(mrb, mrb_math, "PI", mrb_float_value(mrb, atan(1.0)*4.0));
+  mrb_define_const(mrb, mrb_math, "PI", mrb_float_value(mrb, atan(1.0) * 4.0));
 #endif
 
 #ifdef M_E
@@ -762,7 +752,7 @@ mrb_mruby_math_gem_init(mrb_state* mrb)
   mrb_define_module_function(mrb, mrb_math, "atanh", math_atanh, MRB_ARGS_REQ(1));
 
   mrb_define_module_function(mrb, mrb_math, "exp", math_exp, MRB_ARGS_REQ(1));
-  mrb_define_module_function(mrb, mrb_math, "log", math_log, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
+  mrb_define_module_function(mrb, mrb_math, "log", math_log, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
   mrb_define_module_function(mrb, mrb_math, "log2", math_log2, MRB_ARGS_REQ(1));
   mrb_define_module_function(mrb, mrb_math, "log10", math_log10, MRB_ARGS_REQ(1));
   mrb_define_module_function(mrb, mrb_math, "sqrt", math_sqrt, MRB_ARGS_REQ(1));
@@ -773,11 +763,11 @@ mrb_mruby_math_gem_init(mrb_state* mrb)
 
   mrb_define_module_function(mrb, mrb_math, "hypot", math_hypot, MRB_ARGS_REQ(2));
 
-  mrb_define_module_function(mrb, mrb_math, "erf",  math_erf,  MRB_ARGS_REQ(1));
+  mrb_define_module_function(mrb, mrb_math, "erf", math_erf, MRB_ARGS_REQ(1));
   mrb_define_module_function(mrb, mrb_math, "erfc", math_erfc, MRB_ARGS_REQ(1));
 }
 
 void
-mrb_mruby_math_gem_final(mrb_state* mrb)
+mrb_mruby_math_gem_final(mrb_state *mrb)
 {
 }

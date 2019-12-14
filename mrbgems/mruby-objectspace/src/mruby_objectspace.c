@@ -1,26 +1,25 @@
 #include <mruby.h>
+#include <mruby/class.h>
 #include <mruby/gc.h>
 #include <mruby/hash.h>
-#include <mruby/class.h>
 
 struct os_count_struct {
   mrb_int total;
   mrb_int freed;
-  mrb_int counts[MRB_TT_MAXDEFINE+1];
+  mrb_int counts[MRB_TT_MAXDEFINE + 1];
 };
 
 static int
 os_count_object_type(mrb_state *mrb, struct RBasic *obj, void *data)
 {
   struct os_count_struct *obj_count;
-  obj_count = (struct os_count_struct*)data;
+  obj_count = (struct os_count_struct *)data;
 
   obj_count->total++;
 
   if (mrb_object_dead_p(mrb, obj)) {
     obj_count->freed++;
-  }
-  else {
+  } else {
     obj_count->counts[obj->tt]++;
   }
   return MRB_EACH_OBJ_OK;
@@ -49,7 +48,7 @@ os_count_object_type(mrb_state *mrb, struct RBasic *obj, void *data)
 static mrb_value
 os_count_objects(mrb_state *mrb, mrb_value self)
 {
-  struct os_count_struct obj_count = { 0 };
+  struct os_count_struct obj_count = {0};
   mrb_int i;
   mrb_value hash;
 
@@ -63,13 +62,18 @@ os_count_objects(mrb_state *mrb, mrb_value self)
 
   mrb_objspace_each_objects(mrb, os_count_object_type, &obj_count);
 
-  mrb_hash_set(mrb, hash, mrb_symbol_value(mrb_intern_lit(mrb, "TOTAL")), mrb_fixnum_value(obj_count.total));
-  mrb_hash_set(mrb, hash, mrb_symbol_value(mrb_intern_lit(mrb, "FREE")), mrb_fixnum_value(obj_count.freed));
+  mrb_hash_set(mrb, hash, mrb_symbol_value(mrb_intern_lit(mrb, "TOTAL")),
+               mrb_fixnum_value(obj_count.total));
+  mrb_hash_set(mrb, hash, mrb_symbol_value(mrb_intern_lit(mrb, "FREE")),
+               mrb_fixnum_value(obj_count.freed));
 
   for (i = MRB_TT_FALSE; i < MRB_TT_MAXDEFINE; i++) {
     mrb_value type;
     switch (i) {
-#define COUNT_TYPE(t) case (MRB_T ## t): type = mrb_symbol_value(mrb_intern_lit(mrb, #t)); break;
+#define COUNT_TYPE(t)                                 \
+  case (MRB_T##t):                                    \
+    type = mrb_symbol_value(mrb_intern_lit(mrb, #t)); \
+    break;
       COUNT_TYPE(T_FALSE);
       COUNT_TYPE(T_FREE);
       COUNT_TYPE(T_TRUE);
@@ -95,10 +99,10 @@ os_count_objects(mrb_state *mrb, mrb_value self)
       COUNT_TYPE(T_FIBER);
 #undef COUNT_TYPE
     default:
-      type = mrb_fixnum_value(i); break;
+      type = mrb_fixnum_value(i);
+      break;
     }
-    if (obj_count.counts[i])
-      mrb_hash_set(mrb, hash, type, mrb_fixnum_value(obj_count.counts[i]));
+    if (obj_count.counts[i]) mrb_hash_set(mrb, hash, type, mrb_fixnum_value(obj_count.counts[i]));
   }
 
   return hash;
@@ -113,7 +117,7 @@ struct os_each_object_data {
 static int
 os_each_object_cb(mrb_state *mrb, struct RBasic *obj, void *ud)
 {
-  struct os_each_object_data *d = (struct os_each_object_data*)ud;
+  struct os_each_object_data *d = (struct os_each_object_data *)ud;
 
   /* filter dead objects */
   if (mrb_object_dead_p(mrb, obj)) {

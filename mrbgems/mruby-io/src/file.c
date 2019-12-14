@@ -5,81 +5,80 @@
 #include "mruby.h"
 #include "mruby/class.h"
 #include "mruby/data.h"
-#include "mruby/string.h"
 #include "mruby/ext/io.h"
+#include "mruby/string.h"
 
 #if MRUBY_RELEASE_NO < 10000
-#include "error.h"
+#  include "error.h"
 #else
-#include "mruby/error.h"
+#  include "mruby/error.h"
 #endif
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #if defined(_WIN32) || defined(_WIN64)
-  #include <windows.h>
-  #include <io.h>
-  #define NULL_FILE "NUL"
-  #define UNLINK _unlink
-  #define GETCWD _getcwd
-  #define CHMOD(a, b) 0
-  #define MAXPATHLEN 1024
- #if !defined(PATH_MAX)
-  #define PATH_MAX _MAX_PATH
- #endif
-  #define realpath(N,R) _fullpath((R),(N),_MAX_PATH)
-  #include <direct.h>
+#  include <io.h>
+#  include <windows.h>
+#  define NULL_FILE   "NUL"
+#  define UNLINK      _unlink
+#  define GETCWD      _getcwd
+#  define CHMOD(a, b) 0
+#  define MAXPATHLEN  1024
+#  if !defined(PATH_MAX)
+#    define PATH_MAX _MAX_PATH
+#  endif
+#  define realpath(N, R) _fullpath((R), (N), _MAX_PATH)
+#  include <direct.h>
 #else
-  #define NULL_FILE "/dev/null"
-  #include <unistd.h>
-  #define UNLINK unlink
-  #define GETCWD getcwd
-  #define CHMOD(a, b) chmod(a,b)
-  #include <sys/file.h>
-  #include <libgen.h>
-  #include <sys/param.h>
-  #include <pwd.h>
+#  define NULL_FILE "/dev/null"
+#  include <unistd.h>
+#  define UNLINK      unlink
+#  define GETCWD      getcwd
+#  define CHMOD(a, b) chmod(a, b)
+#  include <libgen.h>
+#  include <pwd.h>
+#  include <sys/file.h>
+#  include <sys/param.h>
 #endif
 
 #define FILE_SEPARATOR "/"
 
 #if defined(_WIN32) || defined(_WIN64)
-  #define PATH_SEPARATOR ";"
-  #define FILE_ALT_SEPARATOR "\\"
+#  define PATH_SEPARATOR     ";"
+#  define FILE_ALT_SEPARATOR "\\"
 #else
-  #define PATH_SEPARATOR ":"
+#  define PATH_SEPARATOR ":"
 #endif
 
 #ifndef LOCK_SH
-#define LOCK_SH 1
+#  define LOCK_SH 1
 #endif
 #ifndef LOCK_EX
-#define LOCK_EX 2
+#  define LOCK_EX 2
 #endif
 #ifndef LOCK_NB
-#define LOCK_NB 4
+#  define LOCK_NB 4
 #endif
 #ifndef LOCK_UN
-#define LOCK_UN 8
+#  define LOCK_UN 8
 #endif
 
-#define STAT(p, s)        stat(p, s)
+#define STAT(p, s) stat(p, s)
 
 #ifdef _WIN32
 static int
-flock(int fd, int operation) {
+flock(int fd, int operation)
+{
   OVERLAPPED ov;
   HANDLE h = (HANDLE)_get_osfhandle(fd);
   DWORD flags;
-  flags = ((operation & LOCK_NB) ? LOCKFILE_FAIL_IMMEDIATELY : 0)
-          | ((operation & LOCK_SH) ? LOCKFILE_EXCLUSIVE_LOCK : 0);
+  flags = ((operation & LOCK_NB) ? LOCKFILE_FAIL_IMMEDIATELY : 0) |
+      ((operation & LOCK_SH) ? LOCKFILE_EXCLUSIVE_LOCK : 0);
   memset(&ov, 0, sizeof(ov));
   return LockFileEx(h, flags, 0, 0xffffffff, 0xffffffff, &ov) ? 0 : -1;
 }
@@ -170,11 +169,11 @@ mrb_file_dirname(mrb_state *mrb, mrb_value klass)
   mrb_locale_free(path);
   ridx = strlen(buffer);
   if (ridx == 0) {
-    strncpy(buffer, ".", 2);  /* null terminated */
+    strncpy(buffer, ".", 2); /* null terminated */
   } else if (ridx > 1) {
     ridx--;
     while (ridx > 0 && (buffer[ridx] == '/' || buffer[ridx] == '\\')) {
-      buffer[ridx] = '\0';  /* remove last char */
+      buffer[ridx] = '\0'; /* remove last char */
       ridx--;
     }
   }
@@ -219,7 +218,7 @@ mrb_file_basename(mrb_state *mrb, mrb_value klass)
       return mrb_str_new_cstr(mrb, path);
     }
   }
-  _splitpath((const char*)path, NULL, NULL, bname, extname);
+  _splitpath((const char *)path, NULL, NULL, bname, extname);
   snprintf(buffer, _MAX_DIR + _MAX_EXT, "%s%s", bname, extname);
   return mrb_str_new_cstr(mrb, buffer);
 #else
@@ -230,7 +229,7 @@ mrb_file_basename(mrb_state *mrb, mrb_value klass)
   if ((bname = basename(path)) == NULL) {
     mrb_sys_fail(mrb, "basename");
   }
-  if (strncmp(bname, "//", 3) == 0) bname[1] = '\0';  /* patch for Cygwin */
+  if (strncmp(bname, "//", 3) == 0) bname[1] = '\0'; /* patch for Cygwin */
   return mrb_str_new_cstr(mrb, bname);
 #endif
 }
@@ -254,7 +253,7 @@ mrb_file_realpath(mrb_state *mrb, mrb_value klass)
   if (realpath(cpath, RSTRING_PTR(result)) == NULL) {
     mrb_locale_free(cpath);
     mrb_sys_fail(mrb, cpath);
-    return result;              /* not reached */
+    return result; /* not reached */
   }
   mrb_locale_free(cpath);
   mrb_str_resize(mrb, result, strlen(RSTRING_PTR(result)));
@@ -345,8 +344,7 @@ mrb_file_mtime(mrb_state *mrb, mrb_value self)
 
   obj = mrb_obj_value(mrb_class_get(mrb, "Time"));
   fd = (int)mrb_fixnum(mrb_io_fileno(mrb, self));
-  if (fstat(fd, &st) == -1)
-    return mrb_false_value();
+  if (fstat(fd, &st) == -1) return mrb_false_value();
   return mrb_funcall(mrb, obj, "at", 1, mrb_fixnum_value(st.st_mtime));
 }
 
@@ -364,20 +362,20 @@ mrb_file_flock(mrb_state *mrb, mrb_value self)
 
   while (flock(fd, (int)operation) == -1) {
     switch (errno) {
-      case EINTR:
-        /* retry */
-        break;
-      case EAGAIN:      /* NetBSD */
-#if defined(EWOULDBLOCK) && EWOULDBLOCK != EAGAIN
-      case EWOULDBLOCK: /* FreeBSD OpenBSD Linux */
-#endif
-        if (operation & LOCK_NB) {
-          return mrb_false_value();
-        }
-        /* FALLTHRU - should not happen */
-      default:
-        mrb_sys_fail(mrb, "flock failed");
-        break;
+    case EINTR:
+      /* retry */
+      break;
+    case EAGAIN:      /* NetBSD */
+#  if defined(EWOULDBLOCK) && EWOULDBLOCK != EAGAIN
+    case EWOULDBLOCK: /* FreeBSD OpenBSD Linux */
+#  endif
+      if (operation & LOCK_NB) {
+        return mrb_false_value();
+      }
+      /* FALLTHRU - should not happen */
+    default:
+      mrb_sys_fail(mrb, "flock failed");
+      break;
     }
   }
 #endif
@@ -410,7 +408,8 @@ mrb_file_s_symlink(mrb_state *mrb, mrb_value klass)
 }
 
 static mrb_value
-mrb_file_s_chmod(mrb_state *mrb, mrb_value klass) {
+mrb_file_s_chmod(mrb_state *mrb, mrb_value klass)
+{
   mrb_int mode;
   mrb_int argc, i;
   mrb_value *filenames;
@@ -432,10 +431,11 @@ mrb_file_s_chmod(mrb_state *mrb, mrb_value klass) {
 }
 
 static mrb_value
-mrb_file_s_readlink(mrb_state *mrb, mrb_value klass) {
+mrb_file_s_readlink(mrb_state *mrb, mrb_value klass)
+{
 #if defined(_WIN32) || defined(_WIN64)
   mrb_raise(mrb, E_NOTIMP_ERROR, "readlink is not supported on this platform");
-  return mrb_nil_value(); // unreachable
+  return mrb_nil_value();  // unreachable
 #else
   char *path, *buf, *tmp;
   size_t bufsize = 100;
@@ -471,10 +471,10 @@ mrb_init_file(mrb_state *mrb)
 {
   struct RClass *io, *file, *cnst;
 
-  io   = mrb_class_get(mrb, "IO");
+  io = mrb_class_get(mrb, "IO");
   file = mrb_define_class(mrb, "File", io);
   MRB_SET_INSTANCE_TT(file, MRB_TT_DATA);
-  mrb_define_class_method(mrb, file, "umask",  mrb_file_s_umask, MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, file, "umask", mrb_file_s_umask, MRB_ARGS_OPT(1));
   mrb_define_class_method(mrb, file, "delete", mrb_file_s_unlink, MRB_ARGS_ANY());
   mrb_define_class_method(mrb, file, "unlink", mrb_file_s_unlink, MRB_ARGS_ANY());
   mrb_define_class_method(mrb, file, "rename", mrb_file_s_rename, MRB_ARGS_REQ(2));
@@ -482,11 +482,12 @@ mrb_init_file(mrb_state *mrb)
   mrb_define_class_method(mrb, file, "chmod", mrb_file_s_chmod, MRB_ARGS_REQ(1) | MRB_ARGS_REST());
   mrb_define_class_method(mrb, file, "readlink", mrb_file_s_readlink, MRB_ARGS_REQ(1));
 
-  mrb_define_class_method(mrb, file, "dirname",   mrb_file_dirname,    MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, file, "basename",  mrb_file_basename,   MRB_ARGS_REQ(1));
-  mrb_define_class_method(mrb, file, "realpath",  mrb_file_realpath,   MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_class_method(mrb, file, "_getwd",    mrb_file__getwd,     MRB_ARGS_NONE());
-  mrb_define_class_method(mrb, file, "_gethome",  mrb_file__gethome,   MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, file, "dirname", mrb_file_dirname, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, file, "basename", mrb_file_basename, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, file, "realpath", mrb_file_realpath,
+                          MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, file, "_getwd", mrb_file__getwd, MRB_ARGS_NONE());
+  mrb_define_class_method(mrb, file, "_gethome", mrb_file__gethome, MRB_ARGS_OPT(1));
 
   mrb_define_method(mrb, file, "flock", mrb_file_flock, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, file, "mtime", mrb_file_mtime, MRB_ARGS_NONE());
@@ -504,5 +505,4 @@ mrb_init_file(mrb_state *mrb)
   mrb_define_const(mrb, cnst, "ALT_SEPARATOR", mrb_nil_value());
 #endif
   mrb_define_const(mrb, cnst, "NULL", mrb_str_new_cstr(mrb, NULL_FILE));
-
 }

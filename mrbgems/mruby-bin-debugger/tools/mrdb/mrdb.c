@@ -3,19 +3,19 @@
 **
 */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <ctype.h>
+#include "mrdb.h"
 
+#include <ctype.h>
 #include <mruby.h>
-#include <mruby/dump.h>
-#include <mruby/debug.h>
 #include <mruby/class.h>
+#include <mruby/debug.h>
+#include <mruby/dump.h>
 #include <mruby/opcode.h>
 #include <mruby/variable.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "mrdb.h"
 #include "apibreak.h"
 #include "apilist.h"
 
@@ -26,10 +26,10 @@ static mrdb_state *_mrdb_state = NULL;
 
 struct _args {
   FILE *rfp;
-  char* fname;
-  char* srcpath;
+  char *fname;
+  char *srcpath;
   int argc;
-  char** argv;
+  char **argv;
   mrb_bool mrbfile : 1;
 };
 
@@ -44,36 +44,33 @@ typedef struct debug_command {
 } debug_command;
 
 static const debug_command debug_command_list[] = {
-  {"break",     NULL,           1, 0, 0, DBGCMD_BREAK,          dbgcmd_break},           /* b[reak] */
-  {"continue",  NULL,           1, 0, 0, DBGCMD_CONTINUE,       dbgcmd_continue},        /* c[ontinue] */
-  {"delete",    NULL,           1, 0, 1, DBGCMD_DELETE,         dbgcmd_delete},          /* d[elete] */
-  {"disable",   NULL,           3, 0, 1, DBGCMD_DISABLE,        dbgcmd_disable},         /* dis[able] */
-  {"enable",    NULL,           2, 0, 1, DBGCMD_ENABLE,         dbgcmd_enable},          /* en[able] */
-  {"eval",      NULL,           2, 0, 0, DBGCMD_EVAL,           dbgcmd_eval},            /* ev[al] */
-  {"help",      NULL,           1, 0, 1, DBGCMD_HELP,           dbgcmd_help},            /* h[elp] */
-  {"info",      "breakpoints",  1, 1, 1, DBGCMD_INFO_BREAK,     dbgcmd_info_break},      /* i[nfo] b[reakpoints] */
-  {"info",      "locals",       1, 1, 0, DBGCMD_INFO_LOCAL,     dbgcmd_info_local},      /* i[nfo] l[ocals] */
-  {"list",      NULL,           1, 0, 1, DBGCMD_LIST,           dbgcmd_list},            /* l[ist] */
-  {"print",     NULL,           1, 0, 0, DBGCMD_PRINT,          dbgcmd_print},           /* p[rint] */
-  {"quit",      NULL,           1, 0, 0, DBGCMD_QUIT,           dbgcmd_quit},            /* q[uit] */
-  {"run",       NULL,           1, 0, 0, DBGCMD_RUN,            dbgcmd_run},             /* r[un] */
-  {"step",      NULL,           1, 0, 1, DBGCMD_STEP,           dbgcmd_step},            /* s[tep] */
-  {"next",      NULL,           1, 0, 1, DBGCMD_NEXT,           dbgcmd_next},            /* n[ext] */
-  {NULL}
-};
-
+    {"break", NULL, 1, 0, 0, DBGCMD_BREAK, dbgcmd_break},          /* b[reak] */
+    {"continue", NULL, 1, 0, 0, DBGCMD_CONTINUE, dbgcmd_continue}, /* c[ontinue] */
+    {"delete", NULL, 1, 0, 1, DBGCMD_DELETE, dbgcmd_delete},       /* d[elete] */
+    {"disable", NULL, 3, 0, 1, DBGCMD_DISABLE, dbgcmd_disable},    /* dis[able] */
+    {"enable", NULL, 2, 0, 1, DBGCMD_ENABLE, dbgcmd_enable},       /* en[able] */
+    {"eval", NULL, 2, 0, 0, DBGCMD_EVAL, dbgcmd_eval},             /* ev[al] */
+    {"help", NULL, 1, 0, 1, DBGCMD_HELP, dbgcmd_help},             /* h[elp] */
+    {"info", "breakpoints", 1, 1, 1, DBGCMD_INFO_BREAK,
+     dbgcmd_info_break},                                               /* i[nfo] b[reakpoints] */
+    {"info", "locals", 1, 1, 0, DBGCMD_INFO_LOCAL, dbgcmd_info_local}, /* i[nfo] l[ocals] */
+    {"list", NULL, 1, 0, 1, DBGCMD_LIST, dbgcmd_list},                 /* l[ist] */
+    {"print", NULL, 1, 0, 0, DBGCMD_PRINT, dbgcmd_print},              /* p[rint] */
+    {"quit", NULL, 1, 0, 0, DBGCMD_QUIT, dbgcmd_quit},                 /* q[uit] */
+    {"run", NULL, 1, 0, 0, DBGCMD_RUN, dbgcmd_run},                    /* r[un] */
+    {"step", NULL, 1, 0, 1, DBGCMD_STEP, dbgcmd_step},                 /* s[tep] */
+    {"next", NULL, 1, 0, 1, DBGCMD_NEXT, dbgcmd_next},                 /* n[ext] */
+    {NULL}};
 
 static void
 usage(const char *name)
 {
-  static const char *const usage_msg[] = {
-  "switches:",
-  "-b           load and execute RiteBinary (mrb) file",
-  "-d           specify source directory",
-  "--version    print the version",
-  "--copyright  print the copyright",
-  NULL
-  };
+  static const char *const usage_msg[] = {"switches:",
+                                          "-b           load and execute RiteBinary (mrb) file",
+                                          "-d           specify source directory",
+                                          "--version    print the version",
+                                          "--copyright  print the copyright",
+                                          NULL};
   const char *const *p = usage_msg;
 
   printf("Usage: %s [switches] programfile\n", name);
@@ -86,11 +83,11 @@ static int
 parse_args(mrb_state *mrb, int argc, char **argv, struct _args *args)
 {
   char **origargv = argv;
-  static const struct _args args_zero = { 0 };
+  static const struct _args args_zero = {0};
 
   *args = args_zero;
 
-  for (argc--,argv++; argc > 0; argc--,argv++) {
+  for (argc--, argv++; argc > 0; argc--, argv++) {
     char *item;
     if (argv[0][0] != '-') break;
 
@@ -102,11 +99,11 @@ parse_args(mrb_state *mrb, int argc, char **argv, struct _args *args)
     case 'd':
       if (item[0]) {
         goto append_srcpath;
-      }
-      else if (argc > 1) {
-        argc--; argv++;
+      } else if (argc > 1) {
+        argc--;
+        argv++;
         item = argv[0];
-append_srcpath:
+      append_srcpath:
         if (!args->srcpath) {
           size_t buflen;
           char *buf;
@@ -115,20 +112,17 @@ append_srcpath:
           buf = (char *)mrb_malloc(mrb, buflen);
           memcpy(buf, item, buflen);
           args->srcpath = buf;
-        }
-        else {
+        } else {
           size_t srcpathlen;
           size_t itemlen;
 
           srcpathlen = strlen(args->srcpath);
           itemlen = strlen(item);
-          args->srcpath =
-            (char *)mrb_realloc(mrb, args->srcpath, srcpathlen + itemlen + 2);
+          args->srcpath = (char *)mrb_realloc(mrb, args->srcpath, srcpathlen + itemlen + 2);
           args->srcpath[srcpathlen] = '\n';
           memcpy(args->srcpath + srcpathlen + 1, item, itemlen + 1);
         }
-      }
-      else {
+      } else {
         printf("%s: No path specified for -d\n", *origargv);
         return EXIT_SUCCESS;
       }
@@ -137,8 +131,7 @@ append_srcpath:
       if (strcmp((*argv) + 2, "version") == 0) {
         mrb_show_version(mrb);
         exit(EXIT_SUCCESS);
-      }
-      else if (strcmp((*argv) + 2, "copyright") == 0) {
+      } else if (strcmp((*argv) + 2, "copyright") == 0) {
         mrb_show_copyright(mrb);
         exit(EXIT_SUCCESS);
       }
@@ -151,19 +144,19 @@ append_srcpath:
     if (*argv == NULL) {
       printf("%s: Program file not specified.\n", *origargv);
       return EXIT_FAILURE;
-    }
-    else {
+    } else {
       args->rfp = fopen(argv[0], args->mrbfile ? "rb" : "r");
       if (args->rfp == NULL) {
         printf("%s: Cannot open program file. (%s)\n", *origargv, *argv);
         return EXIT_FAILURE;
       }
       args->fname = argv[0];
-      argc--; argv++;
+      argc--;
+      argv++;
     }
   }
-  args->argv = (char **)mrb_realloc(mrb, args->argv, sizeof(char*) * (argc + 1));
-  memcpy(args->argv, argv, (argc+1) * sizeof(char*));
+  args->argv = (char **)mrb_realloc(mrb, args->argv, sizeof(char *) * (argc + 1));
+  memcpy(args->argv, argv, (argc + 1) * sizeof(char *));
   args->argc = argc;
 
   return EXIT_SUCCESS;
@@ -172,20 +165,17 @@ append_srcpath:
 static void
 cleanup(mrb_state *mrb, struct _args *args)
 {
-  if (args->rfp)
-    fclose(args->rfp);
-  if (args->srcpath)
-    mrb_free(mrb, args->srcpath);
-  if (args->argv)
-    mrb_free(mrb, args->argv);
+  if (args->rfp) fclose(args->rfp);
+  if (args->srcpath) mrb_free(mrb, args->srcpath);
+  if (args->argv) mrb_free(mrb, args->argv);
   mrdb_state_free(mrb);
   mrb_close(mrb);
 }
 
-static mrb_debug_context*
+static mrb_debug_context *
 mrb_debug_context_new(mrb_state *mrb)
 {
-  mrb_debug_context *dbg = (mrb_debug_context*)mrb_malloc(mrb, sizeof(mrb_debug_context));
+  mrb_debug_context *dbg = (mrb_debug_context *)mrb_malloc(mrb, sizeof(mrb_debug_context));
 
   memset(dbg, 0, sizeof(mrb_debug_context));
 
@@ -196,7 +186,7 @@ mrb_debug_context_new(mrb_state *mrb)
   return dbg;
 }
 
-mrb_debug_context*
+mrb_debug_context *
 mrb_debug_context_get(mrb_state *mrb)
 {
   if (!_debug_context) {
@@ -221,21 +211,21 @@ mrb_debug_context_free(mrb_state *mrb)
   }
 }
 
-static mrdb_state*
+static mrdb_state *
 mrdb_state_new(mrb_state *mrb)
 {
-  mrdb_state *mrdb = (mrdb_state*)mrb_malloc(mrb, sizeof(mrdb_state));
+  mrdb_state *mrdb = (mrdb_state *)mrb_malloc(mrb, sizeof(mrdb_state));
 
   memset(mrdb, 0, sizeof(mrdb_state));
 
   mrdb->dbg = mrb_debug_context_get(mrb);
-  mrdb->command = (char*)mrb_malloc(mrb, MAX_COMMAND_LINE+1);
+  mrdb->command = (char *)mrb_malloc(mrb, MAX_COMMAND_LINE + 1);
   mrdb->print_no = 1;
 
   return mrdb;
 }
 
-mrdb_state*
+mrdb_state *
 mrdb_state_get(mrb_state *mrb)
 {
   if (!_mrdb_state) {
@@ -261,14 +251,14 @@ mrdb_state_free(mrb_state *mrb)
   }
 }
 
-static char*
+static char *
 get_command(mrb_state *mrb, mrdb_state *mrdb)
 {
   int i;
   int c;
 
-  for (i=0; i<MAX_COMMAND_LINE; i++) {
-    if ((c=getchar()) == EOF || c == '\n') break;
+  for (i = 0; i < MAX_COMMAND_LINE; i++) {
+    if ((c = getchar()) == EOF || c == '\n') break;
     mrdb->command[i] = c;
   }
 
@@ -279,7 +269,8 @@ get_command(mrb_state *mrb, mrdb_state *mrdb)
   }
 
   if (i == MAX_COMMAND_LINE) {
-    for ( ; (c=getchar()) != EOF && c !='\n'; i++) ;
+    for (; (c = getchar()) != EOF && c != '\n'; i++)
+      ;
   }
 
   if (i > MAX_COMMAND_LINE) {
@@ -291,21 +282,21 @@ get_command(mrb_state *mrb, mrdb_state *mrdb)
   return mrdb->command;
 }
 
-static char*
+static char *
 pick_out_word(mrb_state *mrb, char **pp)
 {
   char *ps;
 
-  for (ps=*pp; ISBLANK(*ps); ps++) ;
+  for (ps = *pp; ISBLANK(*ps); ps++)
+    ;
   if (*ps == '\0') {
     return NULL;
   }
 
   if (*ps == '\"' || *ps == '\'') {
-    *pp = strchr(ps+1, *ps);
+    *pp = strchr(ps + 1, *ps);
     if (*pp) (*pp)++;
-  }
-  else {
+  } else {
     *pp = strpbrk(ps, " \t");
   }
 
@@ -321,7 +312,7 @@ pick_out_word(mrb_state *mrb, char **pp)
   return ps;
 }
 
-static debug_command*
+static debug_command *
 parse_command(mrb_state *mrb, mrdb_state *mrdb, char *buf)
 {
   debug_command *cmd = NULL;
@@ -335,16 +326,16 @@ parse_command(mrb_state *mrb, mrdb_state *mrdb, char *buf)
   }
   mrdb->wcnt = 1;
   /* set remain parameter */
-  for ( ; *p && ISBLANK(*p); p++) ;
+  for (; *p && ISBLANK(*p); p++)
+    ;
   if (*p) {
     mrdb->words[mrdb->wcnt++] = p;
   }
 
   /* check word #1 */
-  for (cmd=(debug_command*)debug_command_list; cmd->cmd1; cmd++) {
+  for (cmd = (debug_command *)debug_command_list; cmd->cmd1; cmd++) {
     wlen = strlen(mrdb->words[0]);
-    if (wlen >= cmd->len1 &&
-        strncmp(mrdb->words[0], cmd->cmd1, wlen) == 0) {
+    if (wlen >= cmd->len1 && strncmp(mrdb->words[0], cmd->cmd1, wlen) == 0) {
       break;
     }
   }
@@ -355,7 +346,8 @@ parse_command(mrb_state *mrb, mrdb_state *mrdb, char *buf)
       mrdb->words[1] = pick_out_word(mrb, &p);
       if (mrdb->words[1]) {
         /* update remain parameter */
-        for ( ; *p && ISBLANK(*p); p++) ;
+        for (; *p && ISBLANK(*p); p++)
+          ;
         if (*p) {
           mrdb->words[mrdb->wcnt++] = p;
         }
@@ -363,21 +355,19 @@ parse_command(mrb_state *mrb, mrdb_state *mrdb, char *buf)
     }
 
     /* check word #1,#2 */
-    for ( ; cmd->cmd1; cmd++) {
+    for (; cmd->cmd1; cmd++) {
       wlen = strlen(mrdb->words[0]);
-      if (wlen < cmd->len1 ||
-          strncmp(mrdb->words[0], cmd->cmd1, wlen)) {
+      if (wlen < cmd->len1 || strncmp(mrdb->words[0], cmd->cmd1, wlen)) {
         continue;
       }
 
-      if (!cmd->cmd2) break;          /* word #1 only */
+      if (!cmd->cmd2) break; /* word #1 only */
 
-      if (mrdb->wcnt == 1) continue;  /* word #2 not specified */
+      if (mrdb->wcnt == 1) continue; /* word #2 not specified */
 
       wlen = strlen(mrdb->words[1]);
-      if (wlen >= cmd->len2 &&
-          strncmp(mrdb->words[1], cmd->cmd2, wlen) == 0) {
-        break;  /* word #1 and #2 */
+      if (wlen >= cmd->len2 && strncmp(mrdb->words[1], cmd->cmd2, wlen) == 0) {
+        break; /* word #1 and #2 */
       }
     }
   }
@@ -385,7 +375,7 @@ parse_command(mrb_state *mrb, mrdb_state *mrdb, char *buf)
   /* divide remain parameters */
   if (cmd->cmd1 && cmd->div) {
     p = mrdb->words[--mrdb->wcnt];
-    for ( ; mrdb->wcnt<MAX_COMMAND_WORD; mrdb->wcnt++) {
+    for (; mrdb->wcnt < MAX_COMMAND_WORD; mrdb->wcnt++) {
       mrdb->words[mrdb->wcnt] = pick_out_word(mrb, &p);
       if (!mrdb->words[mrdb->wcnt]) {
         break;
@@ -408,27 +398,26 @@ print_info_stopped_break(mrb_state *mrb, mrdb_state *mrdb)
 
   ret = mrb_debug_get_break(mrb, mrdb->dbg, mrdb->dbg->stopped_bpno, &bp);
   if (ret == 0) {
-    switch(bp.type) {
-      case MRB_DEBUG_BPTYPE_LINE:
-        file = bp.point.linepoint.file;
-        lineno = bp.point.linepoint.lineno;
-        printf("Breakpoint %d, at %s:%d\n", bp.bpno, file, lineno);
-        break;
-      case MRB_DEBUG_BPTYPE_METHOD:
-        method_name = bp.point.methodpoint.method_name;
-        class_name = bp.point.methodpoint.class_name;
-        if (class_name == NULL) {
-          printf("Breakpoint %d, %s\n", bp.bpno, method_name);
-        }
-        else {
-          printf("Breakpoint %d, %s:%s\n", bp.bpno, class_name, method_name);
-        }
-        if (mrdb->dbg->isCfunc) {
-          printf("Stopped before calling the C function.\n");
-        }
-        break;
-      default:
-        break;
+    switch (bp.type) {
+    case MRB_DEBUG_BPTYPE_LINE:
+      file = bp.point.linepoint.file;
+      lineno = bp.point.linepoint.lineno;
+      printf("Breakpoint %d, at %s:%d\n", bp.bpno, file, lineno);
+      break;
+    case MRB_DEBUG_BPTYPE_METHOD:
+      method_name = bp.point.methodpoint.method_name;
+      class_name = bp.point.methodpoint.class_name;
+      if (class_name == NULL) {
+        printf("Breakpoint %d, %s\n", bp.bpno, method_name);
+      } else {
+        printf("Breakpoint %d, %s:%s\n", bp.bpno, class_name, method_name);
+      }
+      if (mrdb->dbg->isCfunc) {
+        printf("Stopped before calling the C function.\n");
+      }
+      break;
+    default:
+      break;
     }
   }
 }
@@ -436,7 +425,7 @@ print_info_stopped_break(mrb_state *mrb, mrdb_state *mrdb)
 static void
 print_info_stopped_step_next(mrb_state *mrb, mrdb_state *mrdb)
 {
-  const char* file = mrdb->dbg->prvfile;
+  const char *file = mrdb->dbg->prvfile;
   uint16_t lineno = mrdb->dbg->prvline;
   printf("%s:%d\n", file, lineno);
 }
@@ -444,7 +433,7 @@ print_info_stopped_step_next(mrb_state *mrb, mrdb_state *mrdb)
 static void
 print_info_stopped_code(mrb_state *mrb, mrdb_state *mrdb)
 {
-  char* file = mrb_debug_get_source(mrb, mrdb, mrdb->srcpath, mrdb->dbg->prvfile);
+  char *file = mrb_debug_get_source(mrb, mrdb, mrdb->srcpath, mrdb->dbg->prvfile);
   uint16_t lineno = mrdb->dbg->prvline;
   if (file != NULL) {
     mrb_debug_list(mrb, mrdb->dbg, file, lineno, lineno);
@@ -455,22 +444,22 @@ print_info_stopped_code(mrb_state *mrb, mrdb_state *mrdb)
 static void
 print_info_stopped(mrb_state *mrb, mrdb_state *mrdb)
 {
-  switch(mrdb->dbg->bm) {
-    case BRK_BREAK:
-      print_info_stopped_break(mrb, mrdb);
-      print_info_stopped_code(mrb, mrdb);
-      break;
-    case BRK_STEP:
-    case BRK_NEXT:
-      print_info_stopped_step_next(mrb, mrdb);
-      print_info_stopped_code(mrb, mrdb);
-      break;
-    default:
-      break;
+  switch (mrdb->dbg->bm) {
+  case BRK_BREAK:
+    print_info_stopped_break(mrb, mrdb);
+    print_info_stopped_code(mrb, mrdb);
+    break;
+  case BRK_STEP:
+  case BRK_NEXT:
+    print_info_stopped_step_next(mrb, mrdb);
+    print_info_stopped_code(mrb, mrdb);
+    break;
+  default:
+    break;
   }
 }
 
-static debug_command*
+static debug_command *
 get_and_parse_command(mrb_state *mrb, mrdb_state *mrdb)
 {
   debug_command *cmd = NULL;
@@ -478,7 +467,7 @@ get_and_parse_command(mrb_state *mrb, mrdb_state *mrdb)
   int i;
 
   while (!cmd) {
-    for (p=NULL; !p || *p=='\0'; ) {
+    for (p = NULL; !p || *p == '\0';) {
       printf("(%s:%d) ", mrdb->dbg->prvfile, mrdb->dbg->prvline);
       fflush(stdout);
       p = get_command(mrb, mrdb);
@@ -486,14 +475,14 @@ get_and_parse_command(mrb_state *mrb, mrdb_state *mrdb)
 
     cmd = parse_command(mrb, mrdb, p);
 #ifdef _DBG_MRDB_PARSER_
-    for (i=0; i<mrdb->wcnt; i++) {
+    for (i = 0; i < mrdb->wcnt; i++) {
       printf("%d: %s\n", i, mrdb->words[i]);
     }
 #endif
     if (!cmd) {
       printf("invalid command (");
-      for (i=0; i<mrdb->wcnt; i++) {
-        if (i>0) {
+      for (i = 0; i < mrdb->wcnt; i++) {
+        if (i > 0) {
           printf(" ");
         }
         printf("%s", mrdb->words[i]);
@@ -507,7 +496,7 @@ get_and_parse_command(mrb_state *mrb, mrdb_state *mrdb)
 static int32_t
 check_method_breakpoint(mrb_state *mrb, mrb_irep *irep, const mrb_code *pc, mrb_value *regs)
 {
-  struct RClass* c;
+  struct RClass *c;
   mrb_sym sym;
   int32_t bpno;
   mrb_bool isCfunc;
@@ -520,19 +509,19 @@ check_method_breakpoint(mrb_state *mrb, mrb_irep *irep, const mrb_code *pc, mrb_
   dbg->method_bpno = 0;
 
   insn = mrb_decode_insn(pc);
-  switch(insn.insn) {
-    case OP_SEND:
-    case OP_SENDB:
-      c = mrb_class(mrb, regs[insn.a]);
-      sym = irep->syms[insn.b];
-      break;
-    case OP_SUPER:
-      c = mrb->c->ci->target_class->super;
-      sym = mrb->c->ci->mid;
-      break;
-    default:
-      sym = 0;
-      break;
+  switch (insn.insn) {
+  case OP_SEND:
+  case OP_SENDB:
+    c = mrb_class(mrb, regs[insn.a]);
+    sym = irep->syms[insn.b];
+    break;
+  case OP_SUPER:
+    c = mrb->c->ci->target_class->super;
+    sym = mrb->c->ci->mid;
+    break;
+  default:
+    sym = 0;
+    break;
   }
   if (sym != 0) {
     dbg->method_bpno = mrb_debug_check_breakpoint_method(mrb, dbg, c, sym, &isCfunc);
@@ -557,7 +546,7 @@ mrb_code_fetch_hook(mrb_state *mrb, mrb_irep *irep, const mrb_code *pc, mrb_valu
   mrb_assert(dbg);
 
   dbg->irep = irep;
-  dbg->pc   = pc;
+  dbg->pc = pc;
   dbg->regs = regs;
 
   if (dbg->xphase == DBG_PHASE_RESTART) {
@@ -663,10 +652,10 @@ main(int argc, char **argv)
   mrb_value v;
   mrdb_state *mrdb;
   mrdb_state *mrdb_backup;
-  mrb_debug_context* dbg_backup;
+  mrb_debug_context *dbg_backup;
   debug_command *cmd;
 
- l_restart:
+l_restart:
 
   if (mrb == NULL) {
     fputs("Invalid mrb_state, exiting mruby\n", stderr);
@@ -688,8 +677,7 @@ main(int argc, char **argv)
 
   if (mrdb->dbg->xm == DBG_QUIT) {
     mrdb->dbg->xphase = DBG_PHASE_RESTART;
-  }
-  else {
+  } else {
     mrdb->dbg->xphase = DBG_PHASE_BEFORE_RUN;
   }
   mrdb->dbg->xm = DBG_INIT;
@@ -701,8 +689,7 @@ main(int argc, char **argv)
 
   if (args.mrbfile) { /* .mrb */
     v = mrb_load_irep_file(mrb, args.rfp);
-  }
-  else {              /* .rb */
+  } else { /* .rb */
     mrbc_context *cc = mrbc_context_new(mrb);
     mrbc_filename(mrb, cc, args.fname);
     v = mrb_load_file_cxt(mrb, args.rfp, cc);
@@ -735,8 +722,7 @@ main(int argc, char **argv)
   if (!mrb_undef_p(v)) {
     if (mrb->exc) {
       mrb_print_error(mrb);
-    }
-    else {
+    } else {
       printf(" => ");
       mrb_p(mrb, v);
     }
@@ -753,7 +739,7 @@ main(int argc, char **argv)
       break;
     }
 
-    if ( cmd->func(mrb, mrdb) == DBGST_RESTART ) goto l_restart;
+    if (cmd->func(mrb, mrdb) == DBGST_RESTART) goto l_restart;
   }
 
   cleanup(mrb, &args);

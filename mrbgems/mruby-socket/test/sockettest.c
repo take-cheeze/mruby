@@ -6,33 +6,31 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 
-#include <io.h>
+#  include <io.h>
 
-#ifdef _MSC_VER
+#  ifdef _MSC_VER
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#define open  _open
-#define close _close
-#define unlink _unlink
+#    include <fcntl.h>
+#    include <sys/stat.h>
+#    define open   _open
+#    define close  _close
+#    define unlink _unlink
 
 static int
 mkstemp(char *p)
 {
   int fd;
-  char* fname = _mktemp(p);
-  if (fname == NULL)
-    return -1;
+  char *fname = _mktemp(p);
+  if (fname == NULL) return -1;
   fd = open(fname, O_RDWR | O_CREAT | O_EXCL, _S_IREAD | _S_IWRITE);
-  if (fd >= 0)
-    return fd;
+  if (fd >= 0) return fd;
   return -1;
 }
-#endif
+#  endif
 
 #else
 
-#include <unistd.h>
+#  include <unistd.h>
 
 #endif
 
@@ -74,7 +72,7 @@ mrb_sockettest_cygwin_p(mrb_state *mrb, mrb_value klass)
 }
 
 void
-mrb_mruby_socket_gem_test(mrb_state* mrb)
+mrb_mruby_socket_gem_test(mrb_state *mrb)
 {
   struct RClass *c = mrb_define_module(mrb, "SocketTest");
   mrb_define_class_method(mrb, c, "tmppath", mrb_sockettest_tmppath, MRB_ARGS_NONE());

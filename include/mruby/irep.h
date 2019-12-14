@@ -7,8 +7,9 @@
 #ifndef MRUBY_IREP_H
 #define MRUBY_IREP_H
 
-#include "common.h"
 #include <mruby/compile.h>
+
+#include "common.h"
 
 /**
  * Compiled mruby scripts.
@@ -28,8 +29,8 @@ struct mrb_locals {
 
 /* Program data array struct */
 typedef struct mrb_irep {
-  uint16_t nlocals;        /* Number of local variables */
-  uint16_t nregs;          /* Number of register variables */
+  uint16_t nlocals; /* Number of local variables */
+  uint16_t nregs;   /* Number of register variables */
   uint8_t flags;
 
   const mrb_code *iseq;
@@ -39,7 +40,7 @@ typedef struct mrb_irep {
 
   struct mrb_locals *lv;
   /* debug info */
-  struct mrb_irep_debug_info* debug_info;
+  struct mrb_irep_debug_info *debug_info;
 
   uint16_t ilen, plen, slen, rlen;
   uint32_t refcnt;
@@ -50,27 +51,27 @@ typedef struct mrb_irep {
 MRB_API mrb_irep *mrb_add_irep(mrb_state *mrb);
 
 /* @param [const uint8_t*] irep code, expected as a literal */
-MRB_API mrb_value mrb_load_irep(mrb_state*, const uint8_t*);
+MRB_API mrb_value mrb_load_irep(mrb_state *, const uint8_t *);
 
 /*
  * @param [const void*] irep code
  * @param [size_t] size of irep buffer. If -1 is given, it is considered unrestricted.
  */
-MRB_API mrb_value mrb_load_irep_buf(mrb_state*, const void*, size_t);
+MRB_API mrb_value mrb_load_irep_buf(mrb_state *, const void *, size_t);
 
 /* @param [const uint8_t*] irep code, expected as a literal */
-MRB_API mrb_value mrb_load_irep_cxt(mrb_state*, const uint8_t*, mrbc_context*);
+MRB_API mrb_value mrb_load_irep_cxt(mrb_state *, const uint8_t *, mrbc_context *);
 
 /*
  * @param [const void*] irep code
  * @param [size_t] size of irep buffer. If -1 is given, it is considered unrestricted.
  */
-MRB_API mrb_value mrb_load_irep_buf_cxt(mrb_state*, const void*, size_t, mrbc_context*);
+MRB_API mrb_value mrb_load_irep_buf_cxt(mrb_state *, const void *, size_t, mrbc_context *);
 
-void mrb_irep_free(mrb_state*, struct mrb_irep*);
-void mrb_irep_incref(mrb_state*, struct mrb_irep*);
-void mrb_irep_decref(mrb_state*, struct mrb_irep*);
-void mrb_irep_cutref(mrb_state*, struct mrb_irep*);
+void mrb_irep_free(mrb_state *, struct mrb_irep *);
+void mrb_irep_incref(mrb_state *, struct mrb_irep *);
+void mrb_irep_decref(mrb_state *, struct mrb_irep *);
+void mrb_irep_cutref(mrb_state *, struct mrb_irep *);
 void mrb_irep_remove_lv(mrb_state *mrb, mrb_irep *irep);
 
 struct mrb_insn_data {
@@ -84,4 +85,4 @@ struct mrb_insn_data mrb_decode_insn(const mrb_code *pc);
 
 MRB_END_DECL
 
-#endif  /* MRUBY_IREP_H */
+#endif /* MRUBY_IREP_H */

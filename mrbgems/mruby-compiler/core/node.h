@@ -100,4 +100,4 @@ enum node_type {
   NODE_LAST
 };
 
-#endif  /* MRUBY_COMPILER_NODE_H */
+#endif /* MRUBY_COMPILER_NODE_H */

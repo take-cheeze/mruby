@@ -1,9 +1,9 @@
 #include <mruby.h>
-#include <mruby/proc.h>
-#include <mruby/opcode.h>
 #include <mruby/array.h>
-#include <mruby/string.h>
 #include <mruby/debug.h>
+#include <mruby/opcode.h>
+#include <mruby/proc.h>
+#include <mruby/string.h>
 
 static mrb_value
 mrb_proc_lambda(mrb_state *mrb, mrb_value self)
@@ -19,8 +19,7 @@ mrb_proc_source_location(mrb_state *mrb, mrb_value self)
 
   if (MRB_PROC_CFUNC_P(p)) {
     return mrb_nil_value();
-  }
-  else {
+  } else {
     mrb_irep *irep = p->body.irep;
     int32_t line;
     const char *filename;
@@ -28,7 +27,8 @@ mrb_proc_source_location(mrb_state *mrb, mrb_value self)
     filename = mrb_debug_get_filename(mrb, irep, 0);
     line = mrb_debug_get_line(mrb, irep, 0);
 
-    return (!filename && line == -1)? mrb_nil_value()
+    return (!filename && line == -1)
+        ? mrb_nil_value()
         : mrb_assoc_new(mrb, mrb_str_new_cstr(mrb, filename), mrb_fixnum_value(line));
   }
 }
@@ -53,8 +53,7 @@ mrb_proc_inspect(mrb_state *mrb, mrb_value self)
     line = mrb_debug_get_line(mrb, irep, 0);
     if (line != -1) {
       mrb_str_concat(mrb, str, mrb_fixnum_value(line));
-    }
-    else {
+    } else {
       mrb_str_cat_lit(mrb, str, "-");
     }
   }
@@ -94,14 +93,9 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     size_t len;
     const char *name;
     int size;
-  } *p, parameters_list [] = {
-    {sizeof("req")   - 1, "req",   0},
-    {sizeof("opt")   - 1, "opt",   0},
-    {sizeof("rest")  - 1, "rest",  0},
-    {sizeof("req")   - 1, "req",   0},
-    {sizeof("block") - 1, "block", 0},
-    {0, NULL, 0}
-  };
+  } * p, parameters_list[] = {{sizeof("req") - 1, "req", 0},     {sizeof("opt") - 1, "opt", 0},
+                              {sizeof("rest") - 1, "rest", 0},   {sizeof("req") - 1, "req", 0},
+                              {sizeof("block") - 1, "block", 0}, {0, NULL, 0}};
   const struct RProc *proc = mrb_proc_ptr(self);
   const struct mrb_irep *irep = proc->body.irep;
   mrb_aspec aspec;
@@ -130,16 +124,16 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     parameters_list[3].name = "opt";
   }
 
-  aspec = PEEK_W(irep->iseq+1);
+  aspec = PEEK_W(irep->iseq + 1);
   parameters_list[0].size = MRB_ASPEC_REQ(aspec);
   parameters_list[1].size = MRB_ASPEC_OPT(aspec);
   parameters_list[2].size = MRB_ASPEC_REST(aspec);
   parameters_list[3].size = MRB_ASPEC_POST(aspec);
   parameters_list[4].size = MRB_ASPEC_BLOCK(aspec);
 
-  parameters = mrb_ary_new_capa(mrb, irep->nlocals-1);
+  parameters = mrb_ary_new_capa(mrb, irep->nlocals - 1);
 
-  max = irep->nlocals-1;
+  max = irep->nlocals - 1;
   for (i = 0, p = parameters_list; p->name; p++) {
     mrb_value sname = mrb_symbol_value(mrb_intern_static(mrb, p->name, p->len));
 
@@ -152,7 +146,8 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
         mrb_sym sym = irep->lv[i].name;
         const char *name = mrb_sym_name(mrb, sym);
         switch (name[0]) {
-        case '*': case '&':
+        case '*':
+        case '&':
           break;
         default:
           mrb_ary_push(mrb, a, mrb_symbol_value(sym));
@@ -166,20 +161,22 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
 }
 
 void
-mrb_mruby_proc_ext_gem_init(mrb_state* mrb)
+mrb_mruby_proc_ext_gem_init(mrb_state *mrb)
 {
   struct RClass *p = mrb->proc_class;
-  mrb_define_method(mrb, p, "lambda?",         mrb_proc_lambda,          MRB_ARGS_NONE());
+  mrb_define_method(mrb, p, "lambda?", mrb_proc_lambda, MRB_ARGS_NONE());
   mrb_define_method(mrb, p, "source_location", mrb_proc_source_location, MRB_ARGS_NONE());
-  mrb_define_method(mrb, p, "to_s",            mrb_proc_inspect,         MRB_ARGS_NONE());
-  mrb_define_method(mrb, p, "inspect",         mrb_proc_inspect,         MRB_ARGS_NONE());
-  mrb_define_method(mrb, p, "parameters",      mrb_proc_parameters,      MRB_ARGS_NONE());
+  mrb_define_method(mrb, p, "to_s", mrb_proc_inspect, MRB_ARGS_NONE());
+  mrb_define_method(mrb, p, "inspect", mrb_proc_inspect, MRB_ARGS_NONE());
+  mrb_define_method(mrb, p, "parameters", mrb_proc_parameters, MRB_ARGS_NONE());
 
-  mrb_define_class_method(mrb, mrb->kernel_module, "proc", mrb_kernel_proc, MRB_ARGS_NONE()|MRB_ARGS_BLOCK());
-  mrb_define_method(mrb, mrb->kernel_module,       "proc", mrb_kernel_proc, MRB_ARGS_NONE()|MRB_ARGS_BLOCK());
+  mrb_define_class_method(mrb, mrb->kernel_module, "proc", mrb_kernel_proc,
+                          MRB_ARGS_NONE() | MRB_ARGS_BLOCK());
+  mrb_define_method(mrb, mrb->kernel_module, "proc", mrb_kernel_proc,
+                    MRB_ARGS_NONE() | MRB_ARGS_BLOCK());
 }
 
 void
-mrb_mruby_proc_ext_gem_final(mrb_state* mrb)
+mrb_mruby_proc_ext_gem_final(mrb_state *mrb)
 {
 }

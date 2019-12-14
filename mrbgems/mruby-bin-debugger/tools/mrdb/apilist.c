@@ -2,16 +2,17 @@
  * apilist.c
  */
 
+#include "apilist.h"
+
 #include <ctype.h>
+#include <mruby/compile.h>
+#include <mruby/debug.h>
+#include <mruby/irep.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mrdb.h"
 #include "mrdberror.h"
-#include "apilist.h"
-#include <mruby/compile.h>
-#include <mruby/irep.h>
-#include <mruby/debug.h>
 
 #define LINE_BUF_SIZE MAX_COMMAND_LINE
 
@@ -36,7 +37,7 @@ source_file_free(mrb_state *mrb, source_file *file)
   }
 }
 
-static char*
+static char *
 build_path(mrb_state *mrb, const char *dir, const char *base)
 {
   int len;
@@ -48,7 +49,7 @@ build_path(mrb_state *mrb, const char *dir, const char *base)
     len += strlen(dir) + sizeof("/") - 1;
   }
 
-  path = (char*)mrb_malloc(mrb, len);
+  path = (char *)mrb_malloc(mrb, len);
   memset(path, 0, len);
 
   if (strcmp(dir, ".")) {
@@ -60,7 +61,7 @@ build_path(mrb_state *mrb, const char *dir, const char *base)
   return path;
 }
 
-static char*
+static char *
 dirname(mrb_state *mrb, const char *path)
 {
   size_t len;
@@ -74,19 +75,19 @@ dirname(mrb_state *mrb, const char *path)
   p = strrchr(path, '/');
   len = p != NULL ? (size_t)(p - path) : strlen(path);
 
-  dir = (char*)mrb_malloc(mrb, len + 1);
+  dir = (char *)mrb_malloc(mrb, len + 1);
   strncpy(dir, path, len);
   dir[len] = '\0';
 
   return dir;
 }
 
-static source_file*
+static source_file *
 source_file_new(mrb_state *mrb, mrb_debug_context *dbg, char *filename)
 {
   source_file *file;
 
-  file = (source_file*)mrb_malloc(mrb, sizeof(source_file));
+  file = (source_file *)mrb_malloc(mrb, sizeof(source_file));
 
   memset(file, '\0', sizeof(source_file));
   file->fp = fopen(filename, "rb");
@@ -97,7 +98,7 @@ source_file_new(mrb_state *mrb, mrb_debug_context *dbg, char *filename)
   }
 
   file->lineno = 1;
-  file->path = (char*)mrb_malloc(mrb, strlen(filename) + 1);
+  file->path = (char *)mrb_malloc(mrb, strlen(filename) + 1);
   strcpy(file->path, filename);
   return file;
 }
@@ -168,7 +169,7 @@ show_lines(source_file *file, uint16_t line_min, uint16_t line_max)
   }
 }
 
-char*
+char *
 mrb_debug_get_source(mrb_state *mrb, mrdb_state *mrdb, const char *srcpath, const char *filename)
 {
   int i;
@@ -177,8 +178,10 @@ mrb_debug_get_source(mrb_state *mrb, mrdb_state *mrdb, const char *srcpath, cons
   char *path = NULL;
   const char *srcname = strrchr(filename, '/');
 
-  if (srcname) srcname++;
-  else srcname = filename;
+  if (srcname)
+    srcname++;
+  else
+    srcname = filename;
 
   search_path[0] = srcpath;
   search_path[1] = dirname(mrb, mrb_debug_get_filename(mrb, mrdb->dbg->irep, 0));
@@ -208,7 +211,8 @@ mrb_debug_get_source(mrb_state *mrb, mrdb_state *mrdb, const char *srcpath, cons
 }
 
 int32_t
-mrb_debug_list(mrb_state *mrb, mrb_debug_context *dbg, char *filename, uint16_t line_min, uint16_t line_max)
+mrb_debug_list(mrb_state *mrb, mrb_debug_context *dbg, char *filename, uint16_t line_min,
+               uint16_t line_max)
 {
   char *ext;
   source_file *file;
@@ -232,8 +236,7 @@ mrb_debug_list(mrb_state *mrb, mrb_debug_context *dbg, char *filename, uint16_t 
     show_lines(file, line_min, line_max);
     source_file_free(mrb, file);
     return MRB_DEBUG_OK;
-  }
-  else {
+  } else {
     printf("Invalid source file named %s.\n", filename);
     return MRB_DEBUG_INVALID_ARGUMENT;
   }

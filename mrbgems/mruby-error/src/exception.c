@@ -1,6 +1,6 @@
 #include <mruby.h>
-#include <mruby/throw.h>
 #include <mruby/error.h>
+#include <mruby/throw.h>
 
 MRB_API mrb_value
 mrb_protect(mrb_state *mrb, mrb_func_t body, mrb_value data, mrb_bool *state)
@@ -10,18 +10,26 @@ mrb_protect(mrb_state *mrb, mrb_func_t body, mrb_value data, mrb_bool *state)
   mrb_value result = mrb_nil_value();
   mrb_int ai = mrb_gc_arena_save(mrb);
 
-  if (state) { *state = FALSE; }
+  if (state) {
+    *state = FALSE;
+  }
 
-  MRB_TRY(&c_jmp) {
+  MRB_TRY(&c_jmp)
+  {
     mrb->jmp = &c_jmp;
     result = body(mrb, data);
     mrb->jmp = prev_jmp;
-  } MRB_CATCH(&c_jmp) {
+  }
+  MRB_CATCH(&c_jmp)
+  {
     mrb->jmp = prev_jmp;
     result = mrb_obj_value(mrb->exc);
     mrb->exc = NULL;
-    if (state) { *state = TRUE; }
-  } MRB_END_EXC(&c_jmp);
+    if (state) {
+      *state = TRUE;
+    }
+  }
+  MRB_END_EXC(&c_jmp);
 
   mrb_gc_arena_restore(mrb, ai);
   mrb_gc_protect(mrb, result);
@@ -36,16 +44,20 @@ mrb_ensure(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_func_t ensure,
   mrb_value result;
   mrb_int ai = mrb_gc_arena_save(mrb);
 
-  MRB_TRY(&c_jmp) {
+  MRB_TRY(&c_jmp)
+  {
     mrb->jmp = &c_jmp;
     result = body(mrb, b_data);
     mrb->jmp = prev_jmp;
-  } MRB_CATCH(&c_jmp) {
+  }
+  MRB_CATCH(&c_jmp)
+  {
     mrb->jmp = prev_jmp;
     mrb_gc_arena_restore(mrb, ai);
     ensure(mrb, e_data);
     MRB_THROW(mrb->jmp); /* rethrow catched exceptions */
-  } MRB_END_EXC(&c_jmp);
+  }
+  MRB_END_EXC(&c_jmp);
 
   mrb_gc_arena_restore(mrb, ai);
   mrb_gc_protect(mrb, result);
@@ -56,15 +68,14 @@ mrb_ensure(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_func_t ensure,
 }
 
 MRB_API mrb_value
-mrb_rescue(mrb_state *mrb, mrb_func_t body, mrb_value b_data,
-           mrb_func_t rescue, mrb_value r_data)
+mrb_rescue(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_func_t rescue, mrb_value r_data)
 {
   return mrb_rescue_exceptions(mrb, body, b_data, rescue, r_data, 1, &mrb->eStandardError_class);
 }
 
 MRB_API mrb_value
-mrb_rescue_exceptions(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_func_t rescue, mrb_value r_data,
-                      mrb_int len, struct RClass **classes)
+mrb_rescue_exceptions(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_func_t rescue,
+                      mrb_value r_data, mrb_int len, struct RClass **classes)
 {
   struct mrb_jmpbuf *prev_jmp = mrb->jmp;
   struct mrb_jmpbuf c_jmp;
@@ -73,11 +84,14 @@ mrb_rescue_exceptions(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_fun
   mrb_int i;
   mrb_int ai = mrb_gc_arena_save(mrb);
 
-  MRB_TRY(&c_jmp) {
+  MRB_TRY(&c_jmp)
+  {
     mrb->jmp = &c_jmp;
     result = body(mrb, b_data);
     mrb->jmp = prev_jmp;
-  } MRB_CATCH(&c_jmp) {
+  }
+  MRB_CATCH(&c_jmp)
+  {
     mrb->jmp = prev_jmp;
 
     for (i = 0; i < len; ++i) {
@@ -87,12 +101,15 @@ mrb_rescue_exceptions(mrb_state *mrb, mrb_func_t body, mrb_value b_data, mrb_fun
       }
     }
 
-    if (!error_matched) { MRB_THROW(mrb->jmp); }
+    if (!error_matched) {
+      MRB_THROW(mrb->jmp);
+    }
 
     mrb->exc = NULL;
     mrb_gc_arena_restore(mrb, ai);
     result = rescue(mrb, r_data);
-  } MRB_END_EXC(&c_jmp);
+  }
+  MRB_END_EXC(&c_jmp);
 
   mrb_gc_arena_restore(mrb, ai);
   mrb_gc_protect(mrb, result);

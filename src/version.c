@@ -2,7 +2,7 @@
 #include <mruby/variable.h>
 
 void
-mrb_init_version(mrb_state* mrb)
+mrb_init_version(mrb_state *mrb)
 {
   mrb_value mruby_version = mrb_str_new_lit(mrb, MRUBY_VERSION);
 

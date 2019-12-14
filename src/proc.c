@@ -6,20 +6,20 @@
 
 #include <mruby.h>
 #include <mruby/class.h>
-#include <mruby/proc.h>
 #include <mruby/opcode.h>
+#include <mruby/proc.h>
 
 static const mrb_code call_iseq[] = {
-  OP_CALL,
+    OP_CALL,
 };
 
-struct RProc*
+struct RProc *
 mrb_proc_new(mrb_state *mrb, mrb_irep *irep)
 {
   struct RProc *p;
   mrb_callinfo *ci = mrb->c->ci;
 
-  p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
+  p = (struct RProc *)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
   if (ci) {
     struct RClass *tc = NULL;
 
@@ -38,18 +38,20 @@ mrb_proc_new(mrb_state *mrb, mrb_irep *irep)
   return p;
 }
 
-static struct REnv*
+static struct REnv *
 env_new(mrb_state *mrb, mrb_int nlocals)
 {
   struct REnv *e;
   mrb_callinfo *ci = mrb->c->ci;
   int bidx;
 
-  e = (struct REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV, NULL);
+  e = (struct REnv *)mrb_obj_alloc(mrb, MRB_TT_ENV, NULL);
   MRB_ENV_SET_STACK_LEN(e, nlocals);
   bidx = ci->argc;
-  if (ci->argc < 0) bidx = 2;
-  else bidx += 1;
+  if (ci->argc < 0)
+    bidx = 2;
+  else
+    bidx += 1;
   MRB_ENV_SET_BIDX(e, bidx);
   e->mid = ci->mid;
   e->stack = mrb->c->stack;
@@ -67,15 +69,14 @@ closure_setup(mrb_state *mrb, struct RProc *p)
 
   if (ci && ci->env) {
     e = ci->env;
-  }
-  else if (up) {
+  } else if (up) {
     struct RClass *tc = MRB_PROC_TARGET_CLASS(p);
 
     e = env_new(mrb, up->body.irep->nlocals);
     ci->env = e;
     if (tc) {
       e->c = tc;
-      mrb_field_write_barrier(mrb, (struct RBasic*)e, (struct RBasic*)tc);
+      mrb_field_write_barrier(mrb, (struct RBasic *)e, (struct RBasic *)tc);
     }
     if (MRB_PROC_ENV_P(up) && MRB_PROC_ENV(up)->cxt == NULL) {
       e->mid = MRB_PROC_ENV(up)->mid;
@@ -84,11 +85,11 @@ closure_setup(mrb_state *mrb, struct RProc *p)
   if (e) {
     p->e.env = e;
     p->flags |= MRB_PROC_ENVSET;
-    mrb_field_write_barrier(mrb, (struct RBasic*)p, (struct RBasic*)e);
+    mrb_field_write_barrier(mrb, (struct RBasic *)p, (struct RBasic *)e);
   }
 }
 
-struct RProc*
+struct RProc *
 mrb_closure_new(mrb_state *mrb, mrb_irep *irep)
 {
   struct RProc *p = mrb_proc_new(mrb, irep);
@@ -97,12 +98,12 @@ mrb_closure_new(mrb_state *mrb, mrb_irep *irep)
   return p;
 }
 
-MRB_API struct RProc*
+MRB_API struct RProc *
 mrb_proc_new_cfunc(mrb_state *mrb, mrb_func_t func)
 {
   struct RProc *p;
 
-  p = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
+  p = (struct RProc *)mrb_obj_alloc(mrb, MRB_TT_PROC, mrb->proc_class);
   p->body.func = func;
   p->flags |= MRB_PROC_CFUNC_FL;
   p->upper = 0;
@@ -111,7 +112,7 @@ mrb_proc_new_cfunc(mrb_state *mrb, mrb_func_t func)
   return p;
 }
 
-MRB_API struct RProc*
+MRB_API struct RProc *
 mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const mrb_value *argv)
 {
   struct RProc *p = mrb_proc_new_cfunc(mrb, func);
@@ -120,15 +121,14 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
 
   p->e.env = e = env_new(mrb, argc);
   p->flags |= MRB_PROC_ENVSET;
-  mrb_field_write_barrier(mrb, (struct RBasic*)p, (struct RBasic*)e);
+  mrb_field_write_barrier(mrb, (struct RBasic *)p, (struct RBasic *)e);
   MRB_ENV_UNSHARE_STACK(e);
-  e->stack = (mrb_value*)mrb_malloc(mrb, sizeof(mrb_value) * argc);
+  e->stack = (mrb_value *)mrb_malloc(mrb, sizeof(mrb_value) * argc);
   if (argv) {
     for (i = 0; i < argc; ++i) {
       e->stack[i] = argv[i];
     }
-  }
-  else {
+  } else {
     for (i = 0; i < argc; ++i) {
       SET_NIL_VALUE(e->stack[i]);
     }
@@ -136,7 +136,7 @@ mrb_proc_new_cfunc_with_env(mrb_state *mrb, mrb_func_t func, mrb_int argc, const
   return p;
 }
 
-MRB_API struct RProc*
+MRB_API struct RProc *
 mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
 {
   return mrb_proc_new_cfunc_with_env(mrb, func, nlocals, NULL);
@@ -156,8 +156,8 @@ mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
     mrb_raise(mrb, E_TYPE_ERROR, "Can't get cfunc env from cfunc Proc without REnv.");
   }
   if (idx < 0 || MRB_ENV_STACK_LEN(e) <= idx) {
-    mrb_raisef(mrb, E_INDEX_ERROR, "Env index out of range: %i (expected: 0 <= index < %i)",
-               idx, MRB_ENV_STACK_LEN(e));
+    mrb_raisef(mrb, E_INDEX_ERROR, "Env index out of range: %i (expected: 0 <= index < %i)", idx,
+               MRB_ENV_STACK_LEN(e));
   }
 
   return e->stack[idx];
@@ -193,8 +193,8 @@ mrb_proc_s_new(mrb_state *mrb, mrb_value proc_class)
   mrb_proc_copy(p, mrb_proc_ptr(blk));
   proc = mrb_obj_value(p);
   mrb_funcall_with_block(mrb, proc, mrb_intern_lit(mrb, "initialize"), 0, NULL, proc);
-  if (!MRB_PROC_STRICT_P(p) &&
-      mrb->c->ci > mrb->c->cibase && MRB_PROC_ENV(p) == mrb->c->ci[-1].env) {
+  if (!MRB_PROC_STRICT_P(p) && mrb->c->ci > mrb->c->cibase &&
+      MRB_PROC_ENV(p) == mrb->c->ci[-1].env) {
     p->flags |= MRB_PROC_ORPHAN;
   }
   return proc;
@@ -244,7 +244,7 @@ proc_lambda(mrb_state *mrb, mrb_value self)
   }
   p = mrb_proc_ptr(blk);
   if (!MRB_PROC_STRICT_P(p)) {
-    struct RProc *p2 = (struct RProc*)mrb_obj_alloc(mrb, MRB_TT_PROC, p->c);
+    struct RProc *p2 = (struct RProc *)mrb_obj_alloc(mrb, MRB_TT_PROC, p->c);
     mrb_proc_copy(p2, p);
     p2->flags |= MRB_PROC_STRICT;
     return mrb_obj_value(p2);
@@ -276,7 +276,7 @@ mrb_proc_arity(const struct RProc *p)
     return 0;
   }
 
-  aspec = PEEK_W(pc+1);
+  aspec = PEEK_W(pc + 1);
   ma = MRB_ASPEC_REQ(aspec);
   op = MRB_ASPEC_OPT(aspec);
   ra = MRB_ASPEC_REST(aspec);
@@ -292,15 +292,16 @@ mrb_init_proc(mrb_state *mrb)
   struct RProc *p;
   mrb_method_t m;
   mrb_irep *call_irep = (mrb_irep *)mrb_malloc(mrb, sizeof(mrb_irep));
-  static const mrb_irep mrb_irep_zero = { 0 };
+  static const mrb_irep mrb_irep_zero = {0};
 
   *call_irep = mrb_irep_zero;
   call_irep->flags = MRB_ISEQ_NO_FREE;
   call_irep->iseq = call_iseq;
   call_irep->ilen = 1;
-  call_irep->nregs = 2;         /* receiver and block */
+  call_irep->nregs = 2; /* receiver and block */
 
-  mrb_define_class_method(mrb, mrb->proc_class, "new", mrb_proc_s_new, MRB_ARGS_NONE()|MRB_ARGS_BLOCK());
+  mrb_define_class_method(mrb, mrb->proc_class, "new", mrb_proc_s_new,
+                          MRB_ARGS_NONE() | MRB_ARGS_BLOCK());
   mrb_define_method(mrb, mrb->proc_class, "initialize_copy", mrb_proc_init_copy, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, mrb->proc_class, "arity", proc_arity, MRB_ARGS_NONE());
 
@@ -309,6 +310,8 @@ mrb_init_proc(mrb_state *mrb)
   mrb_define_method_raw(mrb, mrb->proc_class, mrb_intern_lit(mrb, "call"), m);
   mrb_define_method_raw(mrb, mrb->proc_class, mrb_intern_lit(mrb, "[]"), m);
 
-  mrb_define_class_method(mrb, mrb->kernel_module, "lambda", proc_lambda, MRB_ARGS_NONE()|MRB_ARGS_BLOCK()); /* 15.3.1.2.6  */
-  mrb_define_method(mrb, mrb->kernel_module,       "lambda", proc_lambda, MRB_ARGS_NONE()|MRB_ARGS_BLOCK()); /* 15.3.1.3.27 */
+  mrb_define_class_method(mrb, mrb->kernel_module, "lambda", proc_lambda,
+                          MRB_ARGS_NONE() | MRB_ARGS_BLOCK()); /* 15.3.1.2.6  */
+  mrb_define_method(mrb, mrb->kernel_module, "lambda", proc_lambda,
+                    MRB_ARGS_NONE() | MRB_ARGS_BLOCK()); /* 15.3.1.3.27 */
 }

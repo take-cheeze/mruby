@@ -5,18 +5,18 @@
 */
 
 #include <mruby.h>
-#include <mruby/variable.h>
+#include <mruby/array.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
-#include <mruby/array.h>
 #include <mruby/istruct.h>
+#include <mruby/variable.h>
 #if INT32_MAX <= INTPTR_MAX
-# define XORSHIFT96
-# define NSEEDS 3
+#  define XORSHIFT96
+#  define NSEEDS 3
 #else
-# define NSEEDS 4
+#  define NSEEDS 4
 #endif
-#define LASTSEED (NSEEDS-1)
+#define LASTSEED (NSEEDS - 1)
 
 #include <time.h>
 
@@ -55,7 +55,9 @@ rand_uint32(rand_state *state)
   uint32_t t;
 
   t = (x ^ (x << 3)) ^ (y ^ (y >> 19)) ^ (z ^ (z << 6));
-  x = y; y = z; z = t;
+  x = y;
+  y = z;
+  z = t;
   seed[0] = x;
   seed[1] = y;
   seed[2] = z;
@@ -74,7 +76,9 @@ rand_uint32(rand_state *state)
   uint32_t t;
 
   t = x ^ (x << 11);
-  x = y; y = z; z = w;
+  x = y;
+  y = z;
+  z = w;
   w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
   seed[0] = x;
   seed[1] = y;
@@ -83,14 +87,14 @@ rand_uint32(rand_state *state)
 
   return w;
 }
-#endif  /* XORSHIFT96 */
+#endif /* XORSHIFT96 */
 
 #ifndef MRB_WITHOUT_FLOAT
 static double
 rand_real(rand_state *t)
 {
   uint32_t x = rand_uint32(t);
-  return x*(1.0/4294967295.0);
+  return x * (1.0 / 4294967295.0);
 }
 #endif
 
@@ -105,8 +109,7 @@ random_rand(mrb_state *mrb, rand_state *t, mrb_value max)
 #else
     mrb_raise(mrb, E_ARGUMENT_ERROR, "Float not supported");
 #endif
-  }
-  else {
+  } else {
     value = mrb_fixnum_value(rand_uint32(t) % mrb_fixnum(max));
   }
 
@@ -114,7 +117,7 @@ random_rand(mrb_state *mrb, rand_state *t, mrb_value max)
 }
 
 static mrb_value
-get_opt(mrb_state* mrb)
+get_opt(mrb_state *mrb)
 {
   mrb_value arg;
 
@@ -134,7 +137,8 @@ get_opt(mrb_state* mrb)
 }
 
 static void
-random_check(mrb_state *mrb, mrb_value random) {
+random_check(mrb_state *mrb, mrb_value random)
+{
   struct RClass *c = mrb_class_get(mrb, "Random");
   if (!mrb_obj_is_kind_of(mrb, random, c) || !mrb_istruct_p(random)) {
     mrb_raise(mrb, E_TYPE_ERROR, "Random instance required");
@@ -142,7 +146,8 @@ random_check(mrb_state *mrb, mrb_value random) {
 }
 
 static mrb_value
-random_default(mrb_state *mrb) {
+random_default(mrb_state *mrb)
+{
   struct RClass *c = mrb_class_get(mrb, "Random");
   mrb_value d = mrb_const_get(mrb, mrb_obj_value(c), mrb_intern_lit(mrb, "DEFAULT"));
   if (!mrb_obj_is_kind_of(mrb, d, c)) {
@@ -151,7 +156,7 @@ random_default(mrb_state *mrb) {
   return d;
 }
 
-#define random_ptr(v) (rand_state*)mrb_istruct_ptr(v)
+#define random_ptr(v)             (rand_state *)mrb_istruct_ptr(v)
 #define random_default_state(mrb) random_ptr(random_default(mrb))
 
 static mrb_value
@@ -165,8 +170,7 @@ random_m_init(mrb_state *mrb, mrb_value self)
   t = random_ptr(self);
   if (mrb_nil_p(seed)) {
     rand_init(t);
-  }
-  else {
+  } else {
     rand_seed(t, (uint32_t)mrb_fixnum(seed));
   }
 
@@ -194,8 +198,7 @@ random_m_srand(mrb_state *mrb, mrb_value self)
   sv = get_opt(mrb);
   if (mrb_nil_p(sv)) {
     seed = (uint32_t)time(NULL) + rand_uint32(t);
-  }
-  else {
+  } else {
     seed = (uint32_t)mrb_fixnum(sv);
   }
   old_seed = rand_seed(t, seed);
@@ -223,14 +226,13 @@ mrb_ary_shuffle_bang(mrb_state *mrb, mrb_value ary)
 
     if (mrb_nil_p(r)) {
       random = random_default_state(mrb);
-    }
-    else {
+    } else {
       random_check(mrb, r);
       random = random_ptr(r);
     }
     mrb_ary_modify(mrb, mrb_ary_ptr(ary));
     max = mrb_fixnum_value(RARRAY_LEN(ary));
-    for (i = RARRAY_LEN(ary) - 1; i > 0; i--)  {
+    for (i = RARRAY_LEN(ary) - 1; i > 0; i--) {
       mrb_int j;
       mrb_value *ptr = RARRAY_PTR(ary);
       mrb_value tmp;
@@ -289,13 +291,12 @@ mrb_ary_sample(mrb_state *mrb, mrb_value ary)
   mrb_get_args(mrb, "|i?o", &n, &given, &r);
   if (mrb_nil_p(r)) {
     random = random_default_state(mrb);
-  }
-  else {
+  } else {
     random_check(mrb, r);
     random = random_ptr(r);
   }
   len = RARRAY_LEN(ary);
-  if (!given) {                 /* pick one element */
+  if (!given) { /* pick one element */
     switch (len) {
     case 0:
       return mrb_nil_value();
@@ -304,31 +305,30 @@ mrb_ary_sample(mrb_state *mrb, mrb_value ary)
     default:
       return RARRAY_PTR(ary)[rand_uint32(random) % len];
     }
-  }
-  else {
+  } else {
     mrb_value result;
     mrb_int i, j;
 
     if (n < 0) mrb_raise(mrb, E_ARGUMENT_ERROR, "negative sample number");
     if (n > len) n = len;
     result = mrb_ary_new_capa(mrb, n);
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; i++) {
       mrb_int r;
 
       for (;;) {
       retry:
         r = (mrb_int)(rand_uint32(random) % len);
 
-        for (j=0; j<i; j++) {
+        for (j = 0; j < i; j++) {
           if (mrb_fixnum(RARRAY_PTR(result)[j]) == r) {
-            goto retry;         /* retry if duplicate */
+            goto retry; /* retry if duplicate */
           }
         }
         break;
       }
       mrb_ary_push(mrb, result, mrb_fixnum_value(r));
     }
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; i++) {
       mrb_ary_set(mrb, result, i, RARRAY_PTR(ary)[mrb_fixnum(RARRAY_PTR(result)[i])]);
     }
     return result;
@@ -349,8 +349,8 @@ random_f_srand(mrb_state *mrb, mrb_value self)
   return random_m_srand(mrb, random);
 }
 
-
-void mrb_mruby_random_gem_init(mrb_state *mrb)
+void
+mrb_mruby_random_gem_init(mrb_state *mrb)
 {
   struct RClass *random;
   struct RClass *array = mrb->array_class;
@@ -374,9 +374,10 @@ void mrb_mruby_random_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, array, "sample", mrb_ary_sample, MRB_ARGS_OPT(2));
 
   mrb_const_set(mrb, mrb_obj_value(random), mrb_intern_lit(mrb, "DEFAULT"),
-          mrb_obj_new(mrb, random, 0, NULL));
+                mrb_obj_new(mrb, random, 0, NULL));
 }
 
-void mrb_mruby_random_gem_final(mrb_state *mrb)
+void
+mrb_mruby_random_gem_final(mrb_state *mrb)
 {
 }

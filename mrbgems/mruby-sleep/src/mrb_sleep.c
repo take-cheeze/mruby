@@ -27,12 +27,12 @@
 
 #include <time.h>
 #ifdef _WIN32
-    #include <windows.h>
-    #define sleep(x) Sleep(x * 1000)
-    #define usleep(x) Sleep((DWORD)((x)<1000) ? 1 : ((x)/1000))
+#  include <windows.h>
+#  define sleep(x)  Sleep(x * 1000)
+#  define usleep(x) Sleep((DWORD)((x) < 1000) ? 1 : ((x) / 1000))
 #else
-    #include <unistd.h>
-    #include <sys/time.h>
+#  include <sys/time.h>
+#  include <unistd.h>
 #endif
 
 #include "mruby.h"
@@ -41,92 +41,90 @@
 static mrb_value
 mrb_f_sleep(mrb_state *mrb, mrb_value self)
 {
-    time_t beg = time(0);
-    time_t end;
+  time_t beg = time(0);
+  time_t end;
 #ifndef MRB_WITHOUT_FLOAT
-    mrb_float sec;
+  mrb_float sec;
 
-    mrb_get_args(mrb, "f", &sec);
-    if (sec >= 0) {
-        usleep(sec * 1000000);
-    }
-    else {
-        mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
-    }
+  mrb_get_args(mrb, "f", &sec);
+  if (sec >= 0) {
+    usleep(sec * 1000000);
+  } else {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
+  }
 #else
-    mrb_int sec;
+  mrb_int sec;
 
-    mrb_get_args(mrb, "i", &sec);
-    if (sec >= 0) {
-        sleep(sec);
-    } else {
-        mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
-    }
+  mrb_get_args(mrb, "i", &sec);
+  if (sec >= 0) {
+    sleep(sec);
+  } else {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
+  }
 #endif
-    end = time(0) - beg;
+  end = time(0) - beg;
 
-    return mrb_fixnum_value(end);
+  return mrb_fixnum_value(end);
 }
 
 /* mruby special; needed for mruby without float numbers */
 static mrb_value
 mrb_f_usleep(mrb_state *mrb, mrb_value self)
 {
-    mrb_int usec;
+  mrb_int usec;
 #ifdef _WIN32
-    FILETIME st_ft,ed_ft;
-    unsigned __int64 st_time = 0;
-    unsigned __int64 ed_time = 0;
+  FILETIME st_ft, ed_ft;
+  unsigned __int64 st_time = 0;
+  unsigned __int64 ed_time = 0;
 #else
-    struct timeval st_tm,ed_tm;
+  struct timeval st_tm, ed_tm;
 #endif
-    time_t slp_tm;
-
-#ifdef _WIN32
-    GetSystemTimeAsFileTime(&st_ft);
-#else
-    gettimeofday(&st_tm, NULL);
-#endif
-
-    /* not implemented forever sleep (called without an argument)*/
-    mrb_get_args(mrb, "i", &usec);
-
-    if (usec >= 0) {
-        usleep(usec);
-    } else {
-        mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative integer");
-    }
+  time_t slp_tm;
 
 #ifdef _WIN32
-    GetSystemTimeAsFileTime(&ed_ft);
-
-    st_time |= st_ft.dwHighDateTime;
-    st_time <<=32;
-    st_time |= st_ft.dwLowDateTime;
-    ed_time |= ed_ft.dwHighDateTime;
-    ed_time <<=32;
-    ed_time |= ed_ft.dwLowDateTime;
-
-    slp_tm = (ed_time - st_time) / 10;
+  GetSystemTimeAsFileTime(&st_ft);
 #else
-    gettimeofday(&ed_tm, NULL);
-
-    if (st_tm.tv_usec > ed_tm.tv_usec) {
-        slp_tm = 1000000 + ed_tm.tv_usec - st_tm.tv_usec;
-    }
-    else {
-        slp_tm = ed_tm.tv_usec - st_tm.tv_usec;
-    }
+  gettimeofday(&st_tm, NULL);
 #endif
 
-    return mrb_fixnum_value(slp_tm);
+  /* not implemented forever sleep (called without an argument)*/
+  mrb_get_args(mrb, "i", &usec);
+
+  if (usec >= 0) {
+    usleep(usec);
+  } else {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative integer");
+  }
+
+#ifdef _WIN32
+  GetSystemTimeAsFileTime(&ed_ft);
+
+  st_time |= st_ft.dwHighDateTime;
+  st_time <<= 32;
+  st_time |= st_ft.dwLowDateTime;
+  ed_time |= ed_ft.dwHighDateTime;
+  ed_time <<= 32;
+  ed_time |= ed_ft.dwLowDateTime;
+
+  slp_tm = (ed_time - st_time) / 10;
+#else
+  gettimeofday(&ed_tm, NULL);
+
+  if (st_tm.tv_usec > ed_tm.tv_usec) {
+    slp_tm = 1000000 + ed_tm.tv_usec - st_tm.tv_usec;
+  } else {
+    slp_tm = ed_tm.tv_usec - st_tm.tv_usec;
+  }
+#endif
+
+  return mrb_fixnum_value(slp_tm);
 }
 
 void
 mrb_mruby_sleep_gem_init(mrb_state *mrb)
 {
-    mrb_define_method(mrb, mrb->kernel_module, "sleep",   mrb_f_sleep,   MRB_ARGS_REQ(1));
-    mrb_define_method(mrb, mrb->kernel_module, "usleep",  mrb_f_usleep,  MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, mrb->kernel_module, "sleep", mrb_f_sleep, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, mrb->kernel_module, "usleep", mrb_f_usleep, MRB_ARGS_REQ(1));
 }
 
 void

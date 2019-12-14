@@ -1,6 +1,6 @@
+#include <math.h>
 #include <mruby.h>
 #include <mruby/range.h>
-#include <math.h>
 
 static mrb_bool
 r_le(mrb_state *mrb, mrb_value a, mrb_value b)
@@ -45,12 +45,9 @@ range_cover(mrb_state *mrb, mrb_value range)
 
   if (r_le(mrb, beg, val)) {
     if (RANGE_EXCL(r)) {
-      if (r_lt(mrb, val, end))
-        return mrb_true_value();
-    }
-    else {
-      if (r_le(mrb, val, end))
-        return mrb_true_value();
+      if (r_lt(mrb, val, end)) return mrb_true_value();
+    } else {
+      if (r_le(mrb, val, end)) return mrb_true_value();
     }
   }
 
@@ -113,41 +110,35 @@ range_size(mrb_state *mrb, mrb_value range)
   excl = RANGE_EXCL(r);
   if (mrb_fixnum_p(beg)) {
     beg_f = (mrb_float)mrb_fixnum(beg);
-  }
-  else if (mrb_float_p(beg)) {
+  } else if (mrb_float_p(beg)) {
     beg_f = mrb_float(beg);
-  }
-  else {
+  } else {
     num_p = FALSE;
   }
   if (mrb_fixnum_p(end)) {
     end_f = (mrb_float)mrb_fixnum(end);
-  }
-  else if (mrb_float_p(end)) {
+  } else if (mrb_float_p(end)) {
     end_f = mrb_float(end);
-  }
-  else {
+  } else {
     num_p = FALSE;
   }
   if (num_p) {
     mrb_float n = end_f - beg_f;
-    mrb_float err = (fabs(beg_f) + fabs(end_f) + fabs(end_f-beg_f)) * MRB_FLOAT_EPSILON;
+    mrb_float err = (fabs(beg_f) + fabs(end_f) + fabs(end_f - beg_f)) * MRB_FLOAT_EPSILON;
 
-    if (err>0.5) err=0.5;
+    if (err > 0.5) err = 0.5;
     if (excl) {
-      if (n<=0) return mrb_fixnum_value(0);
-      if (n<1)
+      if (n <= 0) return mrb_fixnum_value(0);
+      if (n < 1)
         n = 0;
       else
         n = floor(n - err);
-    }
-    else {
-      if (n<0) return mrb_fixnum_value(0);
+    } else {
+      if (n < 0) return mrb_fixnum_value(0);
       n = floor(n + err);
     }
-    if (isinf(n+1))
-      return mrb_float_value(mrb, INFINITY);
-    return mrb_fixnum_value((mrb_int)n+1);
+    if (isinf(n + 1)) return mrb_float_value(mrb, INFINITY);
+    return mrb_fixnum_value((mrb_int)n + 1);
   }
   return mrb_nil_value();
 }
@@ -175,16 +166,16 @@ range_size(mrb_state *mrb, mrb_value range)
 #endif /* MRB_WITHOUT_FLOAT */
 
 void
-mrb_mruby_range_ext_gem_init(mrb_state* mrb)
+mrb_mruby_range_ext_gem_init(mrb_state *mrb)
 {
-  struct RClass * s = mrb_class_get(mrb, "Range");
+  struct RClass *s = mrb_class_get(mrb, "Range");
 
   mrb_define_method(mrb, s, "cover?", range_cover, MRB_ARGS_REQ(1));
-  mrb_define_method(mrb, s, "last",   range_last,  MRB_ARGS_OPT(1));
-  mrb_define_method(mrb, s, "size",   range_size,  MRB_ARGS_NONE());
+  mrb_define_method(mrb, s, "last", range_last, MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, s, "size", range_size, MRB_ARGS_NONE());
 }
 
 void
-mrb_mruby_range_ext_gem_final(mrb_state* mrb)
+mrb_mruby_range_ext_gem_final(mrb_state *mrb)
 {
 }

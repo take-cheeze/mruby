@@ -1,10 +1,10 @@
 #include <mruby.h>
 #include <mruby/class.h>
 #include <mruby/compile.h>
-#include <mruby/irep.h>
-#include <mruby/proc.h>
-#include <mruby/opcode.h>
 #include <mruby/error.h>
+#include <mruby/irep.h>
+#include <mruby/opcode.h>
+#include <mruby/proc.h>
 
 mrb_value mrb_exec_irep(mrb_state *mrb, mrb_value self, struct RProc *p);
 mrb_value mrb_obj_instance_eval(mrb_state *mrb, mrb_value self);
@@ -26,16 +26,16 @@ get_closure_irep(mrb_state *mrb, int level)
 }
 
 /* search for irep lev above the bottom */
-static mrb_irep*
+static mrb_irep *
 search_irep(mrb_irep *top, int bnest, int lev, mrb_irep *bottom)
 {
   int i;
 
-  for (i=0; i<top->rlen; i++) {
-    mrb_irep* tmp = top->reps[i];
+  for (i = 0; i < top->rlen; i++) {
+    mrb_irep *tmp = top->reps[i];
 
     if (tmp == bottom) return top;
-    tmp = search_irep(tmp, bnest-1, lev, bottom);
+    tmp = search_irep(tmp, bnest - 1, lev, bottom);
     if (tmp) {
       if (bnest == lev) return top;
       return tmp;
@@ -57,7 +57,7 @@ search_variable(mrb_state *mrb, mrb_sym vsym, int bnest)
     }
     for (pos = 0; pos < virep->nlocals - 1; pos++) {
       if (vsym == virep->lv[pos].name) {
-        return (pos+1)<<8 | (level+bnest);
+        return (pos + 1) << 8 | (level + bnest);
       }
     }
   }
@@ -72,9 +72,9 @@ irep_argc(mrb_irep *irep)
 
   c = irep->iseq[0];
   if (c == OP_ENTER) {
-    mrb_aspec ax = PEEK_W(irep->iseq+1);
+    mrb_aspec ax = PEEK_W(irep->iseq + 1);
     /* extra 1 means a slot for block */
-    return MRB_ASPEC_REQ(ax)+MRB_ASPEC_OPT(ax)+MRB_ASPEC_REST(ax)+MRB_ASPEC_POST(ax)+1;
+    return MRB_ASPEC_REQ(ax) + MRB_ASPEC_OPT(ax) + MRB_ASPEC_REST(ax) + MRB_ASPEC_POST(ax) + 1;
   }
   return 0;
 }
@@ -84,7 +84,7 @@ potential_upvar_p(struct mrb_locals *lv, uint16_t v, int argc, uint16_t nlocals)
 {
   if (v >= nlocals) return FALSE;
   /* skip arguments  */
-  if (v < argc+1) return FALSE;
+  if (v < argc + 1) return FALSE;
   return TRUE;
 }
 
@@ -106,49 +106,48 @@ patch_irep(mrb_state *mrb, mrb_irep *irep, int bnest, mrb_irep *top)
 
   mrb_assert((irep->flags & MRB_ISEQ_NO_FREE) == 0);
 
-  for (i = 0; i < irep->ilen; ) {
+  for (i = 0; i < irep->ilen;) {
     insn = iseq[i];
-    switch(insn){
+    switch (insn) {
     case OP_EPUSH:
-      a = PEEK_B(iseq+i+1);
+      a = PEEK_B(iseq + i + 1);
       patch_irep(mrb, irep->reps[a], bnest + 1, top);
       break;
 
     case OP_LAMBDA:
     case OP_BLOCK:
-      a = PEEK_B(iseq+i+1);
-      b = PEEK_B(iseq+i+2);
+      a = PEEK_B(iseq + i + 1);
+      b = PEEK_B(iseq + i + 2);
       patch_irep(mrb, irep->reps[b], bnest + 1, top);
       break;
 
     case OP_SEND:
-      b = PEEK_B(iseq+i+2);
-      c = PEEK_B(iseq+i+3);
+      b = PEEK_B(iseq + i + 2);
+      c = PEEK_B(iseq + i + 3);
       if (c != 0) {
         break;
-      }
-      else {
+      } else {
         uint16_t arg = search_variable(mrb, irep->syms[b], bnest);
         if (arg != 0) {
           /* must replace */
           iseq[i] = OP_GETUPVAR;
-          iseq[i+2] = arg >> 8;
-          iseq[i+3] = arg & 0xff;
+          iseq[i + 2] = arg >> 8;
+          iseq[i + 3] = arg & 0xff;
         }
       }
       break;
 
     case OP_MOVE:
-      a = PEEK_B(iseq+i+1);
-      b = PEEK_B(iseq+i+2);
+      a = PEEK_B(iseq + i + 1);
+      b = PEEK_B(iseq + i + 2);
       /* src part */
       if (potential_upvar_p(irep->lv, b, argc, irep->nlocals)) {
         uint16_t arg = search_variable(mrb, irep->lv[b - 1].name, bnest);
         if (arg != 0) {
           /* must replace */
           iseq[i] = insn = OP_GETUPVAR;
-          iseq[i+2] = arg >> 8;
-          iseq[i+3] = arg & 0xff;
+          iseq[i + 2] = arg >> 8;
+          iseq[i + 3] = arg & 0xff;
         }
       }
       /* dst part */
@@ -157,73 +156,74 @@ patch_irep(mrb_state *mrb, mrb_irep *irep, int bnest, mrb_irep *top)
         if (arg != 0) {
           /* must replace */
           iseq[i] = insn = OP_SETUPVAR;
-          iseq[i+1] = (mrb_code)b;
-          iseq[i+2] = arg >> 8;
-          iseq[i+3] = arg & 0xff;
+          iseq[i + 1] = (mrb_code)b;
+          iseq[i + 2] = arg >> 8;
+          iseq[i + 3] = arg & 0xff;
         }
       }
       break;
 
     case OP_GETUPVAR:
-      a = PEEK_B(iseq+i+1);
-      b = PEEK_B(iseq+i+2);
-      c = PEEK_B(iseq+i+3);
+      a = PEEK_B(iseq + i + 1);
+      b = PEEK_B(iseq + i + 2);
+      c = PEEK_B(iseq + i + 3);
       {
-        int lev = c+1;
+        int lev = c + 1;
         mrb_irep *tmp = search_irep(top, bnest, lev, irep);
         if (potential_upvar_p(tmp->lv, b, irep_argc(tmp), tmp->nlocals)) {
-          uint16_t arg = search_variable(mrb, tmp->lv[b-1].name, bnest);
+          uint16_t arg = search_variable(mrb, tmp->lv[b - 1].name, bnest);
           if (arg != 0) {
             /* must replace */
             iseq[i] = OP_GETUPVAR;
-            iseq[i+2] = arg >> 8;
-            iseq[i+3] = arg & 0xff;
+            iseq[i + 2] = arg >> 8;
+            iseq[i + 3] = arg & 0xff;
           }
         }
       }
       break;
 
     case OP_SETUPVAR:
-      a = PEEK_B(iseq+i+1);
-      b = PEEK_B(iseq+i+2);
-      c = PEEK_B(iseq+i+3);
+      a = PEEK_B(iseq + i + 1);
+      b = PEEK_B(iseq + i + 2);
+      c = PEEK_B(iseq + i + 3);
       {
-        int lev = c+1;
+        int lev = c + 1;
         mrb_irep *tmp = search_irep(top, bnest, lev, irep);
         if (potential_upvar_p(tmp->lv, b, irep_argc(tmp), tmp->nlocals)) {
-          uint16_t arg = search_variable(mrb, tmp->lv[b-1].name, bnest);
+          uint16_t arg = search_variable(mrb, tmp->lv[b - 1].name, bnest);
           if (arg != 0) {
             /* must replace */
             iseq[i] = OP_SETUPVAR;
-            iseq[i+1] = a;
-            iseq[i+2] = arg >> 8;
-            iseq[i+3] = arg & 0xff;
+            iseq[i + 1] = a;
+            iseq[i + 2] = arg >> 8;
+            iseq[i + 3] = arg & 0xff;
           }
         }
       }
       break;
 
     case OP_EXT1:
-      insn = PEEK_B(iseq+i+1);
-      i += mrb_insn_size1[insn]+1;
+      insn = PEEK_B(iseq + i + 1);
+      i += mrb_insn_size1[insn] + 1;
       continue;
     case OP_EXT2:
-      insn = PEEK_B(iseq+i+1);
-      i += mrb_insn_size2[insn]+1;
+      insn = PEEK_B(iseq + i + 1);
+      i += mrb_insn_size2[insn] + 1;
       continue;
     case OP_EXT3:
-      insn = PEEK_B(iseq+i+1);
-      i += mrb_insn_size3[insn]+1;
+      insn = PEEK_B(iseq + i + 1);
+      i += mrb_insn_size3[insn] + 1;
       continue;
     }
-    i+=mrb_insn_size[insn];
+    i += mrb_insn_size[insn];
   }
 }
 
-void mrb_codedump_all(mrb_state*, struct RProc*);
+void mrb_codedump_all(mrb_state *, struct RProc *);
 
-static struct RProc*
-create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding, const char *file, mrb_int line)
+static struct RProc *
+create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding, const char *file,
+                        mrb_int line)
 {
   mrbc_context *cxt;
   struct mrb_parser_state *p;
@@ -257,15 +257,10 @@ create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding,
     mrb_value str;
 
     if (file) {
-      str = mrb_format(mrb, "file %s line %d: %s",
-                       file,
-                       p->error_buffer[0].lineno,
+      str = mrb_format(mrb, "file %s line %d: %s", file, p->error_buffer[0].lineno,
                        p->error_buffer[0].message);
-    }
-    else {
-      str = mrb_format(mrb, "line %d: %s",
-                       p->error_buffer[0].lineno,
-                       p->error_buffer[0].message);
+    } else {
+      str = mrb_format(mrb, "line %d: %s", p->error_buffer[0].lineno, p->error_buffer[0].message);
     }
     mrb_parser_free(p);
     mrbc_context_free(mrb, cxt);
@@ -281,8 +276,7 @@ create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding,
   }
   if (mrb->c->ci > mrb->c->cibase) {
     ci = &mrb->c->ci[-1];
-  }
-  else {
+  } else {
     ci = mrb->c->cibase;
   }
   if (ci->proc) {
@@ -291,23 +285,23 @@ create_proc_from_string(mrb_state *mrb, char *s, mrb_int len, mrb_value binding,
   if (ci->proc && !MRB_PROC_CFUNC_P(ci->proc)) {
     if (ci->env) {
       e = ci->env;
-    }
-    else {
-      e = (struct REnv*)mrb_obj_alloc(mrb, MRB_TT_ENV,
-                                      (struct RClass*)target_class);
+    } else {
+      e = (struct REnv *)mrb_obj_alloc(mrb, MRB_TT_ENV, (struct RClass *)target_class);
       e->mid = ci->mid;
       e->stack = ci[1].stackent;
       e->cxt = mrb->c;
       MRB_ENV_SET_STACK_LEN(e, ci->proc->body.irep->nlocals);
       bidx = ci->argc;
-      if (ci->argc < 0) bidx = 2;
-      else bidx += 1;
+      if (ci->argc < 0)
+        bidx = 2;
+      else
+        bidx += 1;
       MRB_ENV_SET_BIDX(e, bidx);
       ci->env = e;
     }
     proc->e.env = e;
     proc->flags |= MRB_PROC_ENVSET;
-    mrb_field_write_barrier(mrb, (struct RBasic*)proc, (struct RBasic*)e);
+    mrb_field_write_barrier(mrb, (struct RBasic *)proc, (struct RBasic *)e);
   }
   proc->upper = ci->proc;
   mrb->c->ci->target_class = target_class;
@@ -360,7 +354,8 @@ static mrb_value
 f_instance_eval(mrb_state *mrb, mrb_value self)
 {
   mrb_value b;
-  mrb_int argc; mrb_value *argv;
+  mrb_int argc;
+  mrb_value *argv;
 
   mrb_get_args(mrb, "*!&", &argv, &argc, &b);
 
@@ -379,21 +374,21 @@ f_instance_eval(mrb_state *mrb, mrb_value self)
     mrb_assert(!MRB_PROC_CFUNC_P(proc));
     mrb->c->ci->target_class = mrb_class_ptr(cv);
     return exec_irep(mrb, self, proc);
-  }
-  else {
+  } else {
     mrb_get_args(mrb, "&", &b);
     return mrb_obj_instance_eval(mrb, self);
   }
 }
 
 void
-mrb_mruby_eval_gem_init(mrb_state* mrb)
+mrb_mruby_eval_gem_init(mrb_state *mrb)
 {
   mrb_define_module_function(mrb, mrb->kernel_module, "eval", f_eval, MRB_ARGS_ARG(1, 3));
-  mrb_define_method(mrb, mrb_class_get(mrb, "BasicObject"), "instance_eval", f_instance_eval, MRB_ARGS_OPT(3)|MRB_ARGS_BLOCK());
+  mrb_define_method(mrb, mrb_class_get(mrb, "BasicObject"), "instance_eval", f_instance_eval,
+                    MRB_ARGS_OPT(3) | MRB_ARGS_BLOCK());
 }
 
 void
-mrb_mruby_eval_gem_final(mrb_state* mrb)
+mrb_mruby_eval_gem_final(mrb_state *mrb)
 {
 }

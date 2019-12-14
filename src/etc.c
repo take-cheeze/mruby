@@ -5,16 +5,16 @@
 */
 
 #include <mruby.h>
-#include <mruby/string.h>
-#include <mruby/data.h>
 #include <mruby/class.h>
+#include <mruby/data.h>
+#include <mruby/string.h>
 
-MRB_API struct RData*
+MRB_API struct RData *
 mrb_data_object_alloc(mrb_state *mrb, struct RClass *klass, void *ptr, const mrb_data_type *type)
 {
   struct RData *data;
 
-  data = (struct RData*)mrb_obj_alloc(mrb, MRB_TT_DATA, klass);
+  data = (struct RData *)mrb_obj_alloc(mrb, MRB_TT_DATA, klass);
   data->data = ptr;
   data->type = type;
 
@@ -31,17 +31,15 @@ mrb_data_check_type(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
     const mrb_data_type *t2 = DATA_TYPE(obj);
 
     if (t2) {
-      mrb_raisef(mrb, E_TYPE_ERROR, "wrong argument type %s (expected %s)",
-                 t2->struct_name, type->struct_name);
-    }
-    else {
-      mrb_raisef(mrb, E_TYPE_ERROR, "uninitialized %t (expected %s)",
-                 obj, type->struct_name);
+      mrb_raisef(mrb, E_TYPE_ERROR, "wrong argument type %s (expected %s)", t2->struct_name,
+                 type->struct_name);
+    } else {
+      mrb_raisef(mrb, E_TYPE_ERROR, "uninitialized %t (expected %s)", obj, type->struct_name);
     }
   }
 }
 
-MRB_API void*
+MRB_API void *
 mrb_data_check_get_ptr(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
 {
   if (!mrb_data_p(obj)) {
@@ -53,7 +51,7 @@ mrb_data_check_get_ptr(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
   return DATA_PTR(obj);
 }
 
-MRB_API void*
+MRB_API void *
 mrb_data_get_ptr(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
 {
   mrb_data_check_type(mrb, obj, type);
@@ -66,7 +64,7 @@ mrb_obj_to_sym(mrb_state *mrb, mrb_value name)
   if (mrb_symbol_p(name)) return mrb_symbol(name);
   if (mrb_string_p(name)) return mrb_intern_str(mrb, name);
   mrb_raisef(mrb, E_TYPE_ERROR, "%!v is not a symbol nor a string", name);
-  return 0;  /* not reached */
+  return 0; /* not reached */
 }
 
 MRB_API mrb_int
@@ -76,7 +74,7 @@ mrb_fixnum_id(mrb_int f)
 mrb_float_id(mrb_float f)
 #endif
 {
-  const char *p = (const char*)&f;
+  const char *p = (const char *)&f;
   int len = sizeof(f);
   uint32_t id = 0;
 
@@ -85,10 +83,10 @@ mrb_float_id(mrb_float f)
   if (f == 0) f = 0.0;
 #endif
   while (len--) {
-    id = id*65599 + *p;
+    id = id * 65599 + *p;
     p++;
   }
-  id = id + (id>>5);
+  id = id + (id >> 5);
 
   return (mrb_int)id;
 }
@@ -98,16 +96,15 @@ mrb_obj_id(mrb_value obj)
 {
   mrb_int tt = mrb_type(obj);
 
-#define MakeID2(p,t) (mrb_int)(((intptr_t)(p))^(t))
-#define MakeID(p)    MakeID2(p,tt)
+#define MakeID2(p, t) (mrb_int)(((intptr_t)(p)) ^ (t))
+#define MakeID(p)     MakeID2(p, tt)
 
   switch (tt) {
   case MRB_TT_FREE:
   case MRB_TT_UNDEF:
     return MakeID(0); /* not define */
   case MRB_TT_FALSE:
-    if (mrb_nil_p(obj))
-      return MakeID(1);
+    if (mrb_nil_p(obj)) return MakeID(1);
     return MakeID(0);
   case MRB_TT_TRUE:
     return MakeID(1);
@@ -141,7 +138,7 @@ mrb_obj_id(mrb_value obj)
 }
 
 #ifdef MRB_WORD_BOXING
-#ifndef MRB_WITHOUT_FLOAT
+#  ifndef MRB_WITHOUT_FLOAT
 MRB_API mrb_value
 mrb_word_boxing_float_value(mrb_state *mrb, mrb_float f)
 {
@@ -163,7 +160,7 @@ mrb_word_boxing_float_pool(mrb_state *mrb, mrb_float f)
   MRB_SET_FROZEN_FLAG(nf);
   return mrb_obj_value(nf);
 }
-#endif  /* MRB_WITHOUT_FLOAT */
+#  endif /* MRB_WITHOUT_FLOAT */
 
 MRB_API mrb_value
 mrb_word_boxing_cptr_value(mrb_state *mrb, void *p)
@@ -174,18 +171,18 @@ mrb_word_boxing_cptr_value(mrb_state *mrb, void *p)
   v.value.vp->p = p;
   return v;
 }
-#endif  /* MRB_WORD_BOXING */
+#endif /* MRB_WORD_BOXING */
 
 #if defined _MSC_VER && _MSC_VER < 1900
 
-#ifndef va_copy
+#  ifndef va_copy
 static void
 mrb_msvc_va_copy(va_list *dest, va_list src)
 {
   *dest = src;
 }
-#define va_copy(dest, src) mrb_msvc_va_copy(&(dest), src)
-#endif
+#    define va_copy(dest, src) mrb_msvc_va_copy(&(dest), src)
+#  endif
 
 MRB_API int
 mrb_msvc_vsnprintf(char *s, size_t n, const char *format, va_list arg)
@@ -211,4 +208,4 @@ mrb_msvc_snprintf(char *s, size_t n, const char *format, ...)
   return ret;
 }
 
-#endif  /* defined _MSC_VER && _MSC_VER < 1900 */
+#endif /* defined _MSC_VER && _MSC_VER < 1900 */

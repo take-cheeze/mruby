@@ -13,15 +13,15 @@
 /* architecture selection: */
 /* specify -DMRB_32BIT or -DMRB_64BIT to override */
 #if !defined(MRB_32BIT) && !defined(MRB_64BIT)
-#if UINT64_MAX == SIZE_MAX
-#define MRB_64BIT
-#else
-#define MRB_32BIT
-#endif
+#  if UINT64_MAX == SIZE_MAX
+#    define MRB_64BIT
+#  else
+#    define MRB_32BIT
+#  endif
 #endif
 
 #if defined(MRB_32BIT) && defined(MRB_64BIT)
-#error Cannot build for 32 and 64 bit architecture at the same time
+#  error Cannot build for 32 and 64 bit architecture at the same time
 #endif
 
 /* configuration options: */
@@ -53,21 +53,22 @@
 
 /* if no specific integer type is chosen */
 #if !defined(MRB_INT16) && !defined(MRB_INT32) && !defined(MRB_INT64)
-# if defined(MRB_64BIT) && !defined(MRB_NAN_BOXING)
+#  if defined(MRB_64BIT) && !defined(MRB_NAN_BOXING)
 /* Use 64bit integers on 64bit architecture (without MRB_NAN_BOXING) */
-#  define MRB_INT64
-# else
+#    define MRB_INT64
+#  else
 /* Otherwise use 32bit integers */
-#  define MRB_INT32
-# endif
+#    define MRB_INT32
+#  endif
 #endif
 
 /* define on big endian machines; used by MRB_NAN_BOXING, etc. */
 #ifndef MRB_ENDIAN_BIG
-# if (defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN) || \
-     (defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#  define MRB_ENDIAN_BIG
-# endif
+#  if (defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN) || \
+      (defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) &&                \
+       __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#    define MRB_ENDIAN_BIG
+#  endif
 #endif
 
 /* represent mrb_value in boxed double; conflict with MRB_USE_FLOAT and MRB_WITHOUT_FLOAT */
@@ -131,24 +132,24 @@
 
 /* define MRB_DISABLE_XXXX from DISABLE_XXX (for compatibility) */
 #ifdef DISABLE_STDIO
-#define MRB_DISABLE_STDIO
+#  define MRB_DISABLE_STDIO
 #endif
 
 /* define MRB_ENABLE_XXXX from ENABLE_XXX (for compatibility) */
 #ifdef ENABLE_DEBUG
-#define MRB_ENABLE_DEBUG_HOOK
+#  define MRB_ENABLE_DEBUG_HOOK
 #endif
 
 #ifndef MRB_DISABLE_STDIO
-# include <stdio.h>
+#  include <stdio.h>
 #endif
 
 #ifndef FALSE
-# define FALSE 0
+#  define FALSE 0
 #endif
 
 #ifndef TRUE
-# define TRUE 1
+#  define TRUE 1
 #endif
 
 /*
@@ -157,56 +158,56 @@
 
 /* A profile for micro controllers */
 #if defined(MRB_CONSTRAINED_BASELINE_PROFILE)
-# ifndef KHASH_DEFAULT_SIZE
-#  define KHASH_DEFAULT_SIZE 16
-# endif
+#  ifndef KHASH_DEFAULT_SIZE
+#    define KHASH_DEFAULT_SIZE 16
+#  endif
 
-# ifndef MRB_STR_BUF_MIN_SIZE
-#  define MRB_STR_BUF_MIN_SIZE 32
-# endif
+#  ifndef MRB_STR_BUF_MIN_SIZE
+#    define MRB_STR_BUF_MIN_SIZE 32
+#  endif
 
-# ifndef MRB_HEAP_PAGE_SIZE
-#  define MRB_HEAP_PAGE_SIZE 256
-# endif
+#  ifndef MRB_HEAP_PAGE_SIZE
+#    define MRB_HEAP_PAGE_SIZE 256
+#  endif
 
 /* A profile for default mruby */
 #elif defined(MRB_BASELINE_PROFILE)
 
 /* A profile for desktop computers or workstations; rich memory! */
 #elif defined(MRB_MAIN_PROFILE)
-# ifndef MRB_METHOD_CACHE
-#  define MRB_METHOD_CACHE
-# endif
+#  ifndef MRB_METHOD_CACHE
+#    define MRB_METHOD_CACHE
+#  endif
 
-# ifndef MRB_METHOD_CACHE_SIZE
-#  define MRB_METHOD_CACHE_SIZE (1<<10)
-# endif
+#  ifndef MRB_METHOD_CACHE_SIZE
+#    define MRB_METHOD_CACHE_SIZE (1 << 10)
+#  endif
 
-# ifndef MRB_IV_SEGMENT_SIZE
-#  define MRB_IV_SEGMENT_SIZE 32
-# endif
+#  ifndef MRB_IV_SEGMENT_SIZE
+#    define MRB_IV_SEGMENT_SIZE 32
+#  endif
 
-# ifndef MRB_HEAP_PAGE_SIZE
-#  define MRB_HEAP_PAGE_SIZE 4096
-# endif
+#  ifndef MRB_HEAP_PAGE_SIZE
+#    define MRB_HEAP_PAGE_SIZE 4096
+#  endif
 
 /* A profile for server; mruby vm is long life */
 #elif defined(MRB_HIGH_PROFILE)
-# ifndef MRB_METHOD_CACHE
-#  define MRB_METHOD_CACHE
-# endif
+#  ifndef MRB_METHOD_CACHE
+#    define MRB_METHOD_CACHE
+#  endif
 
-# ifndef MRB_METHOD_CACHE_SIZE
-#  define MRB_METHOD_CACHE_SIZE (1<<12)
-# endif
+#  ifndef MRB_METHOD_CACHE_SIZE
+#    define MRB_METHOD_CACHE_SIZE (1 << 12)
+#  endif
 
-# ifndef MRB_IV_SEGMENT_SIZE
-#  define MRB_IV_SEGMENT_SIZE 64
-# endif
+#  ifndef MRB_IV_SEGMENT_SIZE
+#    define MRB_IV_SEGMENT_SIZE 64
+#  endif
 
-# ifndef MRB_HEAP_PAGE_SIZE
-#  define MRB_HEAP_PAGE_SIZE 4096
-# endif
+#  ifndef MRB_HEAP_PAGE_SIZE
+#    define MRB_HEAP_PAGE_SIZE 4096
+#  endif
 #endif
 
-#endif  /* MRUBYCONF_H */
+#endif /* MRUBYCONF_H */

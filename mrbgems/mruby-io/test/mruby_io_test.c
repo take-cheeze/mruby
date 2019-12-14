@@ -1,41 +1,39 @@
-#include <sys/types.h>
 #include <errno.h>
+#include <sys/types.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 
-#include <winsock.h>
-#include <io.h>
-#include <fcntl.h>
-#include <direct.h>
-#include <string.h>
-#include <stdlib.h>
-#include <malloc.h>
+#  include <direct.h>
+#  include <fcntl.h>
+#  include <io.h>
+#  include <malloc.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  include <winsock.h>
 
-#if (!defined __MINGW64__) && (!defined __MINGW32__)
+#  if (!defined __MINGW64__) && (!defined __MINGW32__)
 typedef int mode_t;
-#endif
+#  endif
 
-#define open _open
-#define close _close
+#  define open  _open
+#  define close _close
 
-#ifdef _MSC_VER
-#include <sys/stat.h>
+#  ifdef _MSC_VER
+#    include <sys/stat.h>
 
 static int
 mkstemp(char *p)
 {
   int fd;
-  char* fname = _mktemp(p);
-  if (fname == NULL)
-    return -1;
+  char *fname = _mktemp(p);
+  if (fname == NULL) return -1;
   fd = open(fname, O_RDWR | O_CREAT | O_EXCL, _S_IREAD | _S_IWRITE);
-  if (fd >= 0)
-    return fd;
+  if (fd >= 0) return fd;
   return -1;
 }
-#endif
+#  endif
 
-static char*
+static char *
 mkdtemp(char *temp)
 {
   char *path = _mktemp(temp);
@@ -44,17 +42,17 @@ mkdtemp(char *temp)
   return path;
 }
 
-#define umask(mode) _umask(mode)
-#define rmdir(path) _rmdir(path)
+#  define umask(mode) _umask(mode)
+#  define rmdir(path) _rmdir(path)
 #else
-  #include <sys/socket.h>
-  #include <unistd.h>
-  #include <sys/un.h>
+#  include <sys/socket.h>
+#  include <sys/un.h>
+#  include <unistd.h>
 #endif
 
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #include "mruby.h"
 #include "mruby/array.h"
@@ -65,10 +63,10 @@ mkdtemp(char *temp)
 static mrb_value
 mrb_io_test_io_setup(mrb_state *mrb, mrb_value self)
 {
-  char rfname[]      = "tmp.mruby-io-test-r.XXXXXXXX";
-  char wfname[]      = "tmp.mruby-io-test-w.XXXXXXXX";
+  char rfname[] = "tmp.mruby-io-test-r.XXXXXXXX";
+  char wfname[] = "tmp.mruby-io-test-w.XXXXXXXX";
   char symlinkname[] = "tmp.mruby-io-test-l.XXXXXXXX";
-  char socketname[]  = "tmp.mruby-io-test-s.XXXXXXXX";
+  char socketname[] = "tmp.mruby-io-test-s.XXXXXXXX";
   char msg[] = "mruby io test\n";
   mode_t mask;
   int fd0, fd1;
@@ -101,8 +99,10 @@ mrb_io_test_io_setup(mrb_state *mrb, mrb_value self)
 
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_rfname"), mrb_str_new_cstr(mrb, rfname));
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_wfname"), mrb_str_new_cstr(mrb, wfname));
-  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_symlinkname"), mrb_str_new_cstr(mrb, symlinkname));
-  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_socketname"), mrb_str_new_cstr(mrb, socketname));
+  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_symlinkname"),
+             mrb_str_new_cstr(mrb, symlinkname));
+  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_socketname"),
+             mrb_str_new_cstr(mrb, socketname));
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$mrbtest_io_msg"), mrb_str_new_cstr(mrb, msg));
 
   fp = fopen(rfname, "wb");
@@ -136,9 +136,7 @@ mrb_io_test_io_setup(mrb_state *mrb, mrb_value self)
   sun0.sun_family = AF_UNIX;
   snprintf(sun0.sun_path, sizeof(sun0.sun_path), "%s", socketname);
   if (bind(fd3, (struct sockaddr *)&sun0, sizeof(sun0)) == -1) {
-    mrb_raisef(mrb, E_RUNTIME_ERROR, "can't bind AF_UNIX socket to %s: %d",
-               sun0.sun_path,
-               errno);
+    mrb_raisef(mrb, E_RUNTIME_ERROR, "can't bind AF_UNIX socket to %s: %d", sun0.sun_path, errno);
   }
   close(fd3);
 #endif
@@ -206,18 +204,18 @@ mrb_value
 mrb_io_win_p(mrb_state *mrb, mrb_value klass)
 {
 #if defined(_WIN32) || defined(_WIN64)
-# if defined(__CYGWIN__) || defined(__CYGWIN32__)
+#  if defined(__CYGWIN__) || defined(__CYGWIN32__)
   return mrb_false_value();
-# else
+#  else
   return mrb_true_value();
-# endif
+#  endif
 #else
   return mrb_false_value();
 #endif
 }
 
 void
-mrb_mruby_io_gem_test(mrb_state* mrb)
+mrb_mruby_io_gem_test(mrb_state *mrb)
 {
   struct RClass *io_test = mrb_define_module(mrb, "MRubyIOTestUtil");
   mrb_define_class_method(mrb, io_test, "io_test_setup", mrb_io_test_io_setup, MRB_ARGS_NONE());

@@ -1,6 +1,6 @@
 #include <mruby.h>
-#include <mruby/error.h>
 #include <mruby/array.h>
+#include <mruby/error.h>
 
 static mrb_value
 protect_cb(mrb_state *mrb, mrb_value b)
@@ -52,8 +52,10 @@ mrb_mruby_error_gem_test(mrb_state *mrb)
   struct RClass *cls;
 
   cls = mrb_define_class(mrb, "ExceptionTest", mrb->object_class);
-  mrb_define_module_function(mrb, cls, "mrb_protect", run_protect, MRB_ARGS_NONE() | MRB_ARGS_BLOCK());
+  mrb_define_module_function(mrb, cls, "mrb_protect", run_protect,
+                             MRB_ARGS_NONE() | MRB_ARGS_BLOCK());
   mrb_define_module_function(mrb, cls, "mrb_ensure", run_ensure, MRB_ARGS_REQ(2));
   mrb_define_module_function(mrb, cls, "mrb_rescue", run_rescue, MRB_ARGS_REQ(2));
-  mrb_define_module_function(mrb, cls, "mrb_rescue_exceptions", run_rescue_exceptions, MRB_ARGS_REQ(2));
+  mrb_define_module_function(mrb, cls, "mrb_rescue_exceptions", run_rescue_exceptions,
+                             MRB_ARGS_REQ(2));
 }

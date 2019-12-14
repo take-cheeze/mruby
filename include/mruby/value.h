@@ -35,112 +35,112 @@ typedef uint8_t mrb_bool;
 struct mrb_state;
 
 #if defined(MRB_INT16) && defined(MRB_INT64)
-# error "You can't define MRB_INT16 and MRB_INT64 at the same time."
+#  error "You can't define MRB_INT16 and MRB_INT64 at the same time."
 #endif
 
 #if defined _MSC_VER && _MSC_VER < 1800
-# define PRIo64 "llo"
-# define PRId64 "lld"
-# define PRIu64 "llu"
-# define PRIx64 "llx"
-# define PRIo16 "ho"
-# define PRId16 "hd"
-# define PRIu16 "hu"
-# define PRIx16 "hx"
-# define PRIo32 "o"
-# define PRId32 "d"
-# define PRIu32 "u"
-# define PRIx32 "x"
+#  define PRIo64 "llo"
+#  define PRId64 "lld"
+#  define PRIu64 "llu"
+#  define PRIx64 "llx"
+#  define PRIo16 "ho"
+#  define PRId16 "hd"
+#  define PRIu16 "hu"
+#  define PRIx16 "hx"
+#  define PRIo32 "o"
+#  define PRId32 "d"
+#  define PRIu32 "u"
+#  define PRIx32 "x"
 #else
-# include <inttypes.h>
+#  include <inttypes.h>
 #endif
 
 #if defined(MRB_INT64)
-  typedef int64_t mrb_int;
-# define MRB_INT_BIT 64
-# define MRB_INT_MIN (INT64_MIN>>MRB_FIXNUM_SHIFT)
-# define MRB_INT_MAX (INT64_MAX>>MRB_FIXNUM_SHIFT)
-# define MRB_PRIo PRIo64
-# define MRB_PRId PRId64
-# define MRB_PRIx PRIx64
+typedef int64_t mrb_int;
+#  define MRB_INT_BIT 64
+#  define MRB_INT_MIN (INT64_MIN >> MRB_FIXNUM_SHIFT)
+#  define MRB_INT_MAX (INT64_MAX >> MRB_FIXNUM_SHIFT)
+#  define MRB_PRIo    PRIo64
+#  define MRB_PRId    PRId64
+#  define MRB_PRIx    PRIx64
 #elif defined(MRB_INT16)
-  typedef int16_t mrb_int;
-# define MRB_INT_BIT 16
-# define MRB_INT_MIN (INT16_MIN>>MRB_FIXNUM_SHIFT)
-# define MRB_INT_MAX (INT16_MAX>>MRB_FIXNUM_SHIFT)
-# define MRB_PRIo PRIo16
-# define MRB_PRId PRId16
-# define MRB_PRIx PRIx16
+typedef int16_t mrb_int;
+#  define MRB_INT_BIT 16
+#  define MRB_INT_MIN (INT16_MIN >> MRB_FIXNUM_SHIFT)
+#  define MRB_INT_MAX (INT16_MAX >> MRB_FIXNUM_SHIFT)
+#  define MRB_PRIo    PRIo16
+#  define MRB_PRId    PRId16
+#  define MRB_PRIx    PRIx16
 #else
-  typedef int32_t mrb_int;
-# define MRB_INT_BIT 32
-# define MRB_INT_MIN (INT32_MIN>>MRB_FIXNUM_SHIFT)
-# define MRB_INT_MAX (INT32_MAX>>MRB_FIXNUM_SHIFT)
-# define MRB_PRIo PRIo32
-# define MRB_PRId PRId32
-# define MRB_PRIx PRIx32
+typedef int32_t mrb_int;
+#  define MRB_INT_BIT 32
+#  define MRB_INT_MIN (INT32_MIN >> MRB_FIXNUM_SHIFT)
+#  define MRB_INT_MAX (INT32_MAX >> MRB_FIXNUM_SHIFT)
+#  define MRB_PRIo    PRIo32
+#  define MRB_PRId    PRId32
+#  define MRB_PRIx    PRIx32
 #endif
 
 #ifdef MRB_ENDIAN_BIG
-# define MRB_ENDIAN_LOHI(a,b) a b
+#  define MRB_ENDIAN_LOHI(a, b) a b
 #else
-# define MRB_ENDIAN_LOHI(a,b) b a
+#  define MRB_ENDIAN_LOHI(a, b) b a
 #endif
 
 #ifndef MRB_WITHOUT_FLOAT
-MRB_API double mrb_float_read(const char*, char**);
-#ifdef MRB_USE_FLOAT
-  typedef float mrb_float;
-#else
-  typedef double mrb_float;
-#endif
+MRB_API double mrb_float_read(const char *, char **);
+#  ifdef MRB_USE_FLOAT
+typedef float mrb_float;
+#  else
+typedef double mrb_float;
+#  endif
 #endif
 
 #if defined _MSC_VER && _MSC_VER < 1900
-# include <stdarg.h>
+#  include <stdarg.h>
 MRB_API int mrb_msvc_vsnprintf(char *s, size_t n, const char *format, va_list arg);
 MRB_API int mrb_msvc_snprintf(char *s, size_t n, const char *format, ...);
-# define vsnprintf(s, n, format, arg) mrb_msvc_vsnprintf(s, n, format, arg)
-# define snprintf(s, n, format, ...) mrb_msvc_snprintf(s, n, format, __VA_ARGS__)
-# if _MSC_VER < 1800 && !defined MRB_WITHOUT_FLOAT
-#  include <float.h>
-#  define isfinite(n) _finite(n)
-#  define isnan _isnan
-#  define isinf(n) (!_finite(n) && !_isnan(n))
-#  define signbit(n) (_copysign(1.0, (n)) < 0.0)
+#  define vsnprintf(s, n, format, arg) mrb_msvc_vsnprintf(s, n, format, arg)
+#  define snprintf(s, n, format, ...)  mrb_msvc_snprintf(s, n, format, __VA_ARGS__)
+#  if _MSC_VER < 1800 && !defined MRB_WITHOUT_FLOAT
+#    include <float.h>
+#    define isfinite(n) _finite(n)
+#    define isnan       _isnan
+#    define isinf(n)    (!_finite(n) && !_isnan(n))
+#    define signbit(n)  (_copysign(1.0, (n)) < 0.0)
 static const unsigned int IEEE754_INFINITY_BITS_SINGLE = 0x7F800000;
-#  define INFINITY (*(float *)&IEEE754_INFINITY_BITS_SINGLE)
-#  define NAN ((float)(INFINITY - INFINITY))
-# endif
+#    define INFINITY (*(float *)&IEEE754_INFINITY_BITS_SINGLE)
+#    define NAN      ((float)(INFINITY - INFINITY))
+#  endif
 #endif
 
 enum mrb_vtype {
-  MRB_TT_FALSE = 0,   /*   0 */
-  MRB_TT_TRUE,        /*   1 */
-  MRB_TT_FLOAT,       /*   2 */
-  MRB_TT_FIXNUM,      /*   3 */
-  MRB_TT_SYMBOL,      /*   4 */
-  MRB_TT_UNDEF,       /*   5 */
-  MRB_TT_CPTR,        /*   6 */
-  MRB_TT_FREE,        /*   7 */
-  MRB_TT_OBJECT,      /*   8 */
-  MRB_TT_CLASS,       /*   9 */
-  MRB_TT_MODULE,      /*  10 */
-  MRB_TT_ICLASS,      /*  11 */
-  MRB_TT_SCLASS,      /*  12 */
-  MRB_TT_PROC,        /*  13 */
-  MRB_TT_ARRAY,       /*  14 */
-  MRB_TT_HASH,        /*  15 */
-  MRB_TT_STRING,      /*  16 */
-  MRB_TT_RANGE,       /*  17 */
-  MRB_TT_EXCEPTION,   /*  18 */
-  MRB_TT_FILE,        /*  19 */
-  MRB_TT_ENV,         /*  20 */
-  MRB_TT_DATA,        /*  21 */
-  MRB_TT_FIBER,       /*  22 */
-  MRB_TT_ISTRUCT,     /*  23 */
-  MRB_TT_BREAK,       /*  24 */
-  MRB_TT_MAXDEFINE    /*  25 */
+  MRB_TT_FALSE = 0, /*   0 */
+  MRB_TT_TRUE,      /*   1 */
+  MRB_TT_FLOAT,     /*   2 */
+  MRB_TT_FIXNUM,    /*   3 */
+  MRB_TT_SYMBOL,    /*   4 */
+  MRB_TT_UNDEF,     /*   5 */
+  MRB_TT_CPTR,      /*   6 */
+  MRB_TT_FREE,      /*   7 */
+  MRB_TT_OBJECT,    /*   8 */
+  MRB_TT_CLASS,     /*   9 */
+  MRB_TT_MODULE,    /*  10 */
+  MRB_TT_ICLASS,    /*  11 */
+  MRB_TT_SCLASS,    /*  12 */
+  MRB_TT_PROC,      /*  13 */
+  MRB_TT_ARRAY,     /*  14 */
+  MRB_TT_HASH,      /*  15 */
+  MRB_TT_STRING,    /*  16 */
+  MRB_TT_RANGE,     /*  17 */
+  MRB_TT_EXCEPTION, /*  18 */
+  MRB_TT_FILE,      /*  19 */
+  MRB_TT_ENV,       /*  20 */
+  MRB_TT_DATA,      /*  21 */
+  MRB_TT_FIBER,     /*  22 */
+  MRB_TT_ISTRUCT,   /*  23 */
+  MRB_TT_BREAK,     /*  24 */
+  MRB_TT_MAXDEFINE  /*  25 */
 };
 
 #include <mruby/object.h>
@@ -162,111 +162,111 @@ typedef void mrb_value;
 #endif
 
 #if defined(MRB_NAN_BOXING)
-#include "boxing_nan.h"
+#  include "boxing_nan.h"
 #elif defined(MRB_WORD_BOXING)
-#include "boxing_word.h"
+#  include "boxing_word.h"
 #else
-#include "boxing_no.h"
+#  include "boxing_no.h"
 #endif
 
 #define MRB_SYMBOL_BIT (sizeof(mrb_sym) * CHAR_BIT - MRB_SYMBOL_SHIFT)
 #define MRB_SYMBOL_MAX (UINT32_MAX >> MRB_SYMBOL_SHIFT)
 
 #if INTPTR_MAX < MRB_INT_MAX
-  typedef intptr_t mrb_ssize;
-# define MRB_SSIZE_MAX (INTPTR_MAX>>MRB_FIXNUM_SHIFT)
+typedef intptr_t mrb_ssize;
+#  define MRB_SSIZE_MAX (INTPTR_MAX >> MRB_FIXNUM_SHIFT)
 #else
-  typedef mrb_int mrb_ssize;
-# define MRB_SSIZE_MAX MRB_INT_MAX
+typedef mrb_int mrb_ssize;
+#  define MRB_SSIZE_MAX MRB_INT_MAX
 #endif
 
 #ifndef mrb_immediate_p
-#define mrb_immediate_p(o) (mrb_type(o) < MRB_TT_FREE)
+#  define mrb_immediate_p(o) (mrb_type(o) < MRB_TT_FREE)
 #endif
 #ifndef mrb_fixnum_p
-#define mrb_fixnum_p(o) (mrb_type(o) == MRB_TT_FIXNUM)
+#  define mrb_fixnum_p(o) (mrb_type(o) == MRB_TT_FIXNUM)
 #endif
 #ifndef mrb_symbol_p
-#define mrb_symbol_p(o) (mrb_type(o) == MRB_TT_SYMBOL)
+#  define mrb_symbol_p(o) (mrb_type(o) == MRB_TT_SYMBOL)
 #endif
 #ifndef mrb_undef_p
-#define mrb_undef_p(o) (mrb_type(o) == MRB_TT_UNDEF)
+#  define mrb_undef_p(o) (mrb_type(o) == MRB_TT_UNDEF)
 #endif
 #ifndef mrb_nil_p
-#define mrb_nil_p(o)  (mrb_type(o) == MRB_TT_FALSE && !mrb_fixnum(o))
+#  define mrb_nil_p(o) (mrb_type(o) == MRB_TT_FALSE && !mrb_fixnum(o))
 #endif
 #ifndef mrb_false_p
-#define mrb_false_p(o) (mrb_type(o) == MRB_TT_FALSE && !!mrb_fixnum(o))
+#  define mrb_false_p(o) (mrb_type(o) == MRB_TT_FALSE && !!mrb_fixnum(o))
 #endif
 #ifndef mrb_true_p
-#define mrb_true_p(o)  (mrb_type(o) == MRB_TT_TRUE)
+#  define mrb_true_p(o) (mrb_type(o) == MRB_TT_TRUE)
 #endif
 #ifndef MRB_WITHOUT_FLOAT
-#ifndef mrb_float_p
-#define mrb_float_p(o) (mrb_type(o) == MRB_TT_FLOAT)
-#endif
+#  ifndef mrb_float_p
+#    define mrb_float_p(o) (mrb_type(o) == MRB_TT_FLOAT)
+#  endif
 #endif
 #ifndef mrb_array_p
-#define mrb_array_p(o) (mrb_type(o) == MRB_TT_ARRAY)
+#  define mrb_array_p(o) (mrb_type(o) == MRB_TT_ARRAY)
 #endif
 #ifndef mrb_string_p
-#define mrb_string_p(o) (mrb_type(o) == MRB_TT_STRING)
+#  define mrb_string_p(o) (mrb_type(o) == MRB_TT_STRING)
 #endif
 #ifndef mrb_hash_p
-#define mrb_hash_p(o) (mrb_type(o) == MRB_TT_HASH)
+#  define mrb_hash_p(o) (mrb_type(o) == MRB_TT_HASH)
 #endif
 #ifndef mrb_cptr_p
-#define mrb_cptr_p(o) (mrb_type(o) == MRB_TT_CPTR)
+#  define mrb_cptr_p(o) (mrb_type(o) == MRB_TT_CPTR)
 #endif
 #ifndef mrb_exception_p
-#define mrb_exception_p(o) (mrb_type(o) == MRB_TT_EXCEPTION)
+#  define mrb_exception_p(o) (mrb_type(o) == MRB_TT_EXCEPTION)
 #endif
 #ifndef mrb_free_p
-#define mrb_free_p(o) (mrb_type(o) == MRB_TT_FREE)
+#  define mrb_free_p(o) (mrb_type(o) == MRB_TT_FREE)
 #endif
 #ifndef mrb_object_p
-#define mrb_object_p(o) (mrb_type(o) == MRB_TT_OBJECT)
+#  define mrb_object_p(o) (mrb_type(o) == MRB_TT_OBJECT)
 #endif
 #ifndef mrb_class_p
-#define mrb_class_p(o) (mrb_type(o) == MRB_TT_CLASS)
+#  define mrb_class_p(o) (mrb_type(o) == MRB_TT_CLASS)
 #endif
 #ifndef mrb_module_p
-#define mrb_module_p(o) (mrb_type(o) == MRB_TT_MODULE)
+#  define mrb_module_p(o) (mrb_type(o) == MRB_TT_MODULE)
 #endif
 #ifndef mrb_iclass_p
-#define mrb_iclass_p(o) (mrb_type(o) == MRB_TT_ICLASS)
+#  define mrb_iclass_p(o) (mrb_type(o) == MRB_TT_ICLASS)
 #endif
 #ifndef mrb_sclass_p
-#define mrb_sclass_p(o) (mrb_type(o) == MRB_TT_SCLASS)
+#  define mrb_sclass_p(o) (mrb_type(o) == MRB_TT_SCLASS)
 #endif
 #ifndef mrb_proc_p
-#define mrb_proc_p(o) (mrb_type(o) == MRB_TT_PROC)
+#  define mrb_proc_p(o) (mrb_type(o) == MRB_TT_PROC)
 #endif
 #ifndef mrb_range_p
-#define mrb_range_p(o) (mrb_type(o) == MRB_TT_RANGE)
+#  define mrb_range_p(o) (mrb_type(o) == MRB_TT_RANGE)
 #endif
 #ifndef mrb_file_p
-#define mrb_file_p(o) (mrb_type(o) == MRB_TT_FILE)
+#  define mrb_file_p(o) (mrb_type(o) == MRB_TT_FILE)
 #endif
 #ifndef mrb_env_p
-#define mrb_env_p(o) (mrb_type(o) == MRB_TT_ENV)
+#  define mrb_env_p(o) (mrb_type(o) == MRB_TT_ENV)
 #endif
 #ifndef mrb_data_p
-#define mrb_data_p(o) (mrb_type(o) == MRB_TT_DATA)
+#  define mrb_data_p(o) (mrb_type(o) == MRB_TT_DATA)
 #endif
 #ifndef mrb_fiber_p
-#define mrb_fiber_p(o) (mrb_type(o) == MRB_TT_FIBER)
+#  define mrb_fiber_p(o) (mrb_type(o) == MRB_TT_FIBER)
 #endif
 #ifndef mrb_istruct_p
-#define mrb_istruct_p(o) (mrb_type(o) == MRB_TT_ISTRUCT)
+#  define mrb_istruct_p(o) (mrb_type(o) == MRB_TT_ISTRUCT)
 #endif
 #ifndef mrb_break_p
-#define mrb_break_p(o) (mrb_type(o) == MRB_TT_BREAK)
+#  define mrb_break_p(o) (mrb_type(o) == MRB_TT_BREAK)
 #endif
 #ifndef mrb_bool
-#define mrb_bool(o)   (mrb_type(o) != MRB_TT_FALSE)
+#  define mrb_bool(o) (mrb_type(o) != MRB_TT_FALSE)
 #endif
-#define mrb_test(o)   mrb_bool(o)
+#define mrb_test(o) mrb_bool(o)
 
 /**
  * Returns a float in Ruby.
@@ -274,10 +274,11 @@ typedef void mrb_value;
  * Takes a float and boxes it into an mrb_value
  */
 #ifndef MRB_WITHOUT_FLOAT
-MRB_INLINE mrb_value mrb_float_value(struct mrb_state *mrb, mrb_float f)
+MRB_INLINE mrb_value
+mrb_float_value(struct mrb_state *mrb, mrb_float f)
 {
   mrb_value v;
-  (void) mrb;
+  (void)mrb;
   SET_FLOAT_VALUE(mrb, v, f);
   return v;
 }
@@ -287,8 +288,8 @@ MRB_INLINE mrb_value
 mrb_cptr_value(struct mrb_state *mrb, void *p)
 {
   mrb_value v;
-  (void) mrb;
-  SET_CPTR_VALUE(mrb,v,p);
+  (void)mrb;
+  SET_CPTR_VALUE(mrb, v, p);
   return v;
 }
 
@@ -297,7 +298,8 @@ mrb_cptr_value(struct mrb_state *mrb, void *p)
  *
  * Takes an integer and boxes it into an mrb_value
  */
-MRB_INLINE mrb_value mrb_fixnum_value(mrb_int i)
+MRB_INLINE mrb_value
+mrb_fixnum_value(mrb_int i)
 {
   mrb_value v;
   SET_INT_VALUE(v, i);
@@ -316,9 +318,9 @@ MRB_INLINE mrb_value
 mrb_obj_value(void *p)
 {
   mrb_value v;
-  SET_OBJ_VALUE(v, (struct RBasic*)p);
+  SET_OBJ_VALUE(v, (struct RBasic *)p);
   mrb_assert(p == mrb_ptr(v));
-  mrb_assert(((struct RBasic*)p)->tt == mrb_type(v));
+  mrb_assert(((struct RBasic *)p)->tt == mrb_type(v));
   return v;
 }
 
@@ -328,7 +330,8 @@ mrb_obj_value(void *p)
  * @return
  *      nil mrb_value object reference.
  */
-MRB_INLINE mrb_value mrb_nil_value(void)
+MRB_INLINE mrb_value
+mrb_nil_value(void)
 {
   mrb_value v;
   SET_NIL_VALUE(v);
@@ -338,7 +341,8 @@ MRB_INLINE mrb_value mrb_nil_value(void)
 /**
  * Returns false in Ruby.
  */
-MRB_INLINE mrb_value mrb_false_value(void)
+MRB_INLINE mrb_value
+mrb_false_value(void)
 {
   mrb_value v;
   SET_FALSE_VALUE(v);
@@ -348,7 +352,8 @@ MRB_INLINE mrb_value mrb_false_value(void)
 /**
  * Returns true in Ruby.
  */
-MRB_INLINE mrb_value mrb_true_value(void)
+MRB_INLINE mrb_value
+mrb_true_value(void)
 {
   mrb_value v;
   SET_TRUE_VALUE(v);
@@ -372,10 +377,10 @@ mrb_undef_value(void)
 }
 
 #if defined(MRB_USE_ETEXT_EDATA) && !defined(MRB_USE_LINK_TIME_RO_DATA_P)
-# ifdef __GNUC__
-#  warning MRB_USE_ETEXT_EDATA is deprecated. Define MRB_USE_LINK_TIME_RO_DATA_P instead.
-# endif
-# define MRB_USE_LINK_TIME_RO_DATA_P
+#  ifdef __GNUC__
+#    warning MRB_USE_ETEXT_EDATA is deprecated. Define MRB_USE_LINK_TIME_RO_DATA_P instead.
+#  endif
+#  define MRB_USE_LINK_TIME_RO_DATA_P
 #endif
 
 #if defined(MRB_USE_CUSTOM_RO_DATA_P)
@@ -391,9 +396,9 @@ mrb_ro_data_p(const char *p)
   return __ehdr_start < p && p < __init_array_start;
 }
 #else
-# define mrb_ro_data_p(p) FALSE
+#  define mrb_ro_data_p(p) FALSE
 #endif
 
 MRB_END_DECL
 
-#endif  /* MRUBY_VALUE_H */
+#endif /* MRUBY_VALUE_H */

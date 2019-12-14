@@ -11,7 +11,7 @@
 #include "mrdbconf.h"
 
 #ifdef _MSC_VER
-# define __func__ __FUNCTION__
+#  define __func__ __FUNCTION__
 #endif
 
 #define MAX_COMMAND_WORD (16)
@@ -142,26 +142,26 @@ typedef struct mrdb_state {
   mrb_debug_context *dbg;
 } mrdb_state;
 
-typedef dbgcmd_state (*debug_command_func)(mrb_state*, mrdb_state*);
+typedef dbgcmd_state (*debug_command_func)(mrb_state *, mrdb_state *);
 
 /* cmdrun.c */
-dbgcmd_state dbgcmd_run(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_continue(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_step(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_next(mrb_state*, mrdb_state*);
+dbgcmd_state dbgcmd_run(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_continue(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_step(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_next(mrb_state *, mrdb_state *);
 /* cmdbreak.c */
-dbgcmd_state dbgcmd_break(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_info_break(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_info_local(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_delete(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_enable(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_disable(mrb_state*, mrdb_state*);
+dbgcmd_state dbgcmd_break(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_info_break(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_info_local(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_delete(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_enable(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_disable(mrb_state *, mrdb_state *);
 /* cmdprint.c */
-dbgcmd_state dbgcmd_print(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_eval(mrb_state*, mrdb_state*);
+dbgcmd_state dbgcmd_print(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_eval(mrb_state *, mrdb_state *);
 /* cmdmisc.c */
-dbgcmd_state dbgcmd_list(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_help(mrb_state*, mrdb_state*);
-dbgcmd_state dbgcmd_quit(mrb_state*, mrdb_state*);
+dbgcmd_state dbgcmd_list(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_help(mrb_state *, mrdb_state *);
+dbgcmd_state dbgcmd_quit(mrb_state *, mrdb_state *);
 
 #endif

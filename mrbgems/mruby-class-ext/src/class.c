@@ -1,11 +1,12 @@
-#include "mruby.h"
 #include "mruby/class.h"
+
+#include "mruby.h"
 #include "mruby/string.h"
 
 static mrb_value
 mrb_mod_name(mrb_state *mrb, mrb_value self)
 {
-  mrb_value name =  mrb_class_path(mrb, mrb_class_ptr(self));
+  mrb_value name = mrb_class_path(mrb, mrb_class_ptr(self));
   if (mrb_string_p(name)) {
     MRB_SET_FROZEN_FLAG(mrb_basic_ptr(name));
   }
@@ -57,8 +58,9 @@ mrb_mruby_class_ext_gem_init(mrb_state *mrb)
 
   mrb_define_method(mrb, mod, "name", mrb_mod_name, MRB_ARGS_NONE());
   mrb_define_method(mrb, mod, "singleton_class?", mrb_mod_singleton_class_p, MRB_ARGS_NONE());
-  mrb_define_method(mrb, mod, "module_exec", mrb_mod_module_exec, MRB_ARGS_ANY()|MRB_ARGS_BLOCK());
-  mrb_define_method(mrb, mod, "class_exec", mrb_mod_module_exec, MRB_ARGS_ANY()|MRB_ARGS_BLOCK());
+  mrb_define_method(mrb, mod, "module_exec", mrb_mod_module_exec,
+                    MRB_ARGS_ANY() | MRB_ARGS_BLOCK());
+  mrb_define_method(mrb, mod, "class_exec", mrb_mod_module_exec, MRB_ARGS_ANY() | MRB_ARGS_BLOCK());
 }
 
 void

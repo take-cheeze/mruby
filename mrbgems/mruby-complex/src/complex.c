@@ -1,10 +1,10 @@
+#include <math.h>
 #include <mruby.h>
 #include <mruby/class.h>
 #include <mruby/numeric.h>
-#include <math.h>
 
 #ifdef MRB_WITHOUT_FLOAT
-# error Complex conflicts 'MRB_WITHOUT_FLOAT' configuration in your 'build_config.rb'
+#  error Complex conflicts 'MRB_WITHOUT_FLOAT' configuration in your 'build_config.rb'
 #endif
 
 struct mrb_complex {
@@ -13,47 +13,47 @@ struct mrb_complex {
 };
 
 #ifdef MRB_USE_FLOAT
-#define F(x) x##f
+#  define F(x) x##f
 #else
-#define F(x) x
+#  define F(x) x
 #endif
 
 #if defined(MRB_64BIT) || defined(MRB_USE_FLOAT)
 
-#define COMPLEX_USE_ISTRUCT
+#  define COMPLEX_USE_ISTRUCT
 /* use TT_ISTRUCT */
-#include <mruby/istruct.h>
+#  include <mruby/istruct.h>
 
-#define complex_ptr(mrb, v) (struct mrb_complex*)mrb_istruct_ptr(v)
+#  define complex_ptr(mrb, v) (struct mrb_complex *)mrb_istruct_ptr(v)
 
-static struct RBasic*
+static struct RBasic *
 complex_alloc(mrb_state *mrb, struct RClass *c, struct mrb_complex **p)
 {
   struct RIStruct *s;
 
-  s = (struct RIStruct*)mrb_obj_alloc(mrb, MRB_TT_ISTRUCT, c);
-  *p = (struct mrb_complex*)s->inline_data;
+  s = (struct RIStruct *)mrb_obj_alloc(mrb, MRB_TT_ISTRUCT, c);
+  *p = (struct mrb_complex *)s->inline_data;
 
-  return (struct RBasic*)s;
+  return (struct RBasic *)s;
 }
 
 #else
 /* use TT_DATA */
-#include <mruby/data.h>
+#  include <mruby/data.h>
 
 static const struct mrb_data_type mrb_complex_type = {"Complex", mrb_free};
 
-static struct RBasic*
+static struct RBasic *
 complex_alloc(mrb_state *mrb, struct RClass *c, struct mrb_complex **p)
 {
   struct RData *d;
 
   Data_Make_Struct(mrb, c, struct mrb_complex, &mrb_complex_type, *p, d);
 
-  return (struct RBasic*)d;
+  return (struct RBasic *)d;
 }
 
-static struct mrb_complex*
+static struct mrb_complex *
 complex_ptr(mrb_state *mrb, mrb_value v)
 {
   struct mrb_complex *p;
@@ -139,8 +139,7 @@ struct float_pair {
 };
 
 static void
-add_pair(struct float_pair *s, struct float_pair const *a,
-         struct float_pair const *b)
+add_pair(struct float_pair *s, struct float_pair const *a, struct float_pair const *b)
 {
   if (b->s == 0.0F) {
     *s = *a;
@@ -156,16 +155,14 @@ add_pair(struct float_pair *s, struct float_pair const *a,
 }
 
 static void
-mul_pair(struct float_pair *p, struct float_pair const *a,
-         struct float_pair const *b)
+mul_pair(struct float_pair *p, struct float_pair const *a, struct float_pair const *b)
 {
   p->s = a->s * b->s;
   p->x = a->x + b->x;
 }
 
 static void
-div_pair(struct float_pair *q, struct float_pair const *a,
-         struct float_pair const *b)
+div_pair(struct float_pair *q, struct float_pair const *a, struct float_pair const *b)
 {
   q->s = a->s / b->s;
   q->x = a->x - b->x;
@@ -218,7 +215,8 @@ complex_div(mrb_state *mrb, mrb_value self)
   return complex_new(mrb, F(ldexp)(zr.s, zr.x), F(ldexp)(zi.s, zi.x));
 }
 
-void mrb_mruby_complex_gem_init(mrb_state *mrb)
+void
+mrb_mruby_complex_gem_init(mrb_state *mrb)
 {
   struct RClass *comp;
 
@@ -232,9 +230,11 @@ void mrb_mruby_complex_gem_init(mrb_state *mrb)
   MRB_SET_INSTANCE_TT(comp, MRB_TT_DATA);
 #endif
   mrb_undef_class_method(mrb, comp, "new");
-  mrb_define_class_method(mrb, comp, "rectangular", complex_s_rect, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_class_method(mrb, comp, "rect", complex_s_rect, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_method(mrb, mrb->kernel_module, "Complex", complex_s_rect, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, comp, "rectangular", complex_s_rect,
+                          MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, comp, "rect", complex_s_rect, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, mrb->kernel_module, "Complex", complex_s_rect,
+                    MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
   mrb_define_method(mrb, comp, "real", complex_real, MRB_ARGS_NONE());
   mrb_define_method(mrb, comp, "imaginary", complex_imaginary, MRB_ARGS_NONE());
   mrb_define_method(mrb, comp, "to_f", complex_to_f, MRB_ARGS_NONE());
@@ -244,6 +244,6 @@ void mrb_mruby_complex_gem_init(mrb_state *mrb)
 }
 
 void
-mrb_mruby_complex_gem_final(mrb_state* mrb)
+mrb_mruby_complex_gem_final(mrb_state *mrb)
 {
 }

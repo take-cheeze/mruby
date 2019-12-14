@@ -4,11 +4,11 @@
 */
 
 #include <ctype.h>
+#include <mruby/compile.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "apilist.h"
-#include <mruby/compile.h>
 
 typedef struct help_msg {
   const char *cmd1;
@@ -18,114 +18,86 @@ typedef struct help_msg {
 } help_msg;
 
 static help_msg help_msg_list[] = {
-  {
-    "b[reak]", NULL, "Set breakpoint",
-    "Usage: break [file:]line\n"
-    "       break [class:]method\n"
-    "\n"
-    "Set breakpoint at specified line or method.\n"
-    "If \'[file:]line\' is specified, break at start of code for that line (in a file).\n"
-    "If \'[class:]method\' is specified, break at start of code for that method (of the class).\n"
-  },
-  {
-    "c[ontinue]", NULL, "Continue program being debugged",
-    "Usage: continue [N]\n"
-    "\n"
-    "Continue program stopped by a breakpoint.\n"
-    "If N, which is non negative value, is passed,\n"
-    "proceed program until the N-th breakpoint is coming.\n"
-    "If N is not passed, N is assumed 1.\n"
-  },
-  {
-    "d[elete]", NULL, "Delete some breakpoints",
-    "Usage: delete [bpno1 [bpno2 [... [bpnoN]]]]\n"
-    "\n"
-    "Delete some breakpoints.\n"
-    "Arguments are breakpoint numbers with spaces in between.\n"
-    "To delete all breakpoints, give no argument.\n"
-  },
-  {
-    "dis[able]", NULL, "Disable some breakpoints",
-    "Usage: disable [bpno1 [bpno2 [... [bpnoN]]]]\n"
-    "\n"
-    "Disable some breakpoints.\n"
-    "Arguments are breakpoint numbers with spaces in between.\n"
-    "To disable all breakpoints, give no argument.\n"
-  },
-  {
-    "en[able]", NULL, "Enable some breakpoints",
-    "Usage: enable [bpno1 [bpno2 [... [bpnoN]]]]\n"
-    "\n"
-    "Enable some breakpoints.\n"
-    "Arguments are breakpoint numbers with spaces in between.\n"
-    "To enable all breakpoints, give no argument.\n"
-  },
-  {
-    "ev[al]", NULL, "Evaluate expression",
-    "Usage: eval expr\n"
-    "\n"
-    "It evaluates and prints the value of the mruby expression.\n"
-    "This is equivalent to the \'print\' command.\n"
-  },
-  {
-    "h[elp]", NULL, "Print this help",
-    "Usage: help [command]\n"
-    "\n"
-    "With no arguments, help displays a short list of commands.\n"
-    "With a command name as help argument, help displays how to use that command.\n"
-  },
-  {
-    "i[nfo]", "b[reakpoints]", "Status of breakpoints",
-    "Usage: info breakpoints [bpno1 [bpno2 [... [bpnoN]]]]\n"
-    "\n"
-    "Status of specified breakpoints (all user-settable breakpoints if no argument).\n"
-    "Arguments are breakpoint numbers with spaces in between.\n"
-  },
-  {
-    "i[nfo]", "l[ocals]", "Print name of local variables",
-    "Usage: info locals\n"
-    "\n"
-    "Print name of local variables.\n"
-  },
-  {
-    "l[ist]", NULL, "List specified line",
-    "Usage: list\n"
-    "       list first[,last]\n"
-    "       list filename:first[,last]\n"
-    "\n"
-    "Print lines from a source file.\n"
-    "\n"
-    "With first and last, list prints lines from first to last.\n"
-    "When last is empty, it stands for ten lines away from first.\n"
-    "With filename, list prints lines in the specified source file.\n"
-  },
-  {
-    "p[rint]", NULL, "Print value of expression",
-    "Usage: print expr\n"
-    "\n"
-    "It evaluates and prints the value of the mruby expression.\n"
-    "This is equivalent to the \'eval\' command.\n"
-  },
-  {
-    "q[uit]", NULL, "Exit mrdb",
-    "Usage: quit\n"
-    "\n"
-    "Exit mrdb.\n"
-  },
-  {
-    "r[un]", NULL, "Start debugged program",
-    "Usage: run\n"
-    "\n"
-    "Start debugged program.\n"
-  },
-  {
-    "s[tep]", NULL, "Step program until it reaches a different source line",
-    "Usage: step\n"
-    "\n"
-    "Step program until it reaches a different source line.\n"
-  },
-  { NULL, NULL, NULL, NULL }
-};
+    {"b[reak]", NULL, "Set breakpoint",
+     "Usage: break [file:]line\n"
+     "       break [class:]method\n"
+     "\n"
+     "Set breakpoint at specified line or method.\n"
+     "If \'[file:]line\' is specified, break at start of code for that line (in a file).\n"
+     "If \'[class:]method\' is specified, break at start of code for that method (of the "
+     "class).\n"},
+    {"c[ontinue]", NULL, "Continue program being debugged",
+     "Usage: continue [N]\n"
+     "\n"
+     "Continue program stopped by a breakpoint.\n"
+     "If N, which is non negative value, is passed,\n"
+     "proceed program until the N-th breakpoint is coming.\n"
+     "If N is not passed, N is assumed 1.\n"},
+    {"d[elete]", NULL, "Delete some breakpoints",
+     "Usage: delete [bpno1 [bpno2 [... [bpnoN]]]]\n"
+     "\n"
+     "Delete some breakpoints.\n"
+     "Arguments are breakpoint numbers with spaces in between.\n"
+     "To delete all breakpoints, give no argument.\n"},
+    {"dis[able]", NULL, "Disable some breakpoints",
+     "Usage: disable [bpno1 [bpno2 [... [bpnoN]]]]\n"
+     "\n"
+     "Disable some breakpoints.\n"
+     "Arguments are breakpoint numbers with spaces in between.\n"
+     "To disable all breakpoints, give no argument.\n"},
+    {"en[able]", NULL, "Enable some breakpoints",
+     "Usage: enable [bpno1 [bpno2 [... [bpnoN]]]]\n"
+     "\n"
+     "Enable some breakpoints.\n"
+     "Arguments are breakpoint numbers with spaces in between.\n"
+     "To enable all breakpoints, give no argument.\n"},
+    {"ev[al]", NULL, "Evaluate expression",
+     "Usage: eval expr\n"
+     "\n"
+     "It evaluates and prints the value of the mruby expression.\n"
+     "This is equivalent to the \'print\' command.\n"},
+    {"h[elp]", NULL, "Print this help",
+     "Usage: help [command]\n"
+     "\n"
+     "With no arguments, help displays a short list of commands.\n"
+     "With a command name as help argument, help displays how to use that command.\n"},
+    {"i[nfo]", "b[reakpoints]", "Status of breakpoints",
+     "Usage: info breakpoints [bpno1 [bpno2 [... [bpnoN]]]]\n"
+     "\n"
+     "Status of specified breakpoints (all user-settable breakpoints if no argument).\n"
+     "Arguments are breakpoint numbers with spaces in between.\n"},
+    {"i[nfo]", "l[ocals]", "Print name of local variables",
+     "Usage: info locals\n"
+     "\n"
+     "Print name of local variables.\n"},
+    {"l[ist]", NULL, "List specified line",
+     "Usage: list\n"
+     "       list first[,last]\n"
+     "       list filename:first[,last]\n"
+     "\n"
+     "Print lines from a source file.\n"
+     "\n"
+     "With first and last, list prints lines from first to last.\n"
+     "When last is empty, it stands for ten lines away from first.\n"
+     "With filename, list prints lines in the specified source file.\n"},
+    {"p[rint]", NULL, "Print value of expression",
+     "Usage: print expr\n"
+     "\n"
+     "It evaluates and prints the value of the mruby expression.\n"
+     "This is equivalent to the \'eval\' command.\n"},
+    {"q[uit]", NULL, "Exit mrdb",
+     "Usage: quit\n"
+     "\n"
+     "Exit mrdb.\n"},
+    {"r[un]", NULL, "Start debugged program",
+     "Usage: run\n"
+     "\n"
+     "Start debugged program.\n"},
+    {"s[tep]", NULL, "Step program until it reaches a different source line",
+     "Usage: step\n"
+     "\n"
+     "Step program until it reaches a different source line.\n"},
+    {NULL, NULL, NULL, NULL}};
 
 typedef struct listcmd_parser_state {
   mrb_bool parse_error;
@@ -136,10 +108,10 @@ typedef struct listcmd_parser_state {
   uint16_t line_max;
 } listcmd_parser_state;
 
-static listcmd_parser_state*
+static listcmd_parser_state *
 listcmd_parser_state_new(mrb_state *mrb)
 {
-  listcmd_parser_state *st = (listcmd_parser_state*)mrb_malloc(mrb, sizeof(listcmd_parser_state));
+  listcmd_parser_state *st = (listcmd_parser_state *)mrb_malloc(mrb, sizeof(listcmd_parser_state));
   memset(st, 0, sizeof(listcmd_parser_state));
   return st;
 }
@@ -165,7 +137,8 @@ parse_uint(char **sp, uint16_t *n)
     return FALSE;
   }
 
-  for (p = *sp; *p != '\0' && ISDIGIT(*p); p++) ;
+  for (p = *sp; *p != '\0' && ISDIGIT(*p); p++)
+    ;
 
   if (p != *sp && (i = atoi(*sp)) >= 0) {
     *n = (uint16_t)i;
@@ -197,16 +170,14 @@ parse_lineno(mrb_state *mrb, char **sp, listcmd_parser_state *st)
 
   if (parse_uint(sp, &st->line_min)) {
     st->has_line_min = TRUE;
-  }
-  else {
+  } else {
     return FALSE;
   }
 
   if (skip_char(sp, ',')) {
     if (parse_uint(sp, &st->line_max)) {
       st->has_line_max = TRUE;
-    }
-    else {
+    } else {
       st->parse_error = TRUE;
       return FALSE;
     }
@@ -227,24 +198,22 @@ parse_filename(mrb_state *mrb, char **sp, listcmd_parser_state *st)
 
   if ((p = strchr(*sp, ':')) != NULL) {
     len = p - *sp;
-  }
-  else {
+  } else {
     len = strlen(*sp);
   }
 
   if (len > 0) {
-    st->filename = (char*)mrb_malloc(mrb, len + 1);
+    st->filename = (char *)mrb_malloc(mrb, len + 1);
     strncpy(st->filename, *sp, len);
     st->filename[len] = '\0';
     *sp += len;
     return TRUE;
-  }
-  else {
+  } else {
     return FALSE;
   }
 }
 
-char*
+char *
 replace_ext(mrb_state *mrb, const char *filename, const char *ext)
 {
   size_t len;
@@ -257,12 +226,11 @@ replace_ext(mrb_state *mrb, const char *filename, const char *ext)
 
   if ((p = strrchr(filename, '.')) != NULL && strchr(p, '/') == NULL) {
     len = p - filename;
-  }
-  else {
+  } else {
     len = strlen(filename);
   }
 
-  s = (char*)mrb_malloc(mrb, len + strlen(ext) + 1);
+  s = (char *)mrb_malloc(mrb, len + strlen(ext) + 1);
   memset(s, '\0', len + strlen(ext) + 1);
   strncpy(s, filename, len);
   strcat(s, ext);
@@ -287,8 +255,7 @@ parse_listcmd_args(mrb_state *mrb, mrdb_state *mrdb, listcmd_parser_state *st)
             st->parse_error = TRUE;
           }
         }
-      }
-      else {
+      } else {
         st->parse_error = TRUE;
       }
     }
@@ -353,7 +320,7 @@ check_cmd_pattern(const char *pattern, const char *cmd)
   p = lbracket + 1;
   q = (char *)cmd + (lbracket - pattern);
 
-  for ( ; p < rbracket && *q != '\0'; p++, q++) {
+  for (; p < rbracket && *q != '\0'; p++, q++) {
     if (*p != *q) {
       break;
     }
@@ -361,7 +328,7 @@ check_cmd_pattern(const char *pattern, const char *cmd)
   return *q == '\0';
 }
 
-static help_msg*
+static help_msg *
 get_help_msg(char *cmd1, char *cmd2)
 {
   help_msg *p;
@@ -387,8 +354,7 @@ show_short_help(void)
   for (p = help_msg_list; p->cmd1 != NULL; p++) {
     if (p->cmd2 == NULL) {
       printf("  %s -- %s\n", p->cmd1, p->short_msg);
-    }
-    else {
+    } else {
       printf("  %s %s -- %s\n", p->cmd1, p->cmd2, p->short_msg);
     }
   }
@@ -480,16 +446,15 @@ dbgcmd_quit(mrb_state *mrb, mrdb_state *mrdb)
         break;
       }
       c = buf;
-      while (buf != '\n' && (buf = getchar()) != EOF) ;
+      while (buf != '\n' && (buf = getchar()) != EOF)
+        ;
 
       if (c == 'y' || c == 'Y') {
         mrdb->dbg->xm = DBG_QUIT;
         break;
-      }
-      else if (c == 'n' || c == 'N') {
+      } else if (c == 'n' || c == 'N') {
         break;
-      }
-      else {
+      } else {
         printf("Please answer y or n.\n");
       }
     }

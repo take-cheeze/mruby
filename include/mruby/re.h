@@ -9,8 +9,8 @@
 
 MRB_BEGIN_DECL
 
-#define REGEXP_CLASS          "Regexp"
+#define REGEXP_CLASS "Regexp"
 
 MRB_END_DECL
 
-#endif  /* RE_H */
+#endif /* RE_H */

@@ -11,6 +11,7 @@
 /*-----------------------------------------------------------------------
 operation code    operands      semantics
 ------------------------------------------------------------------------*/
+/* clang-format off */
 OPCODE(NOP,        Z)        /* no operation */
 OPCODE(MOVE,       BB)       /* R(a) = R(b) */
 OPCODE(LOADL,      BB)       /* R(a) = Pool(b) */
@@ -115,3 +116,4 @@ OPCODE(EXT1,       Z)        /* make 1st operand 16bit */
 OPCODE(EXT2,       Z)        /* make 2nd operand 16bit */
 OPCODE(EXT3,       Z)        /* make 1st and 2nd operands 16bit */
 OPCODE(STOP,       Z)        /* stop VM */
+/* clang-format on */

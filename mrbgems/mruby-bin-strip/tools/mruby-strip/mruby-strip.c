@@ -1,9 +1,9 @@
+#include <mruby.h>
+#include <mruby/dump.h>
+#include <mruby/irep.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mruby.h>
-#include <mruby/irep.h>
-#include <mruby/dump.h>
 
 struct strip_args {
   int argc_start;
@@ -45,8 +45,7 @@ parse_args(int argc, char **argv, struct strip_args *args)
       default:
         return -1;
       }
-    }
-    else {
+    } else {
       break;
     }
   }

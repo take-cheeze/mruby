@@ -1,6 +1,6 @@
 #include <mruby.h>
-#include <mruby/error.h>
 #include <mruby/array.h>
+#include <mruby/error.h>
 #include <mruby/hash.h>
 #include <mruby/range.h>
 
@@ -15,42 +15,40 @@ mrb_f_caller(mrb_state *mrb, mrb_value self)
   argc = mrb_get_args(mrb, "|oo", &v, &length);
 
   switch (argc) {
-    case 0:
-      lev = 1;
-      n = bt_len - lev;
-      break;
-    case 1:
-      if (mrb_range_p(v)) {
-        mrb_int beg, len;
-        if (mrb_range_beg_len(mrb, v, &beg, &len, bt_len, TRUE) == MRB_RANGE_OK) {
-          lev = beg;
-          n = len;
-        }
-        else {
-          return mrb_nil_value();
-        }
+  case 0:
+    lev = 1;
+    n = bt_len - lev;
+    break;
+  case 1:
+    if (mrb_range_p(v)) {
+      mrb_int beg, len;
+      if (mrb_range_beg_len(mrb, v, &beg, &len, bt_len, TRUE) == MRB_RANGE_OK) {
+        lev = beg;
+        n = len;
+      } else {
+        return mrb_nil_value();
       }
-      else {
-        lev = mrb_int(mrb, v);
-        if (lev < 0) {
-          mrb_raisef(mrb, E_ARGUMENT_ERROR, "negative level (%v)", v);
-        }
-        n = bt_len - lev;
-      }
-      break;
-    case 2:
+    } else {
       lev = mrb_int(mrb, v);
-      n = mrb_int(mrb, length);
       if (lev < 0) {
         mrb_raisef(mrb, E_ARGUMENT_ERROR, "negative level (%v)", v);
       }
-      if (n < 0) {
-        mrb_raisef(mrb, E_ARGUMENT_ERROR, "negative size (%v)", length);
-      }
-      break;
-    default:
-      lev = n = 0;
-      break;
+      n = bt_len - lev;
+    }
+    break;
+  case 2:
+    lev = mrb_int(mrb, v);
+    n = mrb_int(mrb, length);
+    if (lev < 0) {
+      mrb_raisef(mrb, E_ARGUMENT_ERROR, "negative level (%v)", v);
+    }
+    if (n < 0) {
+      mrb_raisef(mrb, E_ARGUMENT_ERROR, "negative size (%v)", length);
+    }
+    break;
+  default:
+    lev = n = 0;
+    break;
   }
 
   if (n == 0) {
@@ -213,7 +211,7 @@ mrb_mruby_kernel_ext_gem_init(mrb_state *mrb)
   mrb_define_module_function(mrb, krn, "fail", mrb_f_raise, MRB_ARGS_OPT(2));
   mrb_define_module_function(mrb, krn, "caller", mrb_f_caller, MRB_ARGS_OPT(2));
   mrb_define_method(mrb, krn, "__method__", mrb_f_method, MRB_ARGS_NONE());
-  mrb_define_module_function(mrb, krn, "Integer", mrb_f_integer, MRB_ARGS_ARG(1,1));
+  mrb_define_module_function(mrb, krn, "Integer", mrb_f_integer, MRB_ARGS_ARG(1, 1));
 #ifndef MRB_WITHOUT_FLOAT
   mrb_define_module_function(mrb, krn, "Float", mrb_f_float, MRB_ARGS_REQ(1));
 #endif
