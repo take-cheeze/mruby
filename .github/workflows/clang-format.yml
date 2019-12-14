@@ -1,0 +1,19 @@
+name: clang-format
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - name: install tools
+      run: |
+        sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main'
+        sudo apt install clang-format-9
+    - name: refactor
+      run: |
+        ./minirake clang_format
