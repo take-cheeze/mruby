@@ -2191,6 +2191,7 @@ RETRY_TRY_BLOCK:
       struct RClass *c = MRB_PROC_TARGET_CLASS(ci->proc);
       if (!c) c = mrb->object_class;
       mrb_const_set(mrb, mrb_obj_value(c), irep->syms[b], regs[a]);
+      ci = mrb->c->ci;
       NEXT;
     }
 
