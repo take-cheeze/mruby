@@ -993,10 +993,20 @@ io_puts_str(mrb_state *mrb, int fd, mrb_value str)
   }
 }
 
+/* Maximum nesting depth for puts with arrays; guards against cyclic and
+   pathologically deep arrays causing C stack overflow. */
+#define IO_PUTS_MAX_DEPTH 16
+
 /* Recursive helper for puts with arrays */
 static void
-io_puts_ary(mrb_state *mrb, int fd, mrb_value ary)
+io_puts_ary(mrb_state *mrb, int fd, mrb_value ary, int depth)
 {
+  if (depth >= IO_PUTS_MAX_DEPTH) {
+    mrb_value mark = mrb_str_new_lit(mrb, "[...]\n");
+    fd_write(mrb, fd, mark);
+    return;
+  }
+
   mrb_int len = RARRAY_LEN(ary);
 
   if (len == 0) {
@@ -1009,7 +1019,7 @@ io_puts_ary(mrb_state *mrb, int fd, mrb_value ary)
   for (mrb_int i = 0; i < len; i++) {
     mrb_value elem = RARRAY_PTR(ary)[i];
     if (mrb_array_p(elem)) {
-      io_puts_ary(mrb, fd, elem);  /* Recursive call for nested arrays */
+      io_puts_ary(mrb, fd, elem, depth + 1);
     }
     else {
       io_puts_str(mrb, fd, elem);
@@ -1037,7 +1047,7 @@ io_puts_argv(mrb_state *mrb, mrb_value io, mrb_int argc, const mrb_value *argv)
   for (mrb_int i = 0; i < argc; i++) {
     mrb_value arg = argv[i];
     if (mrb_array_p(arg)) {
-      io_puts_ary(mrb, fd, arg);
+      io_puts_ary(mrb, fd, arg, 0);
     }
     else {
       io_puts_str(mrb, fd, arg);
