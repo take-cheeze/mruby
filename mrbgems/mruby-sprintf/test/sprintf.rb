@@ -91,6 +91,19 @@ assert("String#% invalid format") do
   end
 end
 
+assert("sprintf rejects an oversized float precision/width") do
+  # A precision/width near INT_MAX used to allocate ~2GB and overflow the
+  # formatter's int length into a negative memmove size, segfaulting on input
+  # like "%.2147483647e" (clusterfuzz). It must raise instead.
+  skip unless Object.const_defined?(:Float)
+  assert_raise(ArgumentError) { sprintf("%.2147483647e", 131072) }
+  assert_raise(ArgumentError) { sprintf("%2147483647e", 1.0) }
+  assert_raise(ArgumentError) { sprintf("%.2147483647f", 1.0) }
+  # ordinary precision/width still work
+  assert_equal "1.31072e+05", sprintf("%.5e", 131072.0)
+  assert_equal "3.1400000000", sprintf("%.10f", 3.14)
+end
+
 assert("sprintf with to_s mutating format string") do
   # The to_s callback must not be able to invalidate sprintf's internal
   # iteration pointers by mutating the format string.
