@@ -2158,7 +2158,11 @@ RETRY_TRY_BLOCK:
       }
       else if (tt == MRB_TT_HASH) {
         if (mrb_obj_ptr(recv)->c != mrb->hash_class) goto getidx0_fallback;
-        regs[a] = mrb_hash_get(mrb, recv, mrb_fixnum_value(0));
+        /* the default proc can re-enter the VM and move the stack, so store
+           through the refreshed `regs` */
+        mrb_value v = mrb_hash_get(mrb, recv, mrb_fixnum_value(0));
+        ci = mrb->c->ci;
+        regs[a] = v;
         NEXT;
       }
     getidx0_fallback:
