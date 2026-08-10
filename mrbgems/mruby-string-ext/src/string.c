@@ -1476,12 +1476,12 @@ static mrb_value
 str_lstrip_bang(mrb_state *mrb, mrb_value self)
 {
   struct RString *s = mrb_str_ptr(self);
-  char *ptr = RSTR_PTR(s);
   mrb_int len = RSTR_LEN(s);
   mrb_int start = 0;
 
   mrb_check_frozen(mrb, mrb_obj_ptr(self));
   mrb_str_modify(mrb, s);
+  char *ptr = RSTR_PTR(s);
 
   /* Find first non-whitespace character */
   while (start < len && is_whitespace(ptr[start])) {
@@ -1521,12 +1521,12 @@ static mrb_value
 str_rstrip_bang(mrb_state *mrb, mrb_value self)
 {
   struct RString *s = mrb_str_ptr(self);
-  char *ptr = RSTR_PTR(s);
   mrb_int len = RSTR_LEN(s);
   mrb_int end = len;
 
   mrb_check_frozen(mrb, mrb_obj_ptr(self));
   mrb_str_modify(mrb, s);
+  char *ptr = RSTR_PTR(s);
 
   /* Find last non-whitespace character */
   while (end > 0 && is_whitespace_or_null(ptr[end - 1])) {
@@ -1558,7 +1558,6 @@ static mrb_value
 str_strip_bang(mrb_state *mrb, mrb_value self)
 {
   struct RString *s = mrb_str_ptr(self);
-  char *ptr = RSTR_PTR(s);
   mrb_int len = RSTR_LEN(s);
   mrb_int start = 0;
   mrb_int end = len;
@@ -1566,6 +1565,7 @@ str_strip_bang(mrb_state *mrb, mrb_value self)
 
   mrb_check_frozen(mrb, mrb_obj_ptr(self));
   mrb_str_modify(mrb, s);
+  char *ptr = RSTR_PTR(s);
 
   /* Find first non-whitespace character */
   while (start < len && is_whitespace(ptr[start])) {
