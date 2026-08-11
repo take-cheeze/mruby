@@ -464,7 +464,7 @@ symdup(mrb_state *mrb, int fd, mrb_bool *failed)
     return fd;
 
   new_fd = dup(fd);
-  if (new_fd > 0) *failed = FALSE;
+  if (new_fd >= 0) *failed = FALSE;  /* 0 is a descriptor, not a failure */
   return new_fd;
 }
 
