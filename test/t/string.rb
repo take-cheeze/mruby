@@ -649,6 +649,16 @@ assert('String#slice', '15.2.10.5.34') do
   # length of args is 1
   a = 'abc'.slice(0)
   b = 'abc'.slice(-1)
+assert('String#rindex reaches the first character from a negative position') do
+  # A negative `pos` counts characters back from the end, so minus the length
+  # names the first character rather than a step past it.
+  assert_equal 0, "あいう".rindex("あ", -3)
+  assert_nil "あいう".rindex("あ", -4)
+  assert_equal 3, "あいうあ".rindex("あ", -1)
+  assert_equal 0, "あいうあ".rindex("あ", -4)
+  assert_nil "あいうあ".rindex("あ", -5)
+end if UTF8STRING
+
   c = 'abc'.slice(10)
   d = 'abc'.slice(-10)
 
