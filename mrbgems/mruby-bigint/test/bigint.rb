@@ -28,6 +28,26 @@ assert 'Bigint +' do
   assert_equal 36893488147419104229, n + 997
   assert_equal 36893488147419102235, n + -997
   assert_equal(-36893488147419102235, -n + 997)
+
+    # A Float argument used to be compared by rounding the big integer to a
+    # Float, so every neighbour within half an ULP answered equal.
+    assert_false (1<<70) + 1 == (2.0**70)
+    assert_false (1<<70) - 1 == (2.0**70)
+    assert_false(-((1<<70) + 1) == (-2.0**70))
+    assert_true(-(1<<70) == (-2.0**70))
+
+    # Infinity and NaN reach the same comparison and have no integer part.
+    assert_false (1<<70) == (1.0/0.0)
+    assert_false (1<<70) == (-1.0/0.0)
+    assert_false (1<<70) == (0.0/0.0)
+
+    # A Float whose integer part an `mrb_int` holds, zero included, is carried
+    # over as one rather than built into a big integer.
+    assert_false (1<<70) == 0.0
+    assert_false (1<<70) == -0.0
+    assert_false (1<<70) == 0.5
+    assert_false (1<<70) == 1.5
+    assert_false(-(1<<70) == -0.5)
   assert_equal(-36893488147419104229, -n + -997)
   assert_equal 73786976294838206464, n + n
   assert_equal 0, n + -n
