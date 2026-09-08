@@ -59,3 +59,29 @@ assert('GC marks a heap whose gray objects overflow the gray stack') do
   h.each { |i, v| bad += 1 unless v == "x#{i}" }
   assert_equal 0, bad
 end
+assert('OP_ENTER keeps the block alive while it lays out a short argument list') do
+  # A call that passes fewer positional arguments than the `*rest` and post
+  # parameters span has its post arguments moved to the end of that span,
+  # and when nothing but the required arguments came, or they came packed in
+  # one array with a keyword hash after it, that is the register the block
+  # arrived in.  The empty `rest` is allocated right after, with the block
+  # held in a C local and nowhere the marker looks, so a collection landing
+  # on that allocation freed the `Proc`, and what the method then read as its
+  # block was whatever the cell was reused for.  Enough calls for the
+  # collector to land there.
+  def gc_test_short_args(x, *r, y, &blk); blk; end
+  def gc_test_short_args_kw(x, *r, y, **o, &blk); blk; end
+  args = [1, 2]
+  kw = {}
+  bad = 0
+  i = 0
+  while i < 5000
+    b = gc_test_short_args(1, 2) { :c }
+    bad += 1 unless b.call == :c
+    b = gc_test_short_args_kw(*args, **kw) { :c }
+    bad += 1 unless b.call == :c
+    i += 1
+  end
+  assert_equal 0, bad
+end
+
