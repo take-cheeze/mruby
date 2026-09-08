@@ -244,6 +244,14 @@ assert('File.join') do
   assert_equal "a/b/c", File.join("a/", "/b/", "/c")
   assert_equal "a/b/c", File.join(["a", "b", "c"])
   assert_equal "a/b/c", File.join("a", ["b", ["c"]])
+
+  a = ["a"]
+  assert_equal "a/a", File.join(a, a)
+  a << a
+  assert_raise(ArgumentError) { File.join(a) }
+  b = ["b"]
+  b << [b]
+  assert_raise(ArgumentError) { File.join("x", b) }
 end
 
 assert('File.realpath') do
