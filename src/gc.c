@@ -1618,6 +1618,9 @@ gc_interval_ratio_set(mrb_state *mrb, mrb_value obj)
   mrb_int ratio;
 
   mrb_get_args(mrb, "i", &ratio);
+  if (ratio < 0 || ratio > INT_MAX) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "interval_ratio out of range");
+  }
   mrb->gc.interval_ratio = (int)ratio;
   return mrb_nil_value();
 }
@@ -1651,6 +1654,9 @@ gc_step_ratio_set(mrb_state *mrb, mrb_value obj)
   mrb_int ratio;
 
   mrb_get_args(mrb, "i", &ratio);
+  if (ratio <= 0 || ratio > INT_MAX) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "step_ratio must be positive");
+  }
   mrb->gc.step_ratio = (int)ratio;
   return mrb_nil_value();
 }
