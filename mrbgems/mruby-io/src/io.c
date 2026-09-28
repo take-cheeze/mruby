@@ -1048,7 +1048,7 @@ io_puts_argv(mrb_state *mrb, mrb_value io, mrb_int argc, const mrb_value *argv)
 }
 
 static mrb_value
-io_puts(mrb_state *mrb, mrb_value io)
+io_puts_method(mrb_state *mrb, mrb_value io)
 {
   mrb_value *argv;
   mrb_int argc;
@@ -1063,7 +1063,7 @@ mrb_io_puts_direct(mrb_state *mrb, mrb_value io, mrb_int argc,
   struct RClass *c = mrb_obj_class(mrb, io);
   mrb_method_t method = mrb_method_search_vm(mrb, &c, MRB_SYM(puts));
   if (MRB_METHOD_UNDEF_P(method) || !MRB_METHOD_CFUNC_P(method) ||
-      MRB_METHOD_CFUNC(method) != io_puts) {
+      MRB_METHOD_CFUNC(method) != io_puts_method) {
     return FALSE;
   }
   *result = io_puts_argv(mrb, io, argc, argv);
@@ -2245,7 +2245,7 @@ static const mrb_mt_entry io_rom_entries[] = {
   MRB_MT_ENTRY(io_pid,               MRB_SYM(pid),           MRB_ARGS_NONE()),
   MRB_MT_ENTRY(io_fileno,            MRB_SYM(fileno),        MRB_ARGS_NONE()),
   MRB_MT_ENTRY(io_write,             MRB_SYM(write), MRB_ARGS_ANY()),  /* 15.2.20.5.20 */
-  MRB_MT_ENTRY(io_puts,              MRB_SYM(puts), MRB_ARGS_ANY()),
+  MRB_MT_ENTRY(io_puts_method,       MRB_SYM(puts), MRB_ARGS_ANY()),
   MRB_MT_ENTRY(io_print,             MRB_SYM(print), MRB_ARGS_ANY()),
   MRB_MT_ENTRY(io_putc,              MRB_SYM(putc), MRB_ARGS_REQ(1)),
   MRB_MT_ENTRY(io_lshift,            MRB_OPSYM(lshift), MRB_ARGS_REQ(1)),
