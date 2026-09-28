@@ -70,6 +70,11 @@ struct mrb_io {
 
 int mrb_io_fileno(mrb_state *mrb, mrb_value io);
 
+/* Call the core IO#puts body without a VM argument frame when method lookup
+ * still resolves to that body. Returns FALSE when Ruby overrides it. */
+MRB_API mrb_bool mrb_io_puts_direct(mrb_state *mrb, mrb_value io, mrb_int argc,
+                                    const mrb_value *argv, mrb_value *result);
+
 #if defined(__cplusplus)
 } /* extern "C" { */
 #endif

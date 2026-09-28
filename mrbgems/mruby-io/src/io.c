@@ -9,6 +9,7 @@
 #include <mruby/hash.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
+#include <mruby/proc.h>
 #include <mruby/io.h>
 #include <mruby/error.h>
 #include <mruby/internal.h>
@@ -1017,17 +1018,13 @@ io_puts_ary(mrb_state *mrb, int fd, mrb_value ary)
 }
 
 static mrb_value
-io_puts(mrb_state *mrb, mrb_value io)
+io_puts_argv(mrb_state *mrb, mrb_value io, mrb_int argc, const mrb_value *argv)
 {
   struct mrb_io *fptr = io_get_write_fptr(mrb, io);
   int fd = io_get_write_fd(fptr);
 
   /* Prepare IO for writing (handle read buffer adjustment) */
   io_prepare_write(mrb, fptr);
-
-  mrb_value *argv;
-  mrb_int argc;
-  mrb_get_args(mrb, "*", &argv, &argc);
 
   if (argc == 0) {
     /* No arguments - just write a newline */
@@ -1048,6 +1045,29 @@ io_puts(mrb_state *mrb, mrb_value io)
   }
 
   return mrb_nil_value();
+}
+
+static mrb_value
+io_puts(mrb_state *mrb, mrb_value io)
+{
+  mrb_value *argv;
+  mrb_int argc;
+  mrb_get_args(mrb, "*", &argv, &argc);
+  return io_puts_argv(mrb, io, argc, argv);
+}
+
+mrb_bool
+mrb_io_puts_direct(mrb_state *mrb, mrb_value io, mrb_int argc,
+                  const mrb_value *argv, mrb_value *result)
+{
+  struct RClass *c = mrb_obj_class(mrb, io);
+  mrb_method_t method = mrb_method_search_vm(mrb, &c, MRB_SYM(puts));
+  if (MRB_METHOD_UNDEF_P(method) || !MRB_METHOD_CFUNC_P(method) ||
+      MRB_METHOD_CFUNC(method) != io_puts) {
+    return FALSE;
+  }
+  *result = io_puts_argv(mrb, io, argc, argv);
+  return TRUE;
 }
 
 /*
