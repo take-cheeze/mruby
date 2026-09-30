@@ -363,6 +363,26 @@ assert 'Bigint ==' do
   assert_false((2**64) == "18446744073709551616")
   assert_false((2**64) == nil)
   # bigints on a 32-bit mrb_int, plain Integers on a 64-bit one
+assert 'Bigint Integer#remainder takes the sign of the receiver' do
+  n = 1<<70
+  assert_equal 1, n.remainder(3)
+  assert_equal 1, n.remainder(-3)
+  assert_equal(-1, (-n).remainder(3))
+  assert_equal(-1, (-n).remainder(-3))
+  assert_equal 1, (n + 1).remainder(-(1<<65))
+end
+
+assert 'Bigint Integer#pow(e, m) with a negative base or one past m**2' do
+  n = 1<<70
+  assert_equal 6, (-n).pow(3, 7)
+  assert_equal(-1, (-n).pow(3, -7))
+  assert_equal 1180591620717411303181, (-3).pow(5, n)
+  m = (2**300) + 2
+  assert_equal 729, ((2**600) + 5).pow(3, m)
+  assert_equal ((-(2**300) - 12345) ** 3) % m, (-(2**300) - 12345).pow(3, m)
+  assert_equal ((-(2**300) - 12345) ** 3) % (2**300), (-(2**300) - 12345).pow(3, 2**300)
+end
+
   assert_false((1 << 32) == 0)
   assert_false((2**40 + 5) == 5)
   assert_true((2**40 + 5) == 2**40 + 5)
