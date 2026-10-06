@@ -764,6 +764,9 @@ retry:
           while (*s == fc) {
             s++; len--;
           }
+          /* the ".." and the leading fc count toward width and precision */
+          prec -= 3;
+          width -= 3;
         }
           /* Convert to uppercase for X, B formats */
           if (spec.subtype == 1) { /* uppercase formats: X, B */
@@ -790,7 +793,7 @@ retry:
             prefix = NULL;
           }
         }
-        else if (len == 1 && *s == '0') {
+        else if (!dots && len == 1 && *s == '0') {
           prefix = NULL;
         }
 
@@ -807,7 +810,7 @@ retry:
         }
         else {
           if (prec < len) {
-            if (!prefix && prec == 0 && len == 1 && *s == '0') len = 0;
+            if (!dots && !prefix && prec == 0 && len == 1 && *s == '0') len = 0;
             prec = len;
           }
           width -= prec;
@@ -825,23 +828,18 @@ retry:
           PUSH(prefix, plen);
         }
         if (dots) {
-          prec -= 2;
-          width -= 2;
           PUSH("..", 2);
-          if (*s != fc) {
-            FILL(fc, 1);
-            prec--; width--;
-          }
+          FILL(fc, 1);
         }
 
         if (prec > len) {
           CHECK(prec - len);
-          if ((flags & (FMINUS|FPREC)) != FMINUS) {
+          if (dots) {
+            FILL(fc, prec - len);
+          }
+          else if ((flags & (FMINUS|FPREC)) != FMINUS) {
             char c = '0';
             FILL(c, prec - len);
-          }
-          else if (v < 0) {
-            FILL(fc, prec - len);
           }
         }
           PUSH(s, len);
