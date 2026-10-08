@@ -1242,7 +1242,6 @@ mrb_int_mod_impl(mrb_state *mrb, mrb_value x, mrb_value y)
   }
 #endif
   a = mrb_integer(x);
-  if (a == 0) return x;
   if (mrb_integer_p(y)) {
     b = mrb_integer(y);
     if (b == 0) mrb_int_zerodiv(mrb);
