@@ -870,7 +870,7 @@ redundant:
   mrb_raise(mrb, E_ARGUMENT_ERROR, "redundant UTF-8 sequence");
 }
 
-static int
+static mrb_int
 pack_str(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, unsigned int flags)
 {
   const char *sptr = RSTRING_PTR(src);
@@ -917,7 +917,7 @@ pack_str(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, 
     dptr += padlen;
   }
 
-  return (int)(dptr - dptr0);
+  return dptr - dptr0;
 }
 
 #define CHECK_UNPACK_LEN(mrb, slen, ary) do {\
@@ -927,23 +927,23 @@ pack_str(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, 
   }\
 } while (0)
 
-static int
+static mrb_int
 unpack_str(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int count, unsigned int flags)
 {
   CHECK_UNPACK_LEN(mrb, slen, ary);
 
   const char *sptr = (const char*)src;
-  int copylen;
+  mrb_int copylen;
 
   if (count != -1 && count < slen) {
     slen = count;
   }
-  copylen = (int)slen;
+  copylen = slen;
 
   if (slen >= 0 && flags & PACK_FLAG_Z) {  /* "Z" format */
     const char *cp = (const char*)memchr(sptr, '\0', slen);
     if (cp != NULL) {
-      copylen = (int)(cp - sptr);
+      copylen = cp - sptr;
       if (count == -1) {
         slen = copylen + 1;
       }
@@ -959,17 +959,17 @@ unpack_str(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int cou
 
   if (copylen < 0) copylen = 0;
 
-  mrb_value dst = mrb_str_new(mrb, sptr, (mrb_int)copylen);
+  mrb_value dst = mrb_str_new(mrb, sptr, copylen);
   mrb_ary_push(mrb, ary, dst);
-  return (int)slen;
+  return slen;
 }
 
 
-static int
+static mrb_int
 pack_hex(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, unsigned int flags)
 {
   char *sptr = RSTRING_PTR(src);
-  long slen = (long)RSTRING_LEN(src);
+  mrb_int slen = RSTRING_LEN(src);
 
   unsigned int ashift, bshift;
   if (flags & PACK_FLAG_LSB) {
@@ -981,16 +981,17 @@ pack_hex(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, 
     bshift = 0;
   }
 
+  mrb_int nchars = count;
   if (count == -1) {
-    count = slen;
+    nchars = slen;
   }
   else if (slen > count) {
     slen = count;
   }
 
   /* calculate output buffer size needed - one byte per two hex chars */
-  /* use count/2 + (count&1) to avoid overflow when count == INT_MAX */
-  int output_bytes = count / 2 + (count & 1);
+  /* use nchars/2 + (nchars&1) to avoid overflow when nchars == MRB_INT_MAX */
+  mrb_int output_bytes = nchars / 2 + (nchars & 1);
   dst = str_len_ensure(mrb, dst, didx + output_bytes);
   char *dptr = RSTRING_PTR(dst) + didx;
   char *dptr0 = dptr;
@@ -1014,10 +1015,10 @@ pack_hex(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, 
     }
   }
 
-  return (int)(dptr - dptr0);
+  return dptr - dptr0;
 }
 
-static int
+static mrb_int
 unpack_hex(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int count, unsigned int flags)
 {
   CHECK_UNPACK_LEN(mrb, slen, ary);
@@ -1035,51 +1036,47 @@ unpack_hex(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int cou
   const char *sptr = (const char*)src;
   const char *sptr0 = sptr;
 
-  if (count == -1)
-    count = (int)(slen * 2);
+  mrb_int nchars = count == -1 ? slen * 2 : count;
 
-  mrb_value dst = mrb_str_new(mrb, NULL, count);
+  mrb_value dst = mrb_str_new(mrb, NULL, nchars);
   char *dptr = RSTRING_PTR(dst);
   char *dptr0 = dptr;
 
   const char hexadecimal[] = "0123456789abcdef";
 
   /* process full bytes when we need pairs of hex characters */
-  while (slen > 0 && count >= 2) {
+  while (slen > 0 && nchars >= 2) {
     unsigned char byte = *sptr++;
     slen--;
 
     *dptr++ = hexadecimal[(byte >> ashift) & 0x0f];
     *dptr++ = hexadecimal[(byte >> bshift) & 0x0f];
-    count -= 2;
+    nchars -= 2;
   }
 
   /* handle remaining single character if count is odd */
-  if (slen > 0 && count > 0) {
+  if (slen > 0 && nchars > 0) {
     unsigned char byte = *sptr++;
     *dptr++ = hexadecimal[(byte >> ashift) & 0x0f];
   }
 
   dst = mrb_str_resize(mrb, dst, (mrb_int)(dptr - dptr0));
   mrb_ary_push(mrb, ary, dst);
-  return (int)(sptr - sptr0);
+  return sptr - sptr0;
 }
 
-static int
+static mrb_int
 pack_bstr(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count, unsigned int flags)
 {
   const char *sptr = RSTRING_PTR(src);
-  int slen = (int)RSTRING_LEN(src);
+  mrb_int slen = RSTRING_LEN(src);
 
-  if (count == -1) {
-    count = slen;
-  }
-  else if (slen > count) {
+  if (count != -1 && slen > count) {
     slen = count;
   }
 
   /* calculate exact output size: (slen + 7) / 8 */
-  int output_bytes = (slen + 7) / 8;
+  mrb_int output_bytes = (slen + 7) / 8;
   dst = str_len_ensure(mrb, dst, didx + output_bytes);
   char *dptr = RSTRING_PTR(dst) + didx;
   char *dptr0 = dptr;
@@ -1088,14 +1085,14 @@ pack_bstr(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count,
   uint8_t (*pack_func)(const char *) = (flags & PACK_FLAG_LSB) ? pack_8_bits_lsb : pack_8_bits_msb;
 
   /* process 8 characters at a time */
-  int full_bytes = slen / 8;
-  for (int i = 0; i < full_bytes; i++) {
+  mrb_int full_bytes = slen / 8;
+  for (mrb_int i = 0; i < full_bytes; i++) {
     *dptr++ = (char)pack_func(sptr);
     sptr += 8;
   }
 
   /* handle remaining bits (partial byte) */
-  int remaining_bits = slen % 8;
+  int remaining_bits = (int)(slen % 8);
   if (remaining_bits > 0) {
     char temp_chars[8] = {'0', '0', '0', '0', '0', '0', '0', '0'};
     /* copy remaining characters, padding with '0' */
@@ -1105,10 +1102,10 @@ pack_bstr(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count,
     *dptr++ = (char)pack_func(temp_chars);
   }
 
-  return (int)(dptr - dptr0);
+  return dptr - dptr0;
 }
 
-static int
+static mrb_int
 unpack_bstr(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int count, unsigned int flags)
 {
   CHECK_UNPACK_LEN(mrb, slen, ary);
@@ -1116,11 +1113,12 @@ unpack_bstr(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int co
   const char *sptr0 = (const char*)src;
   const char *sptr = sptr0;
 
+  mrb_int nbits = count;
   if (count == -1 || count > slen * 8)
-    count = (int)(slen * 8);
+    nbits = slen * 8;
 
   /* pre-allocate exact output size */
-  mrb_value dst = mrb_str_new(mrb, NULL, count);
+  mrb_value dst = mrb_str_new(mrb, NULL, nbits);
   char *dptr = RSTRING_PTR(dst);
   char *dptr0 = dptr;
 
@@ -1128,14 +1126,14 @@ unpack_bstr(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int co
   void (*unpack_func)(uint8_t, char *) = (flags & PACK_FLAG_LSB) ? unpack_8_bits_lsb : unpack_8_bits_msb;
 
   /* process 8 bits (1 byte) at a time */
-  int full_bytes = count / 8;
-  for (int i = 0; i < full_bytes; i++) {
+  mrb_int full_bytes = nbits / 8;
+  for (mrb_int i = 0; i < full_bytes; i++) {
     unpack_func((uint8_t)*sptr++, dptr);
     dptr += 8;
   }
 
   /* handle remaining bits (partial byte) */
-  int remaining_bits = count % 8;
+  int remaining_bits = (int)(nbits % 8);
   if (remaining_bits > 0) {
     char temp_chars[8];
     unpack_func((uint8_t)*sptr++, temp_chars);
@@ -1148,10 +1146,10 @@ unpack_bstr(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary, int co
   /* ensure string is properly sized */
   dst = mrb_str_resize(mrb, dst, (mrb_int)(dptr - dptr0));
   mrb_ary_push(mrb, ary, dst);
-  return (int)(sptr - sptr0);
+  return sptr - sptr0;
 }
 
-static int
+static mrb_int
 pack_base64(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
 {
   char *srcptr = RSTRING_PTR(src);
@@ -1234,7 +1232,7 @@ pack_base64(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int coun
     if (column > 0) {
       *dstptr++ = '\n';
     }
-    return (int)(dstptr - dstptr0);
+    return dstptr - dstptr0;
   }
 
   /* handle remaining 1-2 bytes for fast path */
@@ -1254,10 +1252,10 @@ pack_base64(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int coun
     *dstptr++ = '=';
   }
 
-  return (int)(dstptr - dstptr0);
+  return dstptr - dstptr0;
 }
 
-static int
+static mrb_int
 unpack_base64(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
 {
   CHECK_UNPACK_LEN(mrb, slen, ary);
@@ -1266,7 +1264,7 @@ unpack_base64(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
   const char *sptr = sptr0;
 
   /* estimate buffer size - may be shorter due to padding/whitespace */
-  int dlen = (int)(slen / 4 * 3);
+  mrb_int dlen = slen / 4 * 3;
   mrb_value dst = mrb_str_new(mrb, NULL, dlen);
   char *dptr0 = RSTRING_PTR(dst);
   char *dptr = dptr0;
@@ -1314,10 +1312,10 @@ unpack_base64(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
 done:
   dst = mrb_str_resize(mrb, dst, (mrb_int)(dptr - dptr0));
   mrb_ary_push(mrb, ary, dst);
-  return (int)(sptr - sptr0);
+  return sptr - sptr0;
 }
 
-static int
+static mrb_int
 pack_qenc(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
 {
   static const char hex_table[] = "0123456789ABCDEF";
@@ -1325,7 +1323,7 @@ pack_qenc(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
   char *s = RSTRING_PTR(src);
   char *send = s + RSTRING_LEN(src);
   int i = 0, n = 0, prev = EOF;
-  int dlen = 0;
+  mrb_int dlen = 0;
 
   if (count <= 1) count = 72;
 
@@ -1404,7 +1402,7 @@ pack_qenc(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
   return dlen;
 }
 
-static int
+static mrb_int
 unpack_qenc(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
 {
   CHECK_UNPACK_LEN(mrb, slen, ary);
@@ -1446,16 +1444,16 @@ unpack_qenc(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
 
   buf = mrb_str_resize(mrb, buf, (mrb_int)(ptr - RSTRING_PTR(buf)));
   mrb_ary_push(mrb, ary, buf);
-  return (int)slen;
+  return slen;
 }
 
-static int
+static mrb_int
 pack_uu(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
 {
   char *s = RSTRING_PTR(src);
-  int slen = (int)RSTRING_LEN(src);
-  int lines_written = 0;
-  int dlen = 0;
+  mrb_int slen = RSTRING_LEN(src);
+  mrb_int lines_written = 0;
+  mrb_int dlen = 0;
 
   /* The leading length character holds `count` in six bits, so a line can
    * carry at most 63 bytes, and encoding works on whole 3-byte groups. */
@@ -1483,7 +1481,7 @@ pack_uu(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
   char *dptr = RSTRING_PTR(dst) + didx;
 
   while (slen > 0) {
-    int line_len = (slen > count) ? count : slen;
+    int line_len = (slen > count) ? count : (int)slen;
 
     /* Write line length character */
     *dptr++ = uu_encode_table[line_len & 0x3F];
@@ -1531,7 +1529,7 @@ pack_uu(mrb_state *mrb, mrb_value src, mrb_value dst, mrb_int didx, int count)
   return dlen;
 }
 
-static int
+static mrb_int
 unpack_uu(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
 {
   const unsigned char *s = (const unsigned char*)src;
@@ -1599,7 +1597,7 @@ unpack_uu(mrb_state *mrb, const void *src, mrb_int slen, mrb_value ary)
 
   result = mrb_str_resize(mrb, result, (mrb_int)(dptr - dptr_start));
   mrb_ary_push(mrb, ary, result);
-  return (int)slen;
+  return slen;
 }
 
 static int
