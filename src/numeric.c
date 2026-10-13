@@ -1269,6 +1269,14 @@ mrb_int_mod_impl(mrb_state *mrb, mrb_value x, mrb_value y)
 
 #ifdef MRB_USE_BIGINT
   if (mrb_bigint_p(x)) {
+#ifndef MRB_NO_FLOAT
+    if (mrb_float_p(y)) {
+      mrb_float mod;
+
+      flodivmod(mrb, mrb_bint_as_float(mrb, x), mrb_float(y), NULL, &mod);
+      return mrb_float_value(mrb, mod);
+    }
+#endif
     return mrb_bint_mod(mrb, x, y);
   }
   if (mrb_bigint_p(y)) {
