@@ -324,6 +324,17 @@ assert 'Bigint >> rounds a negative number toward minus infinity' do
   assert_equal 295147905179352825856, ((1<<70) + 3) >> 2
 end
 
+assert 'Bigint size counts the bytes of the magnitude' do
+  skip unless 1.respond_to?(:size)
+  w = 1.size  # a fixnum's, which a Bignum never answers less than
+  assert_equal 9, (2**64).size
+  assert_equal 9, (-(2**64)).size
+  assert_equal [w, 8].max, (2**64 - 1).size
+  assert_equal 13, (2**100).size
+  assert_equal 10, (256**10 - 1).size
+  assert_equal 20, (256**20 - 1).size
+end
+
 assert 'Bigint to_s' do
   n = 1197857166996989179607278372168909873645893814254642585755536286462800958278984531968
   assert_equal n, "11978_571669_96989179607278372168909873645893814254642585755536286462800958278984531968".to_i
