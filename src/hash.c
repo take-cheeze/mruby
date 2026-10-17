@@ -1346,6 +1346,8 @@ h_replace(mrb_state *mrb, struct RHash *h, struct RHash *orig_h)
 #endif
     ib_set_bit(h, ib_bit(orig_h));
   }
+  /* the entries came in by a copy, past the barrier on each store */
+  mrb_write_barrier(mrb, (struct RBasic*)h);
 }
 
 size_t
