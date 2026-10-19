@@ -3474,6 +3474,12 @@ str_bytesplice(mrb_state *mrb, mrb_value str, mrb_int idx1, mrb_int len1, mrb_va
   if (mrb_int_add_overflow(idx2, len2, &n) || RSTRING_LEN(replace) < n) {
     len2 = RSTRING_LEN(replace) - idx2;
   }
+  /* The bytes spliced in are read after the tail has moved to make room for
+     them. When they are the receiver's own, those past the range replaced
+     have moved with it, so keep what the receiver held at the call. */
+  if (mrb_str_ptr(replace) == s) {
+    replace = mrb_str_dup(mrb, replace);
+  }
   mrb_str_modify(mrb, s);
   if (len1 >= len2) {
     memmove(RSTR_PTR(s)+idx1, RSTRING_PTR(replace)+idx2, len2);
