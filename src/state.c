@@ -78,7 +78,15 @@ mrb_open(void)
 {
   mrb_state *mrb = mrb_open_core();
 
-  if (mrb == NULL || mrb->exc) {
+  /* mrb->c == NULL: mrb_core_init_abort() fired during init_gc_and_core
+   * (an allocation failed before mrb->nomem_err existed to raise it
+   * through normally) and deliberately clears mrb->exc when it does, since
+   * there is no valid exception object this early to expose -- so mrb->exc
+   * alone cannot distinguish that abort from a genuinely successful init.
+   * mrb->c can: init_gc_and_core sets it unconditionally on success, right
+   * before calling mrb_init_core, so it is the one field guaranteed to
+   * still be NULL after this abort path and non-NULL after a real one. */
+  if (mrb == NULL || mrb->exc || mrb->c == NULL) {
     /* Either allocation failed or core init failed */
     return mrb;
   }

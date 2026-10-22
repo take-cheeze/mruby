@@ -927,10 +927,13 @@ mrb_init_exception(mrb_state *mrb)
   mrb_define_class_id(mrb, MRB_SYM(NoMatchingPatternError), E_STANDARD_ERROR);                         /* pattern matching */
   struct RClass *stack_error = mrb_define_class_id(mrb, MRB_SYM(SystemStackError), exception);
   mrb->stack_err = mrb_obj_ptr(mrb_exc_new_lit(mrb, stack_error, "stack level too deep"));
+  mrb->stack_err->frozen = 1;
 
   struct RClass *nomem_error = mrb_define_class_id(mrb, MRB_SYM(NoMemoryError), exception);
   mrb->nomem_err = mrb_obj_ptr(mrb_exc_new_lit(mrb, nomem_error, "Out of memory"));
+  mrb->nomem_err->frozen = 1;
 #ifdef MRB_GC_FIXED_ARENA
   mrb->arena_err = mrb_obj_ptr(mrb_exc_new_lit(mrb, nomem_error, "arena overflow error"));
+  mrb->arena_err->frozen = 1;
 #endif
 }
