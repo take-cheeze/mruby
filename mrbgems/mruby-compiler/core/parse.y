@@ -828,6 +828,15 @@ new_break(parser_state *p, node *c)
   return (node*)n;
 }
 
+/* struct: defined_node(expr) */
+static node*
+new_defined(parser_state *p, node *c)
+{
+  struct mrb_ast_defined_node *n = NEW_NODE(defined, NODE_DEFINED);
+  n->expr = c;
+  return (node*)n;
+}
+
 /* struct: next_node(value) */
 static node*
 new_next(parser_state *p, node *c)
@@ -2049,6 +2058,7 @@ prohibit_literals(parser_state *p, node *n)
         keyword_and     "'and'"
         keyword_or      "'or'"
         keyword_not     "'not'"
+        keyword_defined "'defined?'"
         modifier_if     "'if' modifier"
         modifier_unless "'unless' modifier"
         modifier_while  "'while' modifier"
@@ -2155,6 +2165,7 @@ prohibit_literals(parser_state *p, node *n)
 %nonassoc  modifier_if modifier_unless modifier_while modifier_until keyword_in
 %left  keyword_or keyword_and
 %right keyword_not
+%nonassoc keyword_defined
 %right '=' tOP_ASGN
 %left modifier_rescue
 %right '?' ':' tLABEL_TAG
@@ -2429,6 +2440,10 @@ expr            : command_call
                 | keyword_not opt_nl expr
                     {
                       $$ = call_uni_op(p, cond($3), "!");
+                    }
+                | keyword_defined opt_nl expr
+                    {
+                      $$ = new_defined(p, $3);
                     }
                 | '!' command_call
                     {
@@ -2812,7 +2827,7 @@ reswords        : keyword__LINE__ | keyword__FILE__ | keyword__ENCODING__
                 | keyword_BEGIN | keyword_END
                 | keyword_alias | keyword_and | keyword_begin
                 | keyword_break | keyword_case | keyword_class | keyword_def
-                | keyword_do | keyword_else | keyword_elsif
+                | keyword_defined | keyword_do | keyword_else | keyword_elsif
                 | keyword_end | keyword_ensure | keyword_false
                 | keyword_for | keyword_in | keyword_module | keyword_next
                 | keyword_nil | keyword_not | keyword_or | keyword_redo
@@ -3304,6 +3319,10 @@ primary         : literal
                 | keyword_not '(' rparen
                     {
                       $$ = call_uni_op(p, new_nil(p), "!");
+                    }
+                | keyword_defined '(' expr rparen
+                    {
+                      $$ = new_defined(p, $3);
                     }
                 | operation brace_block
                     {

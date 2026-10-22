@@ -42,4 +42,16 @@ module Kernel
   def to_enum(*a)
     raise NotImplementedError.new("fiber required for enumerator")
   end
+
+  # Used by the compiler's `defined?` codegen (codegen_defined in
+  # mruby-compiler/core/codegen.c) to answer `defined?(@@cvar)`. Class
+  # variables are looked up starting from `self` when `self` is already a
+  # Module/Class (e.g. inside `def self.foo; defined?(@@cvar); end`, where
+  # `self` is the class itself), or from `self.class` otherwise (a plain
+  # instance method) -- `self.class` unconditionally is wrong for the first
+  # case: it would look on `Class`, which knows nothing about the subject
+  # class's own `@@cvar`.
+  private def __defined_cvar_scope
+    is_a?(Module) ? self : self.class
+  end
 end

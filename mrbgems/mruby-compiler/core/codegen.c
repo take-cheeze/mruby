@@ -6239,15 +6239,271 @@ codegen_colon3(codegen_scope *s, node *varnode, int val)
   if (val) push();
 }
 
+/* Unconditionally pushes a literal string at cursp(). Used for the `defined?`
+ * cases whose answer is known at compile time (keywords, local variables,
+ * assignments, and the generic literal/expression fallback). */
+static void
+codegen_defined_push_str(codegen_scope *s, const char *str)
+{
+  int off = new_lit_cstr(s, str);
+  genop_2(s, OP_STRING, cursp(), off);
+  push();
+}
+
+/* Consumes a boolean value already sitting at cursp()-1 (i.e. a single value
+ * was just pushed by the caller) and replaces it with the literal string
+ * `str` when it was truthy, or nil otherwise. Leaves the result at the same
+ * register, with cursp() restored to one past it -- same shape as any other
+ * single-value expression codegen. */
+static void
+codegen_defined_bool_to_str(codegen_scope *s, const char *str)
+{
+  int r;
+  uint32_t skip, done;
+
+  pop();
+  r = cursp();
+  skip = genjmp2_0(s, OP_JMPNOT, r, VAL);
+  codegen_defined_push_str(s, str);
+  done = genjmp_0(s, OP_JMP);
+  dispatch(s, skip);
+  s->sp = r; /* undo the true-branch push(); only one path runs at a time */
+  genop_1(s, OP_LOADNIL, r);
+  push();
+  dispatch(s, done);
+}
+
+/* Pushes `<receiver-or-self>.respond_to?(:method_name, true)` -- used to
+ * answer `defined?` for method-call expressions (including operators, which
+ * are NODE_CALL under the hood) without ever actually invoking the method,
+ * matching real Ruby's `defined?(raise "x")` => "method" (never raises).
+ *
+ * Every helper in this file that emits a SEND/SSEND does one extra push()
+ * beyond the receiver and its arguments before resetting cursp() back to the
+ * call's base register: OP_SEND/OP_SSEND read a block-argument slot at
+ * `a + n + 1` even when no block is passed (mrb_vm_exec's `bidx` in vm.c),
+ * so nregs must account for that trailing register or the VM's own
+ * `bidx < irep->nregs` assertion fails at runtime despite the bytecode
+ * itself being perfectly well-formed. */
+static void
+codegen_defined_respond_to(codegen_scope *s, struct mrb_ast_call_node *call)
+{
+  int r = cursp();
+  int noself = (!call->receiver || node_type(call->receiver) == NODE_SELF);
+
+  if (noself) {
+    push();
+  }
+  else {
+    codegen(s, call->receiver, VAL);
+  }
+  genop_2(s, OP_LOADSYM, cursp(), sym_idx(s, call->method_name));
+  push();
+  genop_1(s, OP_LOADTRUE, cursp());
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_3(s, noself ? OP_SSEND : OP_SEND, r, sym_idx(s, MRB_SYM_Q(respond_to)), 2);
+  s->sp = r;
+  push();
+}
+
+/* Pushes the boolean result of a zero-arg implicit-self call, e.g. `block_given?`. */
+static void
+codegen_defined_self_send0(codegen_scope *s, mrb_sym method)
+{
+  int r = cursp();
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_2(s, OP_SSEND0, r, sym_idx(s, method));
+  s->sp = r;
+  push();
+}
+
+/* Pushes the boolean result of a one-arg implicit-self call with a symbol
+ * argument, e.g. `instance_variable_defined?(:@foo)`. */
+static void
+codegen_defined_self_send1_sym(codegen_scope *s, mrb_sym method, mrb_sym arg_sym)
+{
+  int r = cursp();
+  push();
+  genop_2(s, OP_LOADSYM, cursp(), sym_idx(s, arg_sym));
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_3(s, OP_SSEND, r, sym_idx(s, method), 1);
+  s->sp = r;
+  push();
+}
+
+/* Pushes the boolean result of
+ * `self.__defined_cvar_scope.class_variable_defined?(sym)` (the private
+ * Kernel helper in mrblib/kernel.rb, which resolves to `self` when `self`
+ * is already a Module/Class and to `self.class` otherwise). Still a known,
+ * intentional simplification versus real Ruby's full lexical-cref-based
+ * lookup, but handles both the instance-method and class-method cases. */
+static void
+codegen_defined_cvar(codegen_scope *s, mrb_sym cvar_sym)
+{
+  int r = cursp();
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_2(s, OP_SSEND0, r, sym_idx(s, MRB_SYM(__defined_cvar_scope)));
+  push();
+  genop_2(s, OP_LOADSYM, cursp(), sym_idx(s, cvar_sym));
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_3(s, OP_SEND, r, sym_idx(s, MRB_SYM_Q(class_variable_defined)), 1);
+  s->sp = r;
+  push();
+}
+
+/* Pushes the boolean result of `global_variables.include?(sym)`. */
+static void
+codegen_defined_gvar(codegen_scope *s, mrb_sym gvar_sym)
+{
+  int r = cursp();
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_2(s, OP_SSEND0, r, sym_idx(s, MRB_SYM(global_variables)));
+  push();
+  genop_2(s, OP_LOADSYM, cursp(), sym_idx(s, gvar_sym));
+  push();
+  push(); /* block-argument slot */
+  s->sp = r;
+  genop_3(s, OP_SEND, r, sym_idx(s, MRB_SYM_Q(include)), 1);
+  s->sp = r;
+  push();
+}
+
+/* Answers `defined?` for a constant/scoped-constant read (NODE_CONST,
+ * NODE_COLON2, NODE_COLON3) by reusing the normal read codegen wrapped in a
+ * compiler-generated rescue region: constant reads have no side effects, so
+ * catching and discarding any exception (a bare `rescue` with no filtering)
+ * is safe. Pushes "constant" on success, nil if the read raised. */
+static void
+codegen_defined_const(codegen_scope *s, node *exprnode)
+{
+  int catch_entry, begin, end, r;
+  uint32_t success_jmp, done_jmp;
+
+  r = cursp();
+  catch_entry = catch_handler_new(s);
+  begin = s->pc;
+  codegen(s, exprnode, VAL);
+  pop();
+  end = s->pc;
+  success_jmp = genjmp_0(s, OP_JMP);
+  catch_handler_set(s, catch_entry, MRB_CATCH_RESCUE, begin, end, s->pc);
+  genop_1(s, OP_EXCEPT, r); /* consumes and clears the exception */
+  genop_1(s, OP_LOADNIL, r);
+  push();
+  done_jmp = genjmp_0(s, OP_JMP);
+  dispatch(s, success_jmp);
+  pop(); /* undo the handler branch's push(); the success path writes fresh */
+  codegen_defined_push_str(s, "constant");
+  dispatch(s, done_jmp);
+}
+
 static void
 codegen_defined(codegen_scope *s, node *varnode, int val)
 {
-  // DEFINED nodes are rarely used - generate basic implementation
-  (void)varnode; // suppress unused warning
-  if (val) {
-    // For now, just return nil (defined? is complex to implement correctly)
+  struct mrb_ast_defined_node *n = defined_node(varnode);
+  node *expr = n->expr;
+
+  /* `defined?` never evaluates its argument, so if the result isn't even
+   * used there is nothing to generate at all. */
+  if (!val) return;
+
+  if (!expr) {
     genop_1(s, OP_LOADNIL, cursp());
     push();
+    return;
+  }
+
+  switch (node_type(expr)) {
+  case NODE_NIL:
+    codegen_defined_push_str(s, "nil");
+    break;
+  case NODE_TRUE:
+    codegen_defined_push_str(s, "true");
+    break;
+  case NODE_FALSE:
+    codegen_defined_push_str(s, "false");
+    break;
+  case NODE_SELF:
+    codegen_defined_push_str(s, "self");
+    break;
+
+  case NODE_LVAR:
+    /* mruby's parser only ever emits NODE_LVAR for identifiers already
+     * established as locals in the current scope, so this is a compile-time
+     * certain answer -- an identifier that isn't yet a known local parses as
+     * a method call (NODE_CALL) instead. */
+    codegen_defined_push_str(s, "local-variable");
+    break;
+
+  case NODE_ASGN:
+  case NODE_OP_ASGN:
+  case NODE_MASGN:
+    /* Real Ruby never performs the assignment when checking `defined?`, and
+     * neither do we -- the inner node is intentionally never passed to
+     * codegen() here. Any locals it introduces are already registered by
+     * the parser regardless of whether this code path ever runs. */
+    codegen_defined_push_str(s, "assignment");
+    break;
+
+  case NODE_CONST:
+  case NODE_COLON2:
+  case NODE_COLON3:
+    codegen_defined_const(s, expr);
+    break;
+
+  case NODE_CALL:
+    codegen_defined_respond_to(s, call_node(expr));
+    codegen_defined_bool_to_str(s, "method");
+    break;
+
+  case NODE_IVAR:
+    codegen_defined_self_send1_sym(s, MRB_SYM_Q(instance_variable_defined), var_node(expr)->symbol);
+    codegen_defined_bool_to_str(s, "instance-variable");
+    break;
+
+  case NODE_CVAR:
+    codegen_defined_cvar(s, var_node(expr)->symbol);
+    codegen_defined_bool_to_str(s, "class variable");
+    break;
+
+  case NODE_GVAR:
+    codegen_defined_gvar(s, var_node(expr)->symbol);
+    codegen_defined_bool_to_str(s, "global-variable");
+    break;
+
+  case NODE_YIELD:
+    codegen_defined_self_send0(s, MRB_SYM_Q(block_given));
+    codegen_defined_bool_to_str(s, "yield");
+    break;
+
+  case NODE_SUPER:
+  case NODE_ZSUPER:
+    /* Determining the current method context safely at compile time is more
+     * involved; conservatively report "not defined" rather than guessing. */
+    genop_1(s, OP_LOADNIL, cursp());
+    push();
+    break;
+
+  default:
+    /* Real Ruby's default answer for any other expression (literals,
+     * `if`/`case`/`begin` used as expressions, etc.) is "expression". This
+     * intentionally does not replicate Ruby's recursive definedness checks
+     * for array-literal elements or call arguments -- a safe simplification
+     * that never evaluates anything with side effects. */
+    codegen_defined_push_str(s, "expression");
+    break;
   }
 }
 
