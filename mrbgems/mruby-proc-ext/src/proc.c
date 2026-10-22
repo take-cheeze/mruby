@@ -187,7 +187,7 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     return mrb_ary_new(mrb);
   }
   const struct mrb_irep *irep = proc->body.irep;
-  if (!irep || !irep->lv || *irep->iseq != OP_ENTER) {
+  if (!irep || !MRB_IREP_LV(irep) || *irep->iseq != OP_ENTER) {
     return mrb_ary_new(mrb);
   }
 
@@ -220,12 +220,12 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     for (int j = 0; j < p->size; i++, j++) {
       mrb_value a = mrb_ary_new(mrb);
       mrb_ary_push(mrb, a, sname);
-      if (i < max && irep->lv[i]) {
-        mrb_ary_push(mrb, a, mrb_symbol_value(irep->lv[i]));
+      if (i < max && MRB_IREP_LV(irep)[i]) {
+        mrb_ary_push(mrb, a, mrb_symbol_value(MRB_IREP_LV(irep)[i]));
       }
       if (p->name == MRB_SYM(block)) {
-        if (irep->lv[i+1]) {
-          mrb_ary_push(mrb, a, mrb_symbol_value(irep->lv[i+1]));
+        if (MRB_IREP_LV(irep)[i+1]) {
+          mrb_ary_push(mrb, a, mrb_symbol_value(MRB_IREP_LV(irep)[i+1]));
         }
         block = a; continue;
       }

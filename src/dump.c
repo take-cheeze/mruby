@@ -454,8 +454,8 @@ get_debug_record_size(mrb_state *mrb, const mrb_irep *irep)
   size_t ret = sizeof(uint32_t); /* record size */
   ret += sizeof(uint16_t); /* file count */
 
-  for (uint16_t f_idx = 0; f_idx < irep->debug_info->flen; f_idx++) {
-    mrb_irep_debug_info_file const* file = irep->debug_info->files[f_idx];
+  for (uint16_t f_idx = 0; f_idx < MRB_IREP_DEBUG_INFO(irep)->flen; f_idx++) {
+    mrb_irep_debug_info_file const* file = MRB_IREP_DEBUG_INFO(irep)->files[f_idx];
 
     ret += sizeof(uint32_t); /* position */
     ret += sizeof(uint16_t); /* filename index */
@@ -500,7 +500,7 @@ get_filename_table_size(mrb_state *mrb, const mrb_irep *irep, mrb_sym **fp, uint
 {
   mrb_sym *filenames = *fp;
   size_t size = 0;
-  const mrb_irep_debug_info *di = irep->debug_info;
+  const mrb_irep_debug_info *di = MRB_IREP_DEBUG_INFO(irep);
 
   mrb_assert(lp);
   for (int i = 0; i < di->flen; i++) {
@@ -529,11 +529,11 @@ write_debug_record_1(mrb_state *mrb, const mrb_irep *irep, uint8_t *bin, mrb_sym
   uint8_t *cur;
 
   cur = bin + sizeof(uint32_t); /* skip record size */
-  cur += uint16_to_bin(irep->debug_info->flen, cur); /* file count */
+  cur += uint16_to_bin(MRB_IREP_DEBUG_INFO(irep)->flen, cur); /* file count */
 
-  for (int f_idx = 0; f_idx < irep->debug_info->flen; f_idx++) {
+  for (int f_idx = 0; f_idx < MRB_IREP_DEBUG_INFO(irep)->flen; f_idx++) {
     int filename_idx;
-    const mrb_irep_debug_info_file *file = irep->debug_info->files[f_idx];
+    const mrb_irep_debug_info_file *file = MRB_IREP_DEBUG_INFO(irep)->files[f_idx];
 
     /* position */
     cur += uint32_to_bin(file->start_pos, cur);
@@ -642,7 +642,7 @@ create_lv_sym_table(mrb_state *mrb, const mrb_irep *irep, mrb_sym **syms, uint32
   }
 
   for (int i = 0; i + 1 < irep->nlocals; i++) {
-    mrb_sym const name = irep->lv[i];
+    mrb_sym const name = MRB_IREP_LV(irep)[i];
     if (name == 0) continue;
     if (find_filename_index(*syms, *syms_len, name) != -1) continue;
 
@@ -682,11 +682,11 @@ write_lv_record(mrb_state *mrb, const mrb_irep *irep, uint8_t **start, mrb_sym c
   uint8_t *cur = *start;
 
   for (int i = 0; i + 1 < irep->nlocals; i++) {
-    if (irep->lv[i] == 0) {
+    if (MRB_IREP_LV(irep)[i] == 0) {
       cur += uint16_to_bin(RITE_LV_NULL_MARK, cur);
     }
     else {
-      int const sym_idx = find_filename_index(syms, syms_len, irep->lv[i]);
+      int const sym_idx = find_filename_index(syms, syms_len, MRB_IREP_LV(irep)[i]);
       mrb_assert(sym_idx != -1); /* local variable name must be in syms */
 
       cur += uint16_to_bin(sym_idx, cur);
@@ -780,7 +780,7 @@ write_rite_binary_header(mrb_state *mrb, size_t binary_size, uint8_t *bin, uint8
 static mrb_bool
 debug_info_defined_p(const mrb_irep *irep)
 {
-  if (!irep->debug_info) return FALSE;
+  if (!MRB_IREP_DEBUG_INFO(irep)) return FALSE;
   for (int i = 0; i < irep->rlen; i++) {
     if (!debug_info_defined_p(irep->reps[i])) return FALSE;
   }
@@ -790,7 +790,7 @@ debug_info_defined_p(const mrb_irep *irep)
 static mrb_bool
 lv_defined_p(const mrb_irep *irep)
 {
-  if (irep->lv) return TRUE;
+  if (MRB_IREP_LV(irep)) return TRUE;
   for (int i = 0; i < irep->rlen; i++) {
     if (lv_defined_p(irep->reps[i])) return TRUE;
   }

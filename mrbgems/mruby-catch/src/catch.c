@@ -40,8 +40,7 @@ static const mrb_irep catch_irep = {
   3,5,0,
   MRB_IREP_STATIC,catch_iseq,
   NULL,catch_syms,NULL,
-  NULL,
-  NULL,
+  MRB_IREP_DEBUG_NULL_FIELDS
   sizeof(catch_iseq),0,3,0,0
 };
 

@@ -139,8 +139,8 @@ MRB_API char const*
 mrb_debug_get_filename(mrb_state *mrb, const mrb_irep *irep, uint32_t pc)
 {
   if (irep && pc < irep->ilen) {
-    if (!irep->debug_info) return NULL;
-    return debug_get_filename(mrb, get_file(irep->debug_info, pc));
+    if (!MRB_IREP_DEBUG_INFO(irep)) return NULL;
+    return debug_get_filename(mrb, get_file(MRB_IREP_DEBUG_INFO(irep), pc));
   }
   return NULL;
 }
@@ -154,8 +154,8 @@ MRB_API int32_t
 mrb_debug_get_line(mrb_state *mrb, const mrb_irep *irep, uint32_t pc)
 {
   if (irep && pc < irep->ilen) {
-    if (!irep->debug_info) return -1;
-    return debug_get_line(mrb, get_file(irep->debug_info, pc), pc);
+    if (!MRB_IREP_DEBUG_INFO(irep)) return -1;
+    return debug_get_line(mrb, get_file(MRB_IREP_DEBUG_INFO(irep), pc), pc);
   }
   return -1;
 }
@@ -170,8 +170,8 @@ mrb_debug_get_line(mrb_state *mrb, const mrb_irep *irep, uint32_t pc)
 MRB_API mrb_bool
 mrb_debug_get_position(mrb_state *mrb, const mrb_irep *irep, uint32_t pc, int32_t *lp, const char **fp)
 {
-  if (irep && pc < irep->ilen && irep->debug_info) {
-    mrb_irep_debug_info_file *f = get_file(irep->debug_info, pc);
+  if (irep && pc < irep->ilen && MRB_IREP_DEBUG_INFO(irep)) {
+    mrb_irep_debug_info_file *f = get_file(MRB_IREP_DEBUG_INFO(irep), pc);
     *lp = debug_get_line(mrb, f, pc);
     if (*lp > 0) {
       *fp = debug_get_filename(mrb, f);
@@ -188,6 +188,7 @@ mrb_debug_get_position(mrb_state *mrb, const mrb_irep *irep, uint32_t pc, int32_
  * This function asserts that debug_info is not already allocated for the irep.
  * Returns a pointer to the newly allocated `mrb_irep_debug_info` structure.
  */
+#ifndef MRB_NO_IREP_DEBUG
 MRB_API mrb_irep_debug_info*
 mrb_debug_info_alloc(mrb_state *mrb, mrb_irep *irep)
 {
@@ -199,6 +200,7 @@ mrb_debug_info_alloc(mrb_state *mrb, mrb_irep *irep)
   irep->debug_info = ret;
   return ret;
 }
+#endif
 
 /*
  * Appends a new file's debug information to an existing `mrb_irep_debug_info` structure `d`.

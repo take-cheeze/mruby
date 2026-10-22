@@ -12,9 +12,9 @@ static mrb_bool
 print_r_p(mrb_state *mrb, const mrb_irep *irep, size_t n)
 {
   if (n == 0) return FALSE;
-  if (!irep->lv) return FALSE;
+  if (!MRB_IREP_LV(irep)) return FALSE;
   if (n >= irep->nlocals) return FALSE;
-  if (!irep->lv[n-1]) return FALSE;
+  if (!MRB_IREP_LV(irep)[n-1]) return FALSE;
   return TRUE;
 }
 
@@ -23,8 +23,8 @@ print_r(mrb_state *mrb, const mrb_irep *irep, size_t n, FILE *out)
 {
   if (n == 0) return;
   if (n >= irep->nlocals) return;
-  if (!irep->lv[n-1]) return;
-  fprintf(out, " R%d:%s", (int)n, mrb_sym_dump(mrb, irep->lv[n-1]));
+  if (!MRB_IREP_LV(irep)[n-1]) return;
+  fprintf(out, " R%d:%s", (int)n, mrb_sym_dump(mrb, MRB_IREP_LV(irep)[n-1]));
 }
 
 static void
@@ -101,11 +101,11 @@ codedump(mrb_state *mrb, const mrb_irep *irep, FILE *out)
   fprintf(out, "irep %p nregs=%d nlocals=%d pools=%d syms=%d reps=%d ilen=%d\n", (void*)irep,
           irep->nregs, irep->nlocals, (int)irep->plen, (int)irep->slen, (int)irep->rlen, (int)irep->ilen);
 
-  if (irep->lv) {
+  if (MRB_IREP_LV(irep)) {
     int head = FALSE;
 
     for (int i = 1; i < irep->nlocals; i++) {
-      char const *s = mrb_sym_dump(mrb, irep->lv[i - 1]);
+      char const *s = mrb_sym_dump(mrb, MRB_IREP_LV(irep)[i - 1]);
       if (s) {
         if (!head) {
           head = TRUE;

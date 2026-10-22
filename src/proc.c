@@ -26,8 +26,7 @@ static const mrb_irep call_irep = {
   NULL,                                /* pool */
   NULL,                                /* syms */
   NULL,                                /* reps */
-  NULL,                                /* lv */
-  NULL,                                /* debug_info */
+  MRB_IREP_DEBUG_NULL_FIELDS           /* lv, debug_info */
   1,                                   /* ilen */
   0,                                   /* plen */
   0,                                   /* slen */
@@ -447,10 +446,10 @@ mrb_proc_local_variables(mrb_state *mrb, const struct RProc *proc)
   while (proc) {
     if (MRB_PROC_CFUNC_P(proc)) break;
     const mrb_irep *irep = proc->body.irep;
-    if (irep->lv) {
+    if (MRB_IREP_LV(irep)) {
       for (size_t i = 0; i + 1 < irep->nlocals; i++) {
-        if (irep->lv[i]) {
-          mrb_sym sym = irep->lv[i];
+        if (MRB_IREP_LV(irep)[i]) {
+          mrb_sym sym = MRB_IREP_LV(irep)[i];
           const char *name = mrb_sym_name(mrb, sym);
           switch (name[0]) {
           case '*': case '&':
@@ -509,6 +508,9 @@ mrb_proc_get_caller(mrb_state *mrb, struct REnv **envp)
 void
 mrb_proc_merge_lvar(mrb_state *mrb, mrb_irep *irep, struct REnv *env, int num, const mrb_sym *lv, const mrb_value *stack)
 {
+#ifdef MRB_NO_IREP_DEBUG
+  mrb_raise(mrb, E_RUNTIME_ERROR, "unavailable local variable names");
+#else
   mrb_assert(!(irep->flags & MRB_IREP_NO_FREE));
 
   if ((irep->nlocals + num) > IREP_LVAR_MERGE_LIMIT) {
@@ -541,6 +543,7 @@ mrb_proc_merge_lvar(mrb_state *mrb, mrb_irep *irep, struct REnv *env, int num, c
   irep->nlocals += num;
   irep->nregs = irep->nlocals;
   MRB_ENV_SET_LEN(env, irep->nlocals);
+#endif
 }
 
 /* ---------------------------*/

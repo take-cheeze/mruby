@@ -64,7 +64,7 @@ pack_backtrace(mrb_state *mrb, ptrdiff_t ciidx, struct mrb_backtrace_location *p
       mrb_assert(!MRB_PROC_ALIAS_P(ci->proc));
       loc.irep = ci->proc->body.irep;
       if (!loc.irep) continue;
-      if (!loc.irep->debug_info) continue;
+      if (!MRB_IREP_DEBUG_INFO(loc.irep)) continue;
       if (!ci->pc) continue;
       pc = &ci->pc[-1];
       loc.idx = (uint32_t)(pc - loc.irep->iseq);
@@ -81,7 +81,7 @@ pack_backtrace(mrb_state *mrb, ptrdiff_t ciidx, struct mrb_backtrace_location *p
 
         const mrb_irep *irep = ci->proc->body.irep;
         if (!irep) continue;
-        if (!irep->debug_info) continue;
+        if (!MRB_IREP_DEBUG_INFO(irep)) continue;
         if (!ci->pc) continue;
         pc = &ci->pc[-1];
         loc.irep = irep;

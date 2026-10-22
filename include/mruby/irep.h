@@ -69,15 +69,34 @@ struct mrb_irep {
   const mrb_sym *syms;
   const struct mrb_irep *const *reps;
 
+#ifndef MRB_NO_IREP_DEBUG
   const mrb_sym *lv;
   /* debug info */
   struct mrb_irep_debug_info *debug_info;
+#endif
 
   uint32_t ilen;
   uint16_t plen, slen;
   uint16_t rlen;
   uint16_t refcnt;
 };
+
+/*
+ * MRB_NO_IREP_DEBUG drops the lv and debug_info fields from every irep: no
+ * local variable names and no line numbers, two pointers less per irep.  It
+ * needs a build without mruby-compiler/mruby-binding, which write them.
+ * Read the fields through these; static initializers put
+ * MRB_IREP_DEBUG_NULL_FIELDS where the two fields go.
+ */
+#ifdef MRB_NO_IREP_DEBUG
+# define MRB_IREP_LV(irep) ((const mrb_sym*)NULL)
+# define MRB_IREP_DEBUG_INFO(irep) ((struct mrb_irep_debug_info*)NULL)
+# define MRB_IREP_DEBUG_NULL_FIELDS
+#else
+# define MRB_IREP_LV(irep) ((irep)->lv)
+# define MRB_IREP_DEBUG_INFO(irep) ((irep)->debug_info)
+# define MRB_IREP_DEBUG_NULL_FIELDS NULL, NULL,
+#endif
 
 #define MRB_ISEQ_NO_FREE 1
 #define MRB_IREP_NO_FREE 2

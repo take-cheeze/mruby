@@ -8,6 +8,10 @@
 #include <mruby/debug.h>
 #include <mruby/internal.h>
 
+#ifdef MRB_NO_IREP_DEBUG
+# error "this gem needs the irep lv/debug_info fields that MRB_NO_IREP_DEBUG removes"
+#endif
+
 #define BINDING_UPPER_DEFAULT  20
 #define BINDING_UPPER_MINIMUM  10
 #define BINDING_UPPER_MAXIMUM 100

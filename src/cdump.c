@@ -376,12 +376,12 @@ cdump_irep_struct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE *fp,
   }
   fputs("};\n", fp);
   /* dump lv */
-  if (irep->lv) {
-    cdump_syms(mrb, name, "lv", n, irep->nlocals-1, irep->lv, init_syms_code, fp);
+  if (MRB_IREP_LV(irep)) {
+    cdump_syms(mrb, name, "lv", n, irep->nlocals-1, MRB_IREP_LV(irep), init_syms_code, fp);
   }
   /* dump debug */
   if (flags & MRB_DUMP_DEBUG_INFO) {
-    if (cdump_debug(mrb, name, n, irep->debug_info, init_syms_code, fp) == MRB_DUMP_OK) {
+    if (cdump_debug(mrb, name, n, MRB_IREP_DEBUG_INFO(irep), init_syms_code, fp) == MRB_DUMP_OK) {
       debug_available = 1;
     }
   }
@@ -409,7 +409,9 @@ cdump_irep_struct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE *fp,
   else {
     fputs(      "NULL,\n", fp);
   }
-  if (irep->lv) {
+  /* the target may be built with MRB_NO_IREP_DEBUG */
+  fputs("#ifndef MRB_NO_IREP_DEBUG\n", fp);
+  if (MRB_IREP_LV(irep)) {
     fprintf(fp, "  %s_lv_%d,\n", name, n);
   }
   else {
@@ -421,6 +423,7 @@ cdump_irep_struct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE *fp,
   else {
     fputs("  NULL,\t\t\t\t\t/* debug_info */\n", fp);
   }
+  fputs("#endif\n", fp);
   fprintf(fp,   "  %d,%d,%d,%d,0\n};\n", irep->ilen, irep->plen, irep->slen, irep->rlen);
 
   return MRB_DUMP_OK;

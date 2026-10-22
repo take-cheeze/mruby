@@ -40,6 +40,9 @@
  */
 
 #include <mruby.h>
+#ifdef MRB_NO_IREP_DEBUG
+# error "mruby-compiler needs the irep lv/debug_info fields that MRB_NO_IREP_DEBUG removes"
+#endif
 #include <mruby/compile.h>
 #include <mruby/proc.h>
 #include <mruby/dump.h>

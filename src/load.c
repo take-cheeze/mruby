@@ -400,6 +400,7 @@ read_section_irep(mrb_state *mrb, const uint8_t *bin, size_t size, uint8_t flags
   }
 }
 
+#ifndef MRB_NO_IREP_DEBUG
 static int
 read_debug_record(mrb_state *mrb, const uint8_t *start, const uint8_t *end, mrb_irep* irep, size_t *record_len, const mrb_sym *filenames, size_t filenames_len)
 {
@@ -643,6 +644,7 @@ lv_exit:
   mrb_str_resize(mrb, syms_obj, 0);
   return result;
 }
+#endif /* MRB_NO_IREP_DEBUG */
 
 static int
 read_binary_header(const uint8_t *bin, size_t bufsize, size_t *bin_size, uint8_t *flags)
@@ -705,17 +707,21 @@ read_irep(mrb_state *mrb, const uint8_t *bin, size_t bufsize, uint8_t flags)
     }
     else if (memcmp(section_header->section_ident, RITE_SECTION_DEBUG_IDENT, sizeof(section_header->section_ident)) == 0) {
       if (!irep) return NULL;   /* corrupted data */
+#ifndef MRB_NO_IREP_DEBUG
       result = read_section_debug(mrb, bin, bin_size, irep, flags);
       if (result < MRB_DUMP_OK) {
         return NULL;
       }
+#endif
     }
     else if (memcmp(section_header->section_ident, RITE_SECTION_LV_IDENT, sizeof(section_header->section_ident)) == 0) {
       if (!irep) return NULL;
+#ifndef MRB_NO_IREP_DEBUG
       result = read_section_lv(mrb, bin, bin_size, irep, flags);
       if (result < MRB_DUMP_OK) {
         return NULL;
       }
+#endif
     }
     else if (memcmp(section_header->section_ident, RITE_BINARY_EOF, sizeof(section_header->section_ident)) != 0) {
       break;

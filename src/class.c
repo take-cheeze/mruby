@@ -4234,7 +4234,7 @@ MRB_PRESYM_DEFINE_VAR_AND_INITER(new_syms, 2, MRB_SYM(allocate), MRB_SYM(initial
 
 static const mrb_irep new_irep = {
   4, 6, 0, MRB_IREP_STATIC,
-  new_iseq, NULL, new_syms, NULL, NULL, NULL,
+  new_iseq, NULL, new_syms, NULL, MRB_IREP_DEBUG_NULL_FIELDS
   sizeof(new_iseq), 0, 2, 0, 0,
 };
 
@@ -4266,7 +4266,7 @@ static const mrb_code neq_iseq[] = {
 
 static const mrb_irep neq_irep = {
   4, 6, 0, MRB_IREP_STATIC,
-  neq_iseq, NULL, NULL, NULL, NULL, NULL,
+  neq_iseq, NULL, NULL, NULL, MRB_IREP_DEBUG_NULL_FIELDS
   sizeof(neq_iseq), 0, 2, 0, 0,
 };
 
