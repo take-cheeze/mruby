@@ -8652,11 +8652,11 @@ dump_node(mrb_state *mrb, node *tree, int offset)
     break;
 
   case NODE_BACK_REF:
-    printf("NODE_BACK_REF: $%c\n", node_to_int(tree));
+    printf("NODE_BACK_REF: $%c\n", back_ref_node(tree)->type);
     break;
 
   case NODE_NTH_REF:
-    printf("NODE_NTH_REF: $%d\n", node_to_int(tree));
+    printf("NODE_NTH_REF: $%d\n", nth_ref_node(tree)->nth);
     break;
 
   case NODE_BLOCK_ARG:
