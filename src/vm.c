@@ -1731,7 +1731,7 @@ mrb_vm_exec(mrb_state *mrb, const struct RProc *begin_proc, const mrb_code *iseq
   const struct mrb_irep_catch_handler *ch;
 
 #ifndef MRB_USE_VM_SWITCH_DISPATCH
-  static const void * const optable[] = {
+  static void * const optable[] = {
 #define OPCODE(x,_) &&L_OP_ ## x,
 #include <mruby/ops.h>
 #undef OPCODE
