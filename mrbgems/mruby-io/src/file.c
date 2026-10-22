@@ -57,6 +57,9 @@
 #endif
   #include <sys/param.h>
   #include <pwd.h>
+  #ifndef MAXPATHLEN
+    #define MAXPATHLEN 1024
+  #endif
 #endif
 
 #define FILE_SEPARATOR "/"
