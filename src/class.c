@@ -355,6 +355,8 @@ prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
   struct RClass *c;
 
   mrb_assert(o->c);
+  /* A persistent String's class is not marked (gc.c), so it must stay String. */
+  if (MRB_OBJ_PERSISTENT_P(o)) mrb_raise(mrb, E_FROZEN_ERROR, "can't modify frozen literal String");
   if (o->c->tt == MRB_TT_SCLASS) return;
   struct RClass *sc = MRB_OBJ_ALLOC(mrb, MRB_TT_SCLASS, mrb->class_class);
   sc->flags |= MRB_FL_CLASS_IS_INHERITED;

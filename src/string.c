@@ -12,6 +12,7 @@
 #include <mruby.h>
 #include <mruby/array.h>
 #include <mruby/class.h>
+#include <mruby/hash.h>
 #include <mruby/range.h>
 #include <mruby/string.h>
 #include <mruby/numeric.h>
@@ -263,6 +264,24 @@ mrb_str_new_static(mrb_state *mrb, const char *p, mrb_int len)
 {
   struct RString *s = str_new_static(mrb, p, len);
   return mrb_obj_value(s);
+}
+
+/* The table is keyed by the bytes' symbol: interning costs no String allocation per lookup (ADR 0546). */
+MRB_API mrb_value
+mrb_frozen_literal(mrb_state *mrb, const char *p, mrb_int len)
+{
+  mrb_value key, val;
+
+  if (!mrb_hash_p(mrb->frozen_literals)) {
+    mrb->frozen_literals = mrb_hash_new(mrb);
+  }
+  key = mrb_symbol_value(mrb_intern(mrb, p, (size_t)len));
+  val = mrb_hash_get(mrb, mrb->frozen_literals, key);
+  if (mrb_string_p(val)) return val;
+  val = mrb_obj_freeze(mrb, mrb_str_new(mrb, p, len));
+  mrb_obj_set_persistent(mrb, val);
+  mrb_hash_set(mrb, mrb->frozen_literals, key, val);
+  return val;
 }
 
 static void

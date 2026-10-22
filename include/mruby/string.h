@@ -423,6 +423,14 @@ MRB_API char *mrb_str_to_cstr(mrb_state *mrb, mrb_value str);
 #define mrb_str_buf_cat(mrb, str, ptr, len) mrb_str_cat(mrb, str, ptr, len)
 #define mrb_str_buf_append(mrb, str, str2) mrb_str_cat_str(mrb, str, str2)
 
+/*
+ * The frozen, persistent String for a `# frozen_string_literal: true` literal
+ * with these bytes (ADR 0546). One object per distinct content per mrb_state:
+ * the VM's table holds it, so the same literal answers equal? across calls and
+ * interpreted and bc2cpp-compiled code share it.
+ */
+MRB_API mrb_value mrb_frozen_literal(mrb_state *mrb, const char *p, mrb_int len);
+
 MRB_END_DECL
 
 #endif  /* MRUBY_STRING_H */

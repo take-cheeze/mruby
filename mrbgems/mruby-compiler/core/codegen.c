@@ -953,7 +953,7 @@ gen_move(codegen_scope *s, uint16_t dst, uint16_t src, int nopeep)
     case OP_LOADI8: case OP_LOADINEG:
     case OP_LOADL: case OP_LOADSYM:
     case OP_GETGV: case OP_GETSV: case OP_GETIV: case OP_GETCV:
-    case OP_GETCONST: case OP_STRING:
+    case OP_GETCONST: case OP_STRING: case OP_FSTRING:
     case OP_LAMBDA: case OP_BLOCK: case OP_METHOD: case OP_BLKPUSH:
       if (data.a != src || data.a < s->nlocals) break;
       rewind_pc(s);
@@ -1244,6 +1244,9 @@ get_int_operand(codegen_scope *s, struct mrb_insn_data *data, mrb_int *n)
 static int new_lit_str2(codegen_scope *s, const char *str1, mrb_int len1, const char *str2, mrb_int len2);
 static int find_pool_str(codegen_scope *s, const char *str1, mrb_int len1, const char *str2, mrb_int len2);
 static void gen_string(codegen_scope *s, node *list, int val);
+static mrb_bool str_list_literal_p(node *list);
+static void gen_frozen_string(codegen_scope *s, node *list);
+static mrb_bool frozen_literals_p(codegen_scope *s);
 
 /*
  * Reallocates or allocates memory for a string literal in the IREP's literal pool.
@@ -3245,8 +3248,11 @@ gen_literal_array(codegen_scope *s, node *tree, mrb_bool sym, int val)
             segment_prev->cdr = NULL;
           }
 
-          /* Use gen_string for this segment */
-          gen_string(s, segment_start, VAL);
+          /* Symbol arrays keep gen_string, whose OP_STRING gen_intern rewrites to SYMBOL. */
+          if (!sym && frozen_literals_p(s) && str_list_literal_p(segment_start))
+            gen_frozen_string(s, segment_start);
+          else
+            gen_string(s, segment_start, VAL);
 
           /* Restore the original cdr */
           if (segment_prev) {
@@ -3565,6 +3571,74 @@ gen_string(codegen_scope *s, node *list, int val)
   }
 }
 
+
+/*
+ * ADR 0546: under `# frozen_string_literal: true` an all-literal string is one
+ * OP_FSTRING, the VM's persistent object for its bytes. An interpolated string
+ * stays a fresh String, as in Ruby.
+ */
+static mrb_bool
+str_list_literal_p(node *list)
+{
+  node *n = list;
+  while (n) {
+    node *elem = n->car;
+    if (!elem) break;
+    if (node_to_int(elem->car) < 0) return FALSE;
+    n = n->cdr;
+  }
+  return TRUE;
+}
+
+static void
+gen_frozen_string(codegen_scope *s, node *list)
+{
+  mrb_int total = 0;
+  node *n = list;
+  int off;
+
+  while (n) {
+    node *elem = n->car;
+    if (!elem) break;
+    total += node_to_int(elem->car);
+    n = n->cdr;
+  }
+  if (list && !list->cdr && list->car) {
+    node *elem = list->car;
+    const char *str = (char*)elem->cdr;
+    mrb_int len = node_to_int(elem->car);
+    if (!str) {str = ""; len = 0;}
+    off = new_lit_str(s, str, len);
+  }
+  else if (total == 0) {
+    off = new_lit_str(s, "", 0);
+  }
+  else {
+    /* Adjacent literal parts are joined first, so the pool holds one string. */
+    char *buf = (char*)mrb_malloc(s->mrb, (size_t)total);
+    mrb_int pos = 0;
+    for (n = list; n; n = n->cdr) {
+      node *elem = n->car;
+      mrb_int len;
+      if (!elem) break;
+      len = node_to_int(elem->car);
+      if (len > 0) {
+        memcpy(buf + pos, elem->cdr, (size_t)len);
+        pos += len;
+      }
+    }
+    off = new_lit_str(s, buf, total);
+    mrb_free(s->mrb, buf);
+  }
+  genop_2(s, OP_FSTRING, cursp(), off);
+  push();
+}
+
+static mrb_bool
+frozen_literals_p(codegen_scope *s)
+{
+  return s->parser && s->parser->frozen_string_literal;
+}
 
 /* Handle variable-sized node types */
 static void
@@ -5744,6 +5818,10 @@ codegen_str(codegen_scope *s, node *varnode, int val)
   struct mrb_ast_str_node *str_n = str_node(varnode);
   node *list = str_n->list;
 
+  if (val && frozen_literals_p(s) && str_list_literal_p(list)) {
+    gen_frozen_string(s, list);
+    return;
+  }
   /* Use common cons list string codegen */
   gen_string(s, list, val);
 }
@@ -6086,6 +6164,10 @@ codegen_heredoc(codegen_scope *s, node *varnode, int val)
 {
   struct mrb_ast_heredoc_node *n = heredoc_node(varnode);
   // Process heredoc doc field as cons list string
+  if (val && frozen_literals_p(s) && str_list_literal_p(n->info.doc)) {
+    gen_frozen_string(s, n->info.doc);
+    return;
+  }
   gen_string(s, n->info.doc, val);
 }
 

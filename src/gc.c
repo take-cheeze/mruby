@@ -204,7 +204,8 @@ mrb_static_assert(MRB_GC_RED <= GC_COLOR_MASK);
 #define is_red(o) ((o)->gc_color == GC_RED)
 #define flip_white_part(s) ((s)->current_white_part = other_white_part(s))
 #define other_white_part(s) ((s)->current_white_part ^ GC_WHITES)
-#define is_dead(s, o) (((o)->gc_color & other_white_part(s) & GC_WHITES) || (o)->tt == MRB_TT_FREE)
+/* A persistent String is never dead (ADR 0546): the generational sweep does not repaint it. */
+#define is_dead(s, o) ((((o)->gc_color & other_white_part(s) & GC_WHITES) || (o)->tt == MRB_TT_FREE) && !MRB_OBJ_PERSISTENT_P(o))
 
 mrb_noreturn void mrb_raise_nomemory(mrb_state *mrb);
 
@@ -327,6 +328,25 @@ mrb_object_dead_p(mrb_state *mrb, struct RBasic *object)
   mrb_gc *gc = &mrb->gc;
   if (!heap_p(gc, object)) return TRUE;
   return is_dead(gc, object);
+}
+
+/* The refusals leave a persistent String no reference but its class, which the mark skips (ADR 0546). */
+MRB_API void
+mrb_obj_set_persistent(mrb_state *mrb, mrb_value obj)
+{
+  struct RBasic *b;
+
+  if (mrb_type(obj) != MRB_TT_STRING)
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "only a String can be persistent");
+  b = mrb_basic_ptr(obj);
+  if (!b->frozen)
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "a persistent String must be frozen");
+  /* A String has no ivar table here (variable.c obj_iv_p), so only its class and buffer can refer on. */
+  if (b->c != mrb->string_class)
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "a persistent String must be of class String");
+  if (RSTR_FSHARED_P((struct RString*)b))
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "a persistent String must not share a buffer");
+  b->flags |= MRB_FL_OBJ_PERSISTENT;
 }
 
 static void
@@ -700,6 +720,8 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
 
   mrb_assert(is_gray(obj));
   paint_black(obj);
+  /* A persistent String's only reference is its class, which is the permanent String class (ADR 0546). */
+  if (MRB_OBJ_PERSISTENT_P(obj)) return 0;
   mrb_gc_mark(mrb, (struct RBasic*)obj->c);
   switch (obj->tt) {
   case MRB_TT_ICLASS:
@@ -1037,6 +1059,7 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
   }
 
   mrb_gc_mark_gv(mrb);
+  mrb_gc_mark_value(mrb, mrb->frozen_literals);
   /* mark arena */
   for (i=0,e=gc->arena_idx; i<e; i++) {
     mrb_gc_mark(mrb, gc->arena[i]);

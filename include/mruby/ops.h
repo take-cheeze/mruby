@@ -131,3 +131,5 @@ OPCODE(EXT1,       Z)        /* make 1st operand (a) 16bit */
 OPCODE(EXT2,       Z)        /* make 2nd operand (b) 16bit */
 OPCODE(EXT3,       Z)        /* make 1st and 2nd operands 16bit */
 OPCODE(STOP,       Z)        /* stop VM */
+/* Appended, not inserted: every earlier opcode keeps its number, so existing bytecode still loads (ADR 0546). */
+OPCODE(FSTRING,    BB)       /* R[a] = frozen_literal(Pool[b]) (persistent; ADR 0546) */

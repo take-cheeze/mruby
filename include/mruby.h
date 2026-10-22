@@ -267,6 +267,10 @@ typedef struct mrb_state {
   struct mrb_context *root_c;
   struct iv_tbl *globals;                 /* global variable table */
 
+  /* Hash of persistent frozen string literals keyed by their bytes (mrb_frozen_literal,
+   * string.c); a GC root. Not a global variable, so `global_variables` does not list it. */
+  mrb_value frozen_literals;
+
   struct RObject *exc;                    /* exception */
 
   /* `$!` -- the exception a currently-executing rescue clause is handling.

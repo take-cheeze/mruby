@@ -127,6 +127,9 @@ struct mrb_parser_state {
   mrb_bool capture_errors:1;
   mrb_bool no_ext_ops:1;
   mrb_bool no_return_value:1;
+  /* `# frozen_string_literal: true` seen in the comments before the first token (ADR 0546). */
+  mrb_bool frozen_string_literal:1;
+  mrb_bool token_seen:1;
   const struct RProc *upper;
   struct mrb_parser_message error_buffer[10];
   struct mrb_parser_message warn_buffer[10];

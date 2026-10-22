@@ -75,6 +75,14 @@ MRB_API mrb_bool mrb_object_dead_p(struct mrb_state *mrb, struct RBasic *object)
 MRB_API int mrb_gc_add_region(struct mrb_state *mrb, void *start, size_t size);
 
 /*
+ * Makes a frozen String persistent (ADR 0546): the sweep leaves it alone until
+ * mrb_close, and the mark does not traverse it. Raises unless the String is
+ * frozen, of the String class and has no shared or fshared buffer, since those
+ * are the only references a String can hold to another collectable object.
+ */
+MRB_API void mrb_obj_set_persistent(struct mrb_state *mrb, mrb_value obj);
+
+/*
  * Snapshot the GC's per-type live/allocation counters into caller-owned
  * arrays of MRB_TT_MAXDEFINE size_t entries each (index by enum mrb_vtype,
  * e.g. MRB_TT_STRING). live_out reports currently-live objects of that type;

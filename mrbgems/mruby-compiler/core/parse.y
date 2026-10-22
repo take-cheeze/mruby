@@ -5296,6 +5296,71 @@ skip(parser_state *p, char term)
   }
 }
 
+/* Lower-cases a key character and maps '-' to '_', so `frozen-string-literal` also matches. */
+static int
+magic_key_char(int c)
+{
+  if (c == '-') return '_';
+  if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
+  return c;
+}
+
+static mrb_bool
+magic_ident_char(int c)
+{
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+}
+
+/* Sets p->frozen_string_literal from a `frozen_string_literal: true|false` in one comment line (ADR 0546). */
+static void
+frozen_magic_comment(parser_state *p, const char *s)
+{
+  static const char key[] = "frozen_string_literal";
+  const size_t klen = sizeof(key) - 1;
+
+  for (; *s; s++) {
+    size_t i = 0;
+    const char *v;
+
+    while (i < klen && s[i] && magic_key_char((unsigned char)s[i]) == key[i]) i++;
+    if (i != klen) continue;
+    v = s + klen;
+    while (*v == ' ' || *v == '\t') v++;
+    if (*v != ':') continue;
+    v++;
+    while (*v == ' ' || *v == '\t') v++;
+    if (magic_key_char((unsigned char)v[0]) == 't' && magic_key_char((unsigned char)v[1]) == 'r' &&
+        magic_key_char((unsigned char)v[2]) == 'u' && magic_key_char((unsigned char)v[3]) == 'e' &&
+        !magic_ident_char((unsigned char)v[4])) {
+      p->frozen_string_literal = TRUE;
+    }
+    else if (magic_key_char((unsigned char)v[0]) == 'f' && magic_key_char((unsigned char)v[1]) == 'a' &&
+             magic_key_char((unsigned char)v[2]) == 'l' && magic_key_char((unsigned char)v[3]) == 's' &&
+             magic_key_char((unsigned char)v[4]) == 'e' && !magic_ident_char((unsigned char)v[5])) {
+      p->frozen_string_literal = FALSE;
+    }
+    return;
+  }
+}
+
+/* Consumes one comment line. The line is read into a bounded buffer, so a magic comment
+ * must start within the first 255 bytes of its line. */
+static void
+comment_line(parser_state *p)
+{
+  char line[256];
+  size_t n = 0;
+  int c;
+
+  for (;;) {
+    c = nextc(p);
+    if (c < 0 || c == '\n') break;
+    if (n < sizeof(line) - 1) line[n++] = (char)c;
+  }
+  line[n] = '\0';
+  if (!p->token_seen) frozen_magic_comment(p, line);
+}
+
 static int
 peekc_n(parser_state *p, int n)
 {
@@ -6187,7 +6252,7 @@ parser_yylex(parser_state *p)
     goto retry;
 
   case '#':     /* it's a comment */
-    skip(p, '\n');
+    comment_line(p);
     /* fall through */
   case -2:      /* end of a file */
   case '\n':
@@ -6221,7 +6286,7 @@ parser_yylex(parser_state *p)
         space_seen = 1;
         break;
       case '#': /* comment as a whitespace */
-        skip(p, '\n');
+        comment_line(p);
         nlines++;
         break;
       case '.':
@@ -7473,8 +7538,12 @@ parser_yylex(parser_state *p)
 static int
 yylex(void *lval, void *lp, parser_state *p)
 {
+  int t;
+
   p->ylval = lval;
-  return parser_yylex(p);
+  t = parser_yylex(p);
+  p->token_seen = TRUE;  /* comments lexed from here on no longer carry the magic (ADR 0546) */
+  return t;
 }
 
 static void

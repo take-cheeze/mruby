@@ -31,6 +31,12 @@ struct RBasic {
 #define MRB_FL_OBJ_SHAPED (1 << 5)
 #define MRB_OBJ_SHAPED_P(o) ((o)->tt == MRB_TT_OBJECT && ((o)->flags & MRB_FL_OBJ_SHAPED))
 
+/* A frozen String the sweep never frees before mrb_close (ADR 0546). The bit is
+   only read for MRB_TT_STRING: classes use bits 17-19 and envs 8-18, so no bit is
+   free for every type. Bit 11 is past the string flags (0-10). */
+#define MRB_FL_OBJ_PERSISTENT (1 << 11)
+#define MRB_OBJ_PERSISTENT_P(o) ((o)->tt == MRB_TT_STRING && ((o)->flags & MRB_FL_OBJ_PERSISTENT))
+
 struct RObject {
   MRB_OBJECT_HEADER;
   struct iv_tbl *iv;

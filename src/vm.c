@@ -3408,6 +3408,16 @@ RETRY_TRY_BLOCK:
       NEXT;
     }
 
+    CASE(OP_FSTRING, BB) {
+      /* Pool holds the bytes; the object is the VM's persistent one for them (ADR 0546). */
+      mrb_int len = irep->pool[b].tt >> 2;
+
+      mrb_assert((irep->pool[b].tt&IREP_TT_NFLAG)==0);
+      regs[a] = mrb_frozen_literal(mrb, irep->pool[b].u.str, len);
+      mrb_gc_arena_restore(mrb, ai);
+      NEXT;
+    }
+
     CASE(OP_STRCAT, B) {
       mrb_ensure_string_type(mrb, regs[a]);
       mrb_str_concat(mrb, regs[a], regs[a+1]);
