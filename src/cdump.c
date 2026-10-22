@@ -347,7 +347,7 @@ cdump_irep_struct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE *fp,
       if (cdump_irep_struct(mrb, irep->reps[i], flags, fp, name, max+i, init_syms_code, mp) != MRB_DUMP_OK)
         return MRB_DUMP_INVALID_ARGUMENT;
     }
-    fprintf(fp,   "static const mrb_irep *%s_reps_%d[%d] = {\n", name, n, len);
+    fprintf(fp,   "static const mrb_irep *const %s_reps_%d[%d] = {\n", name, n, len);
     for (i=0,len=irep->rlen; i<len; i++) {
       fprintf(fp,   "  &%s_irep_%d,\n", name, max+i);
     }
