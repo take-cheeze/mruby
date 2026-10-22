@@ -3006,7 +3006,7 @@ gen_colon3_assign(codegen_scope *s, node *varnode, node *rhs, int sp, int val)
   genop_1(s, OP_OCLASS, cursp());
   push();
   idx = sym_idx(s, n->name);
-  gen_colon_assign_common(s, rhs, sp, val, idx, OP_SETCONST);
+  gen_colon_assign_common(s, rhs, sp, val, idx, OP_SETMCNST);
 }
 
 static void
