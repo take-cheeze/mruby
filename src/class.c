@@ -1060,6 +1060,23 @@ mrb_define_method_raw(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_method_
       find_visibility_scope(mrb, c, 0, &ci, &e);
       mrb_assert(ci || e);
       MRB_SET_VISIBILITY_FLAGS(flags, (uint32_t)(e ? MRB_ENV_VISIBILITY(e) : MRB_CI_VISIBILITY(ci)) << 25);
+      if (e ? MRB_ENV_MODFUNC_P(e) : MRB_CI_MODFUNC_P(ci)) {
+        /* Bare `module_function` scope (mrb_mod_module_function's argc==0
+         * case, below in this file): this def also becomes a public
+         * singleton (module-function) method, sharing the same underlying
+         * proc/func -- the same proc-into-a-second-class mt_put technique
+         * mrb_mod_module_function's own explicit named-method-list form
+         * (argc>0 case) already uses. No infinite recursion: m2.flags is
+         * already resolved (PUBLIC, not MT_VDEFAULT) and its target is a
+         * singleton class, which takes the "singleton methods are always
+         * public" branch above instead of this one. */
+        mrb_method_t m2;
+        m2.flags = flags;
+        MRB_SET_VISIBILITY_FLAGS(m2.flags, MRB_METHOD_PUBLIC_FL);
+        if (MRB_METHOD_PROC_P(m)) { m2.as.proc = ptr.proc; } else { m2.as.func = ptr.func; }
+        prepare_singleton_class(mrb, (struct RBasic*)c);
+        mrb_define_method_raw(mrb, c->c, mid, m2);
+      }
     }
   }
   mt_put(mrb, h, mid, flags, ptr);
@@ -3876,7 +3893,26 @@ mrb_mod_module_function(mrb_state *mrb, mrb_value mod)
 
   mrb_get_args(mrb, "*", &argv, &argc);
   if (argc == 0) {
-    /* set MODFUNC SCOPE if implemented */
+    /* Bare module_function: every method subsequently defined in this
+     * scope becomes a module function (private instance method plus a
+     * public singleton copy) -- mirrors bare private/protected/public's
+     * own scope tracking just above (mrb_mod_visibility), reusing the
+     * same find_visibility_scope lookup and CI/ENV flag pair, plus the
+     * new MODFUNC bit (see mruby/internal.h and mruby/proc.h) that
+     * mrb_define_method_raw's own OP_DEF-time visibility resolution
+     * (above in this file) checks to decide whether to also install the
+     * singleton copy. */
+    mrb_callinfo *ci;
+    struct REnv *e;
+    find_visibility_scope(mrb, NULL, 1, &ci, &e);
+    if (e) {
+      MRB_ENV_SET_VISIBILITY(e, MRB_METHOD_PRIVATE_FL >> 25);
+      MRB_ENV_SET_MODFUNC(e);
+    }
+    else {
+      MRB_CI_SET_VISIBILITY(ci, MRB_METHOD_PRIVATE_FL >> 25);
+      MRB_CI_SET_MODFUNC(ci);
+    }
     return mod;
   }
 

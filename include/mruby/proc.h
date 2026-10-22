@@ -30,7 +30,7 @@ struct REnv {
   mrb_sym mid;
 };
 
-/* flags (20bits): 1(ZERO):1(separate module):2(visibility):8(cioff/bidx):8(stack_len) */
+/* flags (20bits): 1(module function):1(separate module):2(visibility):8(cioff/bidx):8(stack_len) */
 #define MRB_ENV_SET_LEN(e,len) ((e)->flags = (((e)->flags & ~0xff)|((unsigned int)(len) & 0xff)))
 #define MRB_ENV_LEN(e) ((mrb_int)((e)->flags & 0xff))
 #define MRB_ENV_CLOSE(e) ((e)->cxt = NULL)
@@ -40,7 +40,12 @@ struct REnv {
 #define MRB_ENV_SET_VISIBILITY(e, vis) MRB_FLAGS_SET((e)->flags, 16, 2, vis)
 #define MRB_ENV_VISIBILITY(e) MRB_FLAGS_GET((e)->flags, 16, 2)
 #define MRB_ENV_VISIBILITY_BREAK_P(e) MRB_FLAG_CHECK((e)->flags, 18)
-#define MRB_ENV_COPY_FLAGS_FROM_CI(e, ci) MRB_FLAGS_SET((e)->flags, 16, 3, (ci)->vis)
+/* bit 19 -- the last previously-unused ("ZERO") bit here -- mirrors
+ * MRB_CI_MODFUNC_P/MRB_CI_SET_MODFUNC (mruby/internal.h) for a block's
+ * captured env, the same way MRB_ENV_VISIBILITY mirrors MRB_CI_VISIBILITY. */
+#define MRB_ENV_MODFUNC_P(e) MRB_FLAG_CHECK((e)->flags, 19)
+#define MRB_ENV_SET_MODFUNC(e) MRB_FLAG_ON((e)->flags, 19)
+#define MRB_ENV_COPY_FLAGS_FROM_CI(e, ci) MRB_FLAGS_SET((e)->flags, 16, 4, (ci)->vis)
 
 /*
  * Returns TRUE on success.

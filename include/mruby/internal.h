@@ -208,6 +208,14 @@ void mrb_free_shape(mrb_state*);
 #define MRB_CI_SET_VISIBILITY(ci, visi) MRB_FLAGS_SET((ci)->vis, 0, 2, visi)
 #define MRB_CI_VISIBILITY_BREAK_P(ci) MRB_FLAG_CHECK((ci)->vis, 2)
 #define MRB_CI_SET_VISIBILITY_BREAK(ci) MRB_FLAG_ON((ci)->vis, 2)
+/* bit 3 of the 5 previously-unused ("ZERO") bits in mrb_callinfo.vis (see
+ * mruby.h's own field comment) -- bare `module_function` (module_function's
+ * "everything def'd from here on in this scope" form, called with no
+ * arguments) scope marker: subsequent method defs in this scope become
+ * module functions (private instance method + public singleton copy), the
+ * same way MRB_CI_VISIBILITY tracks bare private/protected/public's scope. */
+#define MRB_CI_MODFUNC_P(ci) MRB_FLAG_CHECK((ci)->vis, 3)
+#define MRB_CI_SET_MODFUNC(ci) MRB_FLAG_ON((ci)->vis, 3)
 mrb_int mrb_ci_bidx(mrb_callinfo *ci);
 mrb_int mrb_ci_nregs(mrb_callinfo *ci);
 mrb_value mrb_exec_irep(mrb_state *mrb, mrb_value self, const struct RProc *p);
