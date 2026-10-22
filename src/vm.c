@@ -502,6 +502,13 @@ cipop(mrb_state *mrb)
     mrb_exc_raise(mrb, mrb_obj_value(mrb->nomem_err));
   }
   c->ci--;
+  /* `$!` (mrb->errinfo) is scoped to the call frame that contained the
+   * rescue clause which set it; once that frame (or a shallower one) has
+   * returned, it can no longer be in scope. See the mrb_state field's own
+   * comment (mruby.h). */
+  if (mrb->errinfo && (c->ci - c->cibase) < mrb->errinfo_ci_depth) {
+    mrb->errinfo = NULL;
+  }
   return c->ci;
 }
 
@@ -2138,6 +2145,17 @@ RETRY_TRY_BLOCK:
           mrb_assert(!"bad mrb_type");
           exc = mrb_nil_value();
           break;
+        }
+        if (mrb->exc->tt == MRB_TT_EXCEPTION) {
+          /* `$!` for the rescue clause this exception is entering; see the
+           * mrb_state field's own comment (mruby.h) for the scoping this
+           * gives and its one known gap (nested rescues sharing a frame).
+           * By the time OP_EXCEPT runs, the exception search (L_RAISE) has
+           * already popped every frame between the raise site and the
+           * frame owning this rescue clause, so mrb->c->ci here already IS
+           * that owning frame -- captured directly, no deferral needed. */
+          mrb->errinfo = mrb->exc;
+          mrb->errinfo_ci_depth = mrb->c->ci - mrb->c->cibase;
         }
         mrb->exc = NULL;
       }

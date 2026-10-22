@@ -1579,6 +1579,10 @@ mrb_gv_get(mrb_state *mrb, mrb_sym sym)
 {
   mrb_value v;
 
+  if (mrb->errinfo_sym == 0) mrb->errinfo_sym = mrb_intern_lit(mrb, "$!");
+  if (sym == mrb->errinfo_sym) {
+    return mrb->errinfo ? mrb_obj_value(mrb->errinfo) : mrb_nil_value();
+  }
   if (iv_get(mrb, mrb->globals, sym, &v))
     return v;
   return mrb_nil_value();
@@ -1599,6 +1603,16 @@ mrb_gv_set(mrb_state *mrb, mrb_sym sym, mrb_value v)
 {
   iv_tbl *t;
 
+  if (mrb->errinfo_sym == 0) mrb->errinfo_sym = mrb_intern_lit(mrb, "$!");
+  if (sym == mrb->errinfo_sym) {
+    /* Never stored in the ordinary globals table -- see mrb_gv_get and the
+     * mrb_state field's own comment (mruby.h). An explicit `$! = x` from
+     * Ruby (rare, but legal) sets the *current* frame's scope directly,
+     * same as OP_EXCEPT would. */
+    mrb->errinfo = mrb_nil_p(v) ? NULL : mrb_obj_ptr(v);
+    mrb->errinfo_ci_depth = mrb->c->ci - mrb->c->cibase;
+    return;
+  }
   if (!mrb->globals) {
     mrb->globals = iv_new(mrb);
   }

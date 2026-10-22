@@ -515,6 +515,13 @@ mrb_f_raise(mrb_state *mrb, mrb_value self)
   mrb->c->ci->mid = 0;
   switch (argc) {
   case 0:
+    /* Real Ruby re-raises `$!` -- see the mrb_state field's own comment
+     * (mruby.h) -- when a rescue clause is still active; only fall back to
+     * a fresh, empty RuntimeError outside of one, matching CRuby's own
+     * "no `$!` to re-raise" behavior for a bare `raise` outside rescue. */
+    if (mrb->errinfo) {
+      mrb_exc_raise(mrb, mrb_obj_value(mrb->errinfo));
+    }
     mrb_raise(mrb, E_RUNTIME_ERROR, "");
     break;
   case 1:

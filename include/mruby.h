@@ -269,6 +269,33 @@ typedef struct mrb_state {
 
   struct RObject *exc;                    /* exception */
 
+  /* `$!` -- the exception a currently-executing rescue clause is handling.
+   * Set in OP_EXCEPT (vm.c) to the innermost caught exception, captured at
+   * the call-frame depth OP_EXCEPT runs at: by the time it runs, mruby's
+   * exception search (L_RAISE in vm.c) has already popped every frame
+   * between the raise site and the frame owning the matching rescue clause,
+   * so mrb->c->ci at that point already IS the owning frame. Cleared in
+   * cipop once that frame (or a shallower one) returns, so it does not leak
+   * into unrelated code that runs after the rescue's own frame has exited;
+   * calls the rescue body itself makes push and pop back to the same depth,
+   * so they never trip this. Read and written exclusively through
+   * mrb_gv_get/mrb_gv_set's special case for the "$!" symbol (variable.c) --
+   * never stored in the ordinary globals table -- so both `$!` from Ruby and
+   * a bare `raise` (kernel.c) see it uniformly. Coarser than real Ruby's
+   * per-rescue-clause scoping: two `rescue` clauses nested in the *same*
+   * frame (no intervening call) share one slot, so the inner one's `$!`
+   * masks the outer's until the whole frame returns, rather than restoring
+   * right at the inner rescue's end.
+   */
+  struct RObject *errinfo;
+  mrb_int errinfo_ci_depth;
+  mrb_sym errinfo_sym;                    /* "$!", interned lazily and
+                                              cached (mrb_gv_get/set,
+                                              variable.c) so every ordinary
+                                              global access does not re-intern
+                                              it; 0 (never a valid mrb_sym)
+                                              means not yet cached. */
+
   struct RObject *top_self;
   struct RClass *object_class;            /* Object class */
   struct RClass *class_class;

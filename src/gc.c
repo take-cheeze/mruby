@@ -1047,6 +1047,7 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
   mrb_gc_mark(mrb, (struct RBasic*)mrb->top_self);
   /* mark exception */
   mrb_gc_mark(mrb, (struct RBasic*)mrb->exc);
+  mrb_gc_mark(mrb, (struct RBasic*)mrb->errinfo);
 
   mark_context(mrb, mrb->c);
   if (mrb->root_c != mrb->c) {
@@ -1144,6 +1145,7 @@ final_marking_phase(mrb_state *mrb, mrb_gc *gc)
     mark_context(mrb, mrb->root_c);
   }
   mrb_gc_mark(mrb, (struct RBasic*)mrb->exc);
+  mrb_gc_mark(mrb, (struct RBasic*)mrb->errinfo);
 
   /* mark pre-allocated exception */
   clear_error_object(mrb, mrb->nomem_err);
