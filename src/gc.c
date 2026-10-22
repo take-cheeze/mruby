@@ -728,6 +728,18 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
 
   case MRB_TT_OBJECT:
   case MRB_TT_CDATA:
+    if (obj->tt == MRB_TT_CDATA) {
+      struct RData *data = (struct RData*)obj;
+      /* data is NULL until mrb_data_init runs, and stays NULL if #initialize raised first. */
+      if (data->type && data->type->ivars && data->data) {
+        for (size_t i = 0; i < data->type->ivar_count; ++i) {
+          /* A typed slot is a raw C value, never a reference. */
+          if (data->type->ivars[i].kind != MRB_DATA_IVAR_VALUE) continue;
+          mrb_value *slot = (mrb_value*)((char*)data->data + data->type->ivars[i].offset);
+          mrb_gc_mark_value(mrb, *slot);
+        }
+      }
+    }
     children += mrb_gc_mark_iv(mrb, (struct RObject*)obj);
     break;
 

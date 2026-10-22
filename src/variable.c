@@ -5,8 +5,10 @@
 */
 
 #include <mruby.h>
+#include <string.h>
 #include <mruby/array.h>
 #include <mruby/class.h>
+#include <mruby/data.h>
 #include <mruby/proc.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
@@ -597,6 +599,95 @@ obj_iv_p(mrb_value obj)
   }
 }
 
+/* The descriptor entry for `sym` and the address of its slot, or NULL. */
+static const struct mrb_data_ivar*
+rdata_ivar_find(mrb_state *mrb, struct RObject *obj, mrb_sym sym, char **slot)
+{
+  if (obj->tt != MRB_TT_CDATA) return NULL;
+  struct RData *data = (struct RData*)obj;
+  const mrb_data_type *type = data->type;
+  if (!type || !type->ivars || !data->data) return NULL;
+  mrb_int len;
+  const char *name = mrb_sym_name_len(mrb, sym, &len);
+  /* Descriptor names are "@x...", so a shorter name can never match. */
+  if (len < 2) return NULL;
+  if (type->ivar_hash) {
+    /* The hash must match tools/bc2cpp/codegen_emit.rb (RDATA_IVAR_HASH). */
+    uint32_t h = 2166136261u;
+    for (mrb_int i = 0; i < len; ++i) {
+      h ^= (uint8_t)name[i];
+      h *= 16777619u;
+    }
+    for (size_t p = h & type->ivar_hash_mask;; p = (p + 1) & type->ivar_hash_mask) {
+      uint16_t idx = type->ivar_hash[p];
+      if (idx == 0xFFFF) return NULL;
+      const struct mrb_data_ivar *ivar = &type->ivars[idx];
+      if (strncmp(ivar->name, name, (size_t)len) == 0 && ivar->name[len] == '\0') {
+        *slot = (char*)data->data + ivar->offset;
+        return ivar;
+      }
+    }
+  }
+  for (size_t i = 0; i < type->ivar_count; ++i) {
+    const struct mrb_data_ivar *ivar = &type->ivars[i];
+    if (strncmp(ivar->name, name, (size_t)len) == 0 && ivar->name[len] == '\0') {
+      *slot = (char*)data->data + ivar->offset;
+      return ivar;
+    }
+  }
+  return NULL;
+}
+
+/* The slot's value; mrb_undef_value() for a VALUE slot never assigned. */
+static mrb_value
+rdata_ivar_load(const struct mrb_data_ivar *ivar, char *slot)
+{
+  switch (ivar->kind) {
+  case MRB_DATA_IVAR_INT: return mrb_fixnum_value(*(mrb_int*)slot);
+  case MRB_DATA_IVAR_SYMBOL: return mrb_symbol_value(*(mrb_sym*)slot);
+  case MRB_DATA_IVAR_BOOL: return mrb_bool_value(*(mrb_bool*)slot);
+  case MRB_DATA_IVAR_INT_OR_NIL: {
+    struct mrb_data_int_or_nil *f = (struct mrb_data_int_or_nil*)slot;
+    return f->present ? mrb_fixnum_value(f->value) : mrb_nil_value();
+  }
+  default: return *(mrb_value*)slot;
+  }
+}
+
+/* Store `v`. The generated code assumes a typed slot only ever holds its
+   type, so another value is refused instead of being truncated into it. */
+static void
+rdata_ivar_store(mrb_state *mrb, struct RObject *obj, const struct mrb_data_ivar *ivar, char *slot, mrb_value v)
+{
+  const char *want = NULL;
+  switch (ivar->kind) {
+  case MRB_DATA_IVAR_INT:
+    if (mrb_integer_p(v)) { *(mrb_int*)slot = mrb_integer(v); return; }
+    want = "Integer";
+    break;
+  case MRB_DATA_IVAR_SYMBOL:
+    if (mrb_symbol_p(v)) { *(mrb_sym*)slot = mrb_symbol(v); return; }
+    want = "Symbol";
+    break;
+  case MRB_DATA_IVAR_BOOL:
+    if (mrb_true_p(v) || mrb_false_p(v)) { *(mrb_bool*)slot = mrb_true_p(v); return; }
+    want = "boolean";
+    break;
+  case MRB_DATA_IVAR_INT_OR_NIL: {
+    struct mrb_data_int_or_nil *f = (struct mrb_data_int_or_nil*)slot;
+    if (mrb_nil_p(v)) { f->present = FALSE; f->value = 0; return; }
+    if (mrb_integer_p(v)) { f->present = TRUE; f->value = mrb_integer(v); return; }
+    want = "Integer or nil";
+    break;
+  }
+  default:
+    *(mrb_value*)slot = v;
+    mrb_field_write_barrier_value(mrb, (struct RBasic*)obj, v);
+    return;
+  }
+  mrb_raisef(mrb, E_TYPE_ERROR, "%s: expected %s", ivar->name, want);
+}
+
 static iv_tbl*
 class_iv_ptr(struct RClass *c)
 {
@@ -618,6 +709,12 @@ class_iv_ptr(struct RClass *c)
 MRB_API mrb_value
 mrb_obj_iv_get(mrb_state *mrb, struct RObject *obj, mrb_sym sym)
 {
+  char *slot;
+  const struct mrb_data_ivar *ivar = rdata_ivar_find(mrb, obj, sym, &slot);
+  if (ivar) {
+    mrb_value v = rdata_ivar_load(ivar, slot);
+    return mrb_undef_p(v) ? mrb_nil_value() : v;
+  }
   if (MRB_OBJ_SHAPED_P(obj)) {
     return shaped_iv_get(obj, sym);
   }
@@ -689,6 +786,12 @@ assign_class_name(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
 void
 mrb_obj_iv_set_force(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
 {
+  char *slot;
+  const struct mrb_data_ivar *ivar = rdata_ivar_find(mrb, obj, sym, &slot);
+  if (ivar) {
+    rdata_ivar_store(mrb, obj, ivar, slot, v);
+    return;
+  }
   if (namespace_p(obj->tt)) {
     assign_class_name(mrb, obj, sym, v);
   }
@@ -742,6 +845,19 @@ MRB_API void
 mrb_iv_foreach(mrb_state *mrb, mrb_value obj, mrb_iv_foreach_func *func, void *p)
 {
   if (!obj_iv_p(obj)) return;
+  if (mrb_data_p(obj)) {
+    struct RData *data = RDATA(obj);
+    if (data->type && data->type->ivars && data->data) {
+      for (size_t i = 0; i < data->type->ivar_count; ++i) {
+        const struct mrb_data_ivar *ivar = &data->type->ivars[i];
+        mrb_value val = rdata_ivar_load(ivar, (char*)data->data + ivar->offset);
+        if (!mrb_undef_p(val)) {
+          mrb_sym sym = mrb_intern_cstr(mrb, ivar->name);
+          if (func(mrb, sym, val, p) != 0) return;
+        }
+      }
+    }
+  }
   if (MRB_OBJ_SHAPED_P(mrb_obj_ptr(obj))) {
     shaped_iv_foreach(mrb, mrb_obj_ptr(obj), func, p);
     return;
@@ -791,6 +907,9 @@ mrb_iv_set(mrb_state *mrb, mrb_value obj, mrb_sym sym, mrb_value v)
 MRB_API mrb_bool
 mrb_obj_iv_defined(mrb_state *mrb, struct RObject *obj, mrb_sym sym)
 {
+  char *slot;
+  const struct mrb_data_ivar *ivar = rdata_ivar_find(mrb, obj, sym, &slot);
+  if (ivar) return !mrb_undef_p(rdata_ivar_load(ivar, slot));
   if (MRB_OBJ_SHAPED_P(obj)) {
     return shaped_iv_defined(obj, sym);
   }
@@ -887,6 +1006,19 @@ mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
   struct RObject *d = mrb_obj_ptr(dest);
   struct RObject *s = mrb_obj_ptr(src);
 
+  if (s->tt == MRB_TT_CDATA && d->tt == MRB_TT_CDATA) {
+    struct RData *source = (struct RData*)s;
+    struct RData *target = (struct RData*)d;
+    if (source->type && source->type->ivars && source->data) {
+      if (target->data && target->type && target->type->dfree) {
+        target->type->dfree(mrb, target->data);
+      }
+      target->type = source->type;
+      target->data = mrb_malloc(mrb, source->type->ivar_data_size);
+      memcpy(target->data, source->data, source->type->ivar_data_size);
+    }
+  }
+
   /* free dest's existing IVs */
   if (MRB_OBJ_SHAPED_P(d)) {
     shaped_iv_free(mrb, d);
@@ -937,6 +1069,28 @@ mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
       d->iv = iv_copy(mrb, s->iv);
     }
   }
+
+  if (s->tt == MRB_TT_CDATA) {
+    struct RData *source = (struct RData*)s;
+    if (source->type && source->type->ivars && source->data) {
+      for (size_t i = 0; i < source->type->ivar_count; ++i) {
+        const struct mrb_data_ivar *ivar = &source->type->ivars[i];
+        /* A typed slot was copied with the payload above. */
+        if (ivar->kind != MRB_DATA_IVAR_VALUE) continue;
+        mrb_value value = *(mrb_value*)((char*)source->data + ivar->offset);
+        if (mrb_undef_p(value)) continue;
+        mrb_sym sym = mrb_intern_cstr(mrb, ivar->name);
+        char *slot;
+        const struct mrb_data_ivar *target = rdata_ivar_find(mrb, d, sym, &slot);
+        if (target) {
+          rdata_ivar_store(mrb, d, target, slot, value);
+        }
+        else {
+          mrb_obj_iv_set_force(mrb, d, sym, value);
+        }
+      }
+    }
+  }
 }
 
 /*
@@ -958,6 +1112,18 @@ mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym)
   if (obj_iv_p(obj)) {
     struct RObject *o = mrb_obj_ptr(obj);
     mrb_check_frozen(mrb, o);
+
+    char *slot;
+    const struct mrb_data_ivar *ivar = rdata_ivar_find(mrb, o, sym, &slot);
+    if (ivar) {
+      /* A typed slot has no unset state: the generated code reads it unboxed. */
+      if (ivar->kind != MRB_DATA_IVAR_VALUE) {
+        mrb_raisef(mrb, E_TYPE_ERROR, "%s: cannot remove a typed instance variable", ivar->name);
+      }
+      mrb_value val = *(mrb_value*)slot;
+      *(mrb_value*)slot = mrb_undef_value();
+      return val;
+    }
 
     if (MRB_OBJ_SHAPED_P(o)) {
       mrb_shaped_iv *siv = (mrb_shaped_iv*)o->iv;
@@ -1019,13 +1185,7 @@ mrb_obj_instance_variables(mrb_state *mrb, mrb_value self)
   mrb_value ary = mrb_ary_new(mrb);
 
   if (obj_iv_p(self)) {
-    struct RObject *obj = mrb_obj_ptr(self);
-    if (MRB_OBJ_SHAPED_P(obj)) {
-      shaped_iv_foreach(mrb, obj, iv_i, &ary);
-    }
-    else {
-      iv_foreach(mrb, obj->iv, iv_i, &ary);
-    }
+    mrb_iv_foreach(mrb, self, iv_i, &ary);
   }
   return ary;
 }
