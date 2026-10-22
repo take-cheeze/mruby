@@ -913,6 +913,14 @@ retry:
   return result;
 }
 
+/* Exported for bc2cpp's closed `%` helper (ADR 0367): mrb_str_format under a
+ * name the generated code can link to. */
+mrb_value
+mrb_str_format_impl(mrb_state *mrb, mrb_int argc, const mrb_value *argv, mrb_value fmt)
+{
+  return mrb_str_format(mrb, argc, argv, fmt);
+}
+
 /*
  *  call-seq:
  *     format(format_string [, arguments...] )   -> string

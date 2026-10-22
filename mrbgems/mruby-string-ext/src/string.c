@@ -1290,13 +1290,21 @@ str_uplus(mrb_state *mrb, mrb_value str)
  * Returns a frozen, possibly pre-existing copy of the string.
  *
  */
-static mrb_value
-str_uminus(mrb_state *mrb, mrb_value str)
+/* Exported for bc2cpp's closed `-@` helper (ADR 0367): the whole body of
+ * String#-@. */
+mrb_value
+mrb_str_uminus_impl(mrb_state *mrb, mrb_value str)
 {
   if (mrb_frozen_p(mrb_obj_ptr(str))) {
     return str;
   }
   return mrb_obj_freeze(mrb, mrb_str_dup(mrb, str));
+}
+
+static mrb_value
+str_uminus(mrb_state *mrb, mrb_value str)
+{
+  return mrb_str_uminus_impl(mrb, str);
 }
 
 /* Internal helper for String#ascii_only? - checks if string contains only ASCII characters */

@@ -604,14 +604,21 @@ flodivmod(mrb_state *mrb, double x, double y, mrb_float *divp, mrb_float *modp)
  *     6543.21.modulo(137.24)   #=> 92.9299999999996
  */
 
-static mrb_value
-flo_mod(mrb_state *mrb, mrb_value x)
+/* Exported for bc2cpp's closed `%` helper (ADR 0367): the whole body of
+ * Float#%, with the argument passed explicitly. */
+mrb_value
+mrb_flo_mod_impl(mrb_state *mrb, mrb_value x, mrb_value y)
 {
-  mrb_value y = mrb_get_arg1(mrb);
   mrb_float mod;
 
   flodivmod(mrb, mrb_float(x), mrb_as_float(mrb, y), NULL, &mod);
   return mrb_float_value(mrb, mod);
+}
+
+static mrb_value
+flo_mod(mrb_state *mrb, mrb_value x)
+{
+  return mrb_flo_mod_impl(mrb, x, mrb_get_arg1(mrb));
 }
 #endif
 
@@ -1188,10 +1195,11 @@ intdivmod(mrb_state *mrb, mrb_int x, mrb_int y, mrb_int *divp, mrb_int *modp)
  *  See `numeric.divmod` for more information.
  */
 
-static mrb_value
-int_mod(mrb_state *mrb, mrb_value x)
+/* Exported for bc2cpp's closed `%` helper (ADR 0367): the whole body of
+ * Integer#%, with the argument passed explicitly. */
+mrb_value
+mrb_int_mod_impl(mrb_state *mrb, mrb_value x, mrb_value y)
 {
-  mrb_value y = mrb_get_arg1(mrb);
   mrb_int a, b;
 
 #ifdef MRB_USE_BIGINT
@@ -1222,6 +1230,12 @@ int_mod(mrb_state *mrb, mrb_value x)
   flodivmod(mrb, (mrb_float)a, mrb_as_float(mrb, y), NULL, &mod);
   return mrb_float_value(mrb, mod);
 #endif
+}
+
+static mrb_value
+int_mod(mrb_state *mrb, mrb_value x)
+{
+  return mrb_int_mod_impl(mrb, x, mrb_get_arg1(mrb));
 }
 
 #ifndef MRB_NO_FLOAT
