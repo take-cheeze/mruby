@@ -66,7 +66,7 @@ module MRuby
     def scan(paths)
       presym_hash = {}
       paths.each {|path| read_preprocessed(presym_hash, path)}
-      presym_hash.keys.sort_by!{|sym| [c_literal_size(sym), sym]}
+      presym_hash.keys.sort_by!{|sym| [sym.bytesize, sym]}
     end
 
     def read_list
@@ -98,14 +98,34 @@ module MRuby
       end
     end
 
+    # Presyms are sorted by [bytesize, name] (see #scan), so every name of one
+    # length sits in one run.  The table stores them as a single blob of
+    # NUL-terminated names plus, per length, the index and blob offset of that
+    # run's first name: no per-symbol pointer or length entry.
     def write_table_header(presyms)
       _pp "GEN", table_header_path.relative_path
+      len_max = presyms.empty? ? 0 : presyms.last.bytesize
+      counts = Array.new(len_max + 1, 0)
+      presyms.each {|sym| counts[sym.bytesize] += 1}
+      starts = [0]
+      offsets = [0]
+      counts.each_with_index do |n, len|
+        starts << starts.last + n
+        offsets << offsets.last + n * (len + 1)
+      end
+      offsets.pop
       File.open(table_header_path, "w:binary") do |f|
-        f.puts "static const uint16_t presym_length_table[] = {"
-        presyms.each{|sym| f.puts "  #{sym.bytesize},\t/* #{sym} */"}
+        f.puts "#define MRB_PRESYM_LEN_MAX #{len_max}"
+        f.puts
+        f.puts "static const uint16_t presym_len_start[] = {"
+        starts.each_with_index {|s, len| f.puts "  #{s},\t/* #{len} */"}
         f.puts "};"
         f.puts
-        f.puts "static const char * const presym_name_table[] = {"
+        f.puts "static const uint32_t presym_len_offset[] = {"
+        offsets.each_with_index {|o, len| f.puts "  #{o},\t/* #{len} */"}
+        f.puts "};"
+        f.puts
+        f.puts "static const char presym_name_blob[] ="
         presyms.each do |sym|
           sym = sym.gsub(/([\x01-\x1f\x7f-\xff])|("|\\)/n) {
             case
@@ -116,9 +136,9 @@ module MRuby
               "\\#$2"
             end
           }
-          f.puts %|  "#{sym}",|
+          f.puts %|  "#{sym}\\0"|
         end
-        f.puts "};"
+        f.puts "  \"\";"
       end
     end
 

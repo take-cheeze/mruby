@@ -12,28 +12,35 @@
 #include <mruby/internal.h>
 
 #ifndef MRB_PRESYM_SCANNING
-/* const uint16_t presym_length_table[]   */
-/* const char * const presym_name_table[] */
+/* #define MRB_PRESYM_LEN_MAX                              */
+/* const uint16_t presym_len_start[MRB_PRESYM_LEN_MAX+2]  */
+/* const uint32_t presym_len_offset[MRB_PRESYM_LEN_MAX+1] */
+/* const char presym_name_blob[]                          */
 # include <mruby/presym/table.h>
 #endif
+
+/* Presyms are sorted by (length, name); the names of length L are the
+   NUL-terminated run at presym_len_offset[L], indices presym_len_start[L]
+   up to presym_len_start[L+1] (see MRuby::Presym#write_table_header). */
+static const char*
+presym_run_name(size_t len, mrb_sym idx)
+{
+  return presym_name_blob + presym_len_offset[len] + (idx - presym_len_start[len]) * (len + 1);
+}
 
 static mrb_sym
 presym_find(const char *name, size_t len)
 {
-  if (presym_length_table[MRB_PRESYM_MAX-1] < len) return 0;
+  if (len > MRB_PRESYM_LEN_MAX) return 0;
 
-  mrb_sym presym_size = MRB_PRESYM_MAX;
-  for (mrb_sym start = 0; presym_size != 0; presym_size/=2) {
-    mrb_sym idx = start+presym_size/2;
-    int cmp = (int)len-(int)presym_length_table[idx];
-    if (cmp == 0) {
-      cmp = memcmp(name, presym_name_table[idx], len);
-      if (cmp == 0) return idx+1;
-    }
-    if (0 < cmp) {
-      start = ++idx;
-      --presym_size;
-    }
+  mrb_sym lo = presym_len_start[len];
+  mrb_sym hi = presym_len_start[len+1];
+  while (lo < hi) {
+    mrb_sym idx = lo + (hi-lo)/2;
+    int cmp = memcmp(name, presym_run_name(len, idx), len);
+    if (cmp == 0) return idx+1;
+    if (cmp < 0) hi = idx;
+    else lo = idx+1;
   }
   return 0;
 }
@@ -42,8 +49,17 @@ static const char*
 presym_sym2name(mrb_sym sym, mrb_int *lenp)
 {
   if (sym > MRB_PRESYM_MAX) return NULL;
-  if (lenp) *lenp = presym_length_table[sym-1];
-  return presym_name_table[sym-1];
+
+  mrb_sym idx = sym-1;
+  size_t lo = 0, hi = MRB_PRESYM_LEN_MAX;
+  /* find the length whose run holds idx: the last len with start <= idx */
+  while (lo < hi) {
+    size_t len = lo + (hi-lo+1)/2;
+    if (presym_len_start[len] <= idx) lo = len;
+    else hi = len-1;
+  }
+  if (lenp) *lenp = (mrb_int)lo;
+  return presym_run_name(lo, idx);
 }
 
 /* ------------------------------------------------------ */
