@@ -13,6 +13,12 @@
 #include <mruby/hash.h>
 #include <mruby/internal.h>
 
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+mrb_value mrb_proc_aref_impl(mrb_state *mrb, mrb_value proc, mrb_int argc, const mrb_value *argv);
+MRB_END_DECL
+
 static const mrb_code call_iseq[] = {
   OP_CALL,
 };
@@ -544,6 +550,19 @@ mrb_proc_merge_lvar(mrb_state *mrb, mrb_irep *irep, struct REnv *env, int num, c
   irep->nregs = irep->nlocals;
   MRB_ENV_SET_LEN(env, irep->nlocals);
 #endif
+}
+
+/*
+ * proc[args]: what mrb_funcall(proc, "[]", ...) runs once `[]` is found on Proc (call_proc), without the lookup.
+ * For bc2cpp-generated code (ADR 0365); the caller proves the receiver's `[]` is Proc's.
+ */
+mrb_value
+mrb_proc_aref_impl(mrb_state *mrb, mrb_value proc, mrb_int argc, const mrb_value *argv)
+{
+  mrb_method_t m;
+
+  MRB_METHOD_FROM_PROC(m, &call_proc);
+  return mrb_funcall_with_method(mrb, proc, MRB_OPSYM(aref), &m, mrb->proc_class, argc, argv, mrb_nil_value());
 }
 
 /* ---------------------------*/

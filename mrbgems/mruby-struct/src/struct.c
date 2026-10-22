@@ -15,6 +15,13 @@
 #include <mruby/proc.h>
 #include <mruby/internal.h>
 
+/* Struct#[] and Struct#[]= bodies, which read no argument from the call frame; called by bc2cpp-generated code
+   (ADR 0365). */
+MRB_BEGIN_DECL
+mrb_value mrb_struct_aref_impl(mrb_state *mrb, mrb_value s, mrb_value idx);
+mrb_value mrb_struct_aset_impl(mrb_state *mrb, mrb_value s, mrb_value idx, mrb_value val);
+MRB_END_DECL
+
 #define RSTRUCT_LEN(st) RARRAY_LEN(st)
 #define RSTRUCT_PTR(st) RARRAY_PTR(st)
 
@@ -496,11 +503,9 @@ struct_aref_int(mrb_state *mrb, mrb_value s, mrb_int i)
  *     joe[:name]    #=> "Joe Smith"
  *     joe[0]        #=> "Joe Smith"
  */
-static mrb_value
-mrb_struct_aref(mrb_state *mrb, mrb_value s)
+mrb_value
+mrb_struct_aref_impl(mrb_state *mrb, mrb_value s, mrb_value idx)
 {
-  mrb_value idx = mrb_get_arg1(mrb);
-
   if (mrb_string_p(idx)) {
     mrb_sym sym = mrb_intern_str(mrb, idx);
     idx = mrb_symbol_value(sym);
@@ -509,6 +514,12 @@ mrb_struct_aref(mrb_state *mrb, mrb_value s)
     return struct_aref_sym(mrb, s, mrb_symbol(idx));
   }
   return struct_aref_int(mrb, s, mrb_as_int(mrb, idx));
+}
+
+static mrb_value
+mrb_struct_aref(mrb_state *mrb, mrb_value s)
+{
+  return mrb_struct_aref_impl(mrb, s, mrb_get_arg1(mrb));
 }
 
 static mrb_value
@@ -549,14 +560,9 @@ mrb_struct_aset_sym(mrb_state *mrb, mrb_value s, mrb_sym id, mrb_value val)
  *     joe.zip    #=> "90210"
  */
 
-static mrb_value
-mrb_struct_aset(mrb_state *mrb, mrb_value s)
+mrb_value
+mrb_struct_aset_impl(mrb_state *mrb, mrb_value s, mrb_value idx, mrb_value val)
 {
-  mrb_value idx;
-  mrb_value val;
-
-  mrb_get_args(mrb, "oo", &idx, &val);
-
   if (mrb_string_p(idx)) {
     mrb_sym sym = mrb_intern_str(mrb, idx);
     idx = mrb_symbol_value(sym);
@@ -568,6 +574,16 @@ mrb_struct_aset(mrb_state *mrb, mrb_value s)
   mrb_int i = struct_index(mrb, mrb_as_int(mrb, idx), num_members(mrb, s));
   mrb_ary_set(mrb, s, i, val);
   return val;
+}
+
+static mrb_value
+mrb_struct_aset(mrb_state *mrb, mrb_value s)
+{
+  mrb_value idx;
+  mrb_value val;
+
+  mrb_get_args(mrb, "oo", &idx, &val);
+  return mrb_struct_aset_impl(mrb, s, idx, val);
 }
 
 /* 15.2.18.4.1  */

@@ -21,6 +21,11 @@
 #include <mruby/dump.h>
 #include <mruby/internal.h>
 
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+MRB_END_DECL
+
 #ifdef MRB_NO_STDIO
 #if defined(__cplusplus)
 extern "C" {
@@ -793,8 +798,9 @@ ensure_block(mrb_state *mrb, mrb_value blk)
  * @raise E_ARGUMENT_ERROR if `argc` is negative or too large.
  * @raise E_STACK_ERROR if the call level exceeds `MRB_CALL_LEVEL_MAX`.
  */
-MRB_API mrb_value
-mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value blk)
+static mrb_value
+funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value blk,
+                     const mrb_method_t *fixed, struct RClass *fixed_owner)
 {
   mrb_value val;
   int ai = mrb_gc_arena_save(mrb);
@@ -806,7 +812,7 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
     MRB_TRY(&c_jmp) {
       mrb->jmp = &c_jmp;
       /* recursive call */
-      val = mrb_funcall_with_block(mrb, self, mid, argc, argv, blk);
+      val = funcall_with_block_m(mrb, self, mid, argc, argv, blk, fixed, fixed_owner);
       mrb->jmp = NULL;
     }
     MRB_CATCH(&c_jmp) { /* error */
@@ -834,7 +840,13 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
     ci = cipush(mrb, n, CINFO_DIRECT, NULL, NULL, BLK_PTR(blk), 0, 0);
     funcall_args_capture(mrb, 0, argc, argv, blk, ci);
     ci->u.target_class = mrb_class(mrb, self);
-    m = mrb_vm_find_method(mrb, ci->u.target_class, &ci->u.target_class, mid);
+    if (fixed) {
+      m = *fixed;
+      ci->u.target_class = fixed_owner;
+    }
+    else {
+      m = mrb_vm_find_method(mrb, ci->u.target_class, &ci->u.target_class, mid);
+    }
     if (MRB_METHOD_UNDEF_P(m)) {
       m = prepare_missing(mrb, ci, self, mid, mrb_nil_value(), FALSE);
     }
@@ -862,6 +874,23 @@ mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc
   mrb_gc_arena_restore(mrb, ai);
   mrb_gc_protect(mrb, val);
   return val;
+}
+
+MRB_API mrb_value
+mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value blk)
+{
+  return funcall_with_block_m(mrb, self, mid, argc, argv, blk, NULL, NULL);
+}
+
+/*
+ * mrb_funcall_with_block for a method already found: `m`, as found in class `owner`, is called as `mid` with no
+ * lookup. Used by mrb_proc_aref_impl for bc2cpp-generated code (ADR 0365).
+ */
+mrb_value
+mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                        mrb_int argc, const mrb_value *argv, mrb_value blk)
+{
+  return funcall_with_block_m(mrb, self, mid, argc, argv, blk, m, owner);
 }
 
 /**

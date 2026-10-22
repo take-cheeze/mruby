@@ -13,6 +13,13 @@
 #include <mruby/internal.h>
 #include "value_array.h"
 
+/* Frame-independent bodies of Array#[], Array#[]= and Array.[], for bc2cpp-generated code (ADR 0365). */
+MRB_BEGIN_DECL
+mrb_value mrb_ary_aget1_impl(mrb_state *mrb, mrb_value self, mrb_value index);
+mrb_value mrb_ary_aset2_impl(mrb_state *mrb, mrb_value self, mrb_value v1, mrb_value v2);
+mrb_value mrb_ary_s_create_impl(mrb_state *mrb, mrb_value klass, mrb_int len, const mrb_value *vals);
+MRB_END_DECL
+
 #define ARY_DEFAULT_LEN   4
 #define ARY_SHRINK_RATIO  5 /* must be larger than 2 */
 #define ARY_C_MAX_SIZE (SIZE_MAX / sizeof(mrb_value))
@@ -389,6 +396,16 @@ mrb_ary_resize(mrb_state *mrb, mrb_value ary, mrb_int new_len)
   return ary;
 }
 
+mrb_value
+mrb_ary_s_create_impl(mrb_state *mrb, mrb_value klass, mrb_int len, const mrb_value *vals)
+{
+  mrb_value ary = mrb_ary_new_from_values(mrb, len, vals);
+  struct RArray *a = mrb_ary_ptr(ary);
+  a->c = mrb_class_ptr(klass);
+
+  return ary;
+}
+
 /*
  *  call-seq:
  *     Array[obj, ...] -> new_array
@@ -406,11 +423,7 @@ mrb_ary_s_create(mrb_state *mrb, mrb_value klass)
   mrb_int len;
 
   mrb_get_args(mrb, "*!", &vals, &len);
-  mrb_value ary = mrb_ary_new_from_values(mrb, len, vals);
-  struct RArray *a = mrb_ary_ptr(ary);
-  a->c = mrb_class_ptr(klass);
-
-  return ary;
+  return mrb_ary_s_create_impl(mrb, klass, len, vals);
 }
 
 static void ary_replace(mrb_state*, struct RArray*, struct RArray*);
@@ -1311,6 +1324,44 @@ aget_index(mrb_state *mrb, mrb_value index)
   }
 }
 
+/* aget_index for the lone argument of a one-argument call: the "i" of mrb_get_args is mrb_as_int */
+static mrb_int
+aget_index1(mrb_state *mrb, mrb_value index)
+{
+  if (mrb_integer_p(index)) {
+    return mrb_integer(index);
+  }
+#ifndef MRB_NO_FLOAT
+  else if (mrb_float_p(index)) {
+    return (mrb_int)mrb_float(index);
+  }
+#endif
+  return mrb_as_int(mrb, index);
+}
+
+/* Array#[] with one argument, which is not read from the current call frame. */
+mrb_value
+mrb_ary_aget1_impl(mrb_state *mrb, mrb_value self, mrb_value index)
+{
+  struct RArray *a = mrb_ary_ptr(self);
+  mrb_int i, len;
+
+  switch (mrb_type(index)) {
+    /* a[n..m] */
+  case MRB_TT_RANGE:
+    if (mrb_range_beg_len(mrb, index, &i, &len, ARY_LEN(a), TRUE) == MRB_RANGE_OK) {
+      return ary_subseq(mrb, a, i, len);
+    }
+    else {
+      return mrb_nil_value();
+    }
+  case MRB_TT_INTEGER:
+    return mrb_ary_ref(mrb, self, mrb_integer(index));
+  default:
+    return mrb_ary_ref(mrb, self, aget_index1(mrb, index));
+  }
+}
+
 /*
  *  call-seq:
  *     ary[index]                -> obj     or nil
@@ -1346,21 +1397,7 @@ mrb_ary_aget(mrb_state *mrb, mrb_value self)
   mrb_value index;
 
   if (mrb_get_argc(mrb) == 1) {
-    index = mrb_get_arg1(mrb);
-    switch (mrb_type(index)) {
-      /* a[n..m] */
-    case MRB_TT_RANGE:
-      if (mrb_range_beg_len(mrb, index, &i, &len, ARY_LEN(a), TRUE) == MRB_RANGE_OK) {
-        return ary_subseq(mrb, a, i, len);
-      }
-      else {
-        return mrb_nil_value();
-      }
-    case MRB_TT_INTEGER:
-      return mrb_ary_ref(mrb, self, mrb_integer(index));
-    default:
-      return mrb_ary_ref(mrb, self, aget_index(mrb, index));
-    }
+    return mrb_ary_aget1_impl(mrb, self, mrb_get_arg1(mrb));
   }
 
   mrb_get_args(mrb, "oi", &index, &len);
@@ -1373,6 +1410,27 @@ mrb_ary_aget(mrb_state *mrb, mrb_value self)
   if (len > alen - i) len = alen - i;
 
   return ary_subseq(mrb, a, i, len);
+}
+
+/* Array#[]= with an index and a value (not a range-and-length): reads no argument from the call frame. */
+mrb_value
+mrb_ary_aset2_impl(mrb_state *mrb, mrb_value self, mrb_value v1, mrb_value v2)
+{
+  mrb_int i, len;
+
+  /* a[n..m] = v */
+  switch (mrb_range_beg_len(mrb, v1, &i, &len, RARRAY_LEN(self), FALSE)) {
+  case MRB_RANGE_TYPE_MISMATCH:
+    mrb_ary_set(mrb, self, aget_index1(mrb, v1), v2);
+    break;
+  case MRB_RANGE_OK:
+    mrb_ary_splice(mrb, self, i, len, v2);
+    break;
+  case MRB_RANGE_OUT:
+    mrb_raisef(mrb, E_RANGE_ERROR, "%v out of range", v1);
+    break;
+  }
+  return v2;
 }
 
 /*
@@ -1416,23 +1474,8 @@ mrb_ary_aset(mrb_state *mrb, mrb_value self)
   mrb_value v1, v2, v3;
 
   if (mrb_get_argc(mrb) == 2) {
-    mrb_int i, len;
     const mrb_value *vs = mrb_get_argv(mrb);
-    v1 = vs[0]; v2 = vs[1];
-
-    /* a[n..m] = v */
-    switch (mrb_range_beg_len(mrb, v1, &i, &len, RARRAY_LEN(self), FALSE)) {
-    case MRB_RANGE_TYPE_MISMATCH:
-      mrb_ary_set(mrb, self, aget_index(mrb, v1), v2);
-      break;
-    case MRB_RANGE_OK:
-      mrb_ary_splice(mrb, self, i, len, v2);
-      break;
-    case MRB_RANGE_OUT:
-      mrb_raisef(mrb, E_RANGE_ERROR, "%v out of range", v1);
-      break;
-    }
-    return v2;
+    return mrb_ary_aset2_impl(mrb, self, vs[0], vs[1]);
   }
 
   mrb_get_args(mrb, "ooo", &v1, &v2, &v3);

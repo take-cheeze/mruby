@@ -10,6 +10,11 @@
 #include <mruby/class.h>
 #include <mruby/internal.h>
 
+/* Hash.[] body, which reads no argument from the call frame; called by bc2cpp-generated code (ADR 0365). */
+MRB_BEGIN_DECL
+mrb_value mrb_hash_s_create_impl(mrb_state *mrb, mrb_value klass, mrb_int argc, const mrb_value *argv);
+MRB_END_DECL
+
 /*
  * call-seq:
  *   hsh.values_at(key, ...)   -> array
@@ -181,14 +186,10 @@ hash_except(mrb_state *mrb, mrb_value hash)
  *     Hash[ [ ["a", 100], ["b", 200] ] ] #=> {"a"=>100, "b"=>200}
  *     Hash["a" => 100, "b" => 200] #=> {"a"=>100, "b"=>200}
  */
-static mrb_value
-hash_s_create(mrb_state *mrb, mrb_value klass)
+mrb_value
+mrb_hash_s_create_impl(mrb_state *mrb, mrb_value klass, mrb_int argc, const mrb_value *argv)
 {
-  const mrb_value *argv;
-  mrb_int argc;
   mrb_value hash;
-
-  mrb_get_args(mrb, "*", &argv, &argc);
 
   if (argc == 1) {
     mrb_value obj = argv[0];
@@ -261,6 +262,16 @@ hash_s_create(mrb_state *mrb, mrb_value klass)
   }
 
   return hash;
+}
+
+static mrb_value
+hash_s_create(mrb_state *mrb, mrb_value klass)
+{
+  const mrb_value *argv;
+  mrb_int argc;
+
+  mrb_get_args(mrb, "*", &argv, &argc);
+  return mrb_hash_s_create_impl(mrb, klass, argc, argv);
 }
 
 /* Data structure for hash_key search */

@@ -18,6 +18,11 @@
 #include <mruby/internal.h>
 #include <string.h>
 
+/* String#[]= body, which reads no argument from the call frame; called by bc2cpp-generated code (ADR 0365). */
+MRB_BEGIN_DECL
+void mrb_str_aset(mrb_state *mrb, mrb_value str, mrb_value idx, mrb_value alen, mrb_value replace);
+MRB_END_DECL
+
 typedef struct mrb_shared_string {
   int refcnt;
   mrb_int capa;
@@ -1621,7 +1626,7 @@ str_escape(mrb_state *mrb, mrb_value str, mrb_bool inspect)
   return result;
 }
 
-static void
+void
 mrb_str_aset(mrb_state *mrb, mrb_value str, mrb_value idx, mrb_value alen, mrb_value replace)
 {
   mrb_int beg, len, charlen;

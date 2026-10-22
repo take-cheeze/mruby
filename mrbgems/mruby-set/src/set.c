@@ -16,6 +16,11 @@
 #include <mruby/error.h>
 #include <mruby/khash.h>
 
+/* Set.[] body, which reads no argument from the call frame; called by bc2cpp-generated code (ADR 0365). */
+MRB_BEGIN_DECL
+mrb_value mrb_set_s_create_impl(mrb_state *mrb, mrb_value klass, mrb_int argc, const mrb_value *argv);
+MRB_END_DECL
+
 /* Use khash.h for set implementation - set mode (no values, only keys) */
 KHASH_DECLARE(set_val, mrb_value, char, FALSE)  /* FALSE = set mode */
 
@@ -1443,14 +1448,9 @@ set_include_any_p(mrb_state *mrb, mrb_value self)
  *
  * Creates a new set containing the given objects.
  */
-static mrb_value
-set_s_create(mrb_state *mrb, mrb_value klass)
+mrb_value
+mrb_set_s_create_impl(mrb_state *mrb, mrb_value klass, mrb_int argc, const mrb_value *argv)
 {
-  const mrb_value *argv;
-  mrb_int argc;
-
-  mrb_get_args(mrb, "*", &argv, &argc);
-
   /* Optimized direct creation */
   mrb_value set = mrb_obj_new(mrb, mrb_class_ptr(klass), 0, NULL);
   kset_t *ks = set_get_kset(mrb, set);
@@ -1461,6 +1461,16 @@ set_s_create(mrb_state *mrb, mrb_value klass)
   }
 
   return set;
+}
+
+static mrb_value
+set_s_create(mrb_state *mrb, mrb_value klass)
+{
+  const mrb_value *argv;
+  mrb_int argc;
+
+  mrb_get_args(mrb, "*", &argv, &argc);
+  return mrb_set_s_create_impl(mrb, klass, argc, argv);
 }
 
 static const mrb_mt_entry set_rom_entries[] = {
