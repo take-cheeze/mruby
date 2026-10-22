@@ -602,6 +602,8 @@ mrb_obj_alloc(mrb_state *mrb, enum mrb_vtype ttype, struct RClass *cls)
   }
 
   gc->live++;
+  gc->tt_live[ttype]++;
+  gc->tt_allocs[ttype]++;
   gc_protect(mrb, gc, &p->as.basic);
   *p = RVALUE_zero;
   p->as.basic.tt = ttype;
@@ -611,6 +613,14 @@ mrb_obj_alloc(mrb_state *mrb, enum mrb_vtype ttype, struct RClass *cls)
   }
   paint_partial_white(gc, &p->as.basic);
   return &p->as.basic;
+}
+
+MRB_API void
+mrb_gc_type_counts(mrb_state *mrb, size_t *live_out, size_t *alloc_out)
+{
+  mrb_gc *gc = &mrb->gc;
+  if (live_out) memcpy(live_out, gc->tt_live, sizeof(gc->tt_live));
+  if (alloc_out) memcpy(alloc_out, gc->tt_allocs, sizeof(gc->tt_allocs));
 }
 
 static inline void
@@ -851,6 +861,7 @@ static void
 obj_free(mrb_state *mrb, struct RBasic *obj, mrb_bool end)
 {
   DEBUG(fprintf(stderr, "obj_free(%p,tt=%d)\n",obj,obj->tt));
+  mrb->gc.tt_live[obj->tt]--;
   switch (obj->tt) {
   case MRB_TT_OBJECT:
     mrb_gc_free_iv(mrb, (struct RObject*)obj);

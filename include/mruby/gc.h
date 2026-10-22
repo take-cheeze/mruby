@@ -48,6 +48,8 @@ typedef struct mrb_gc {
   mrb_bool gray_overflow:1;        /* gray stack overflowed; needs heap rescan */
   size_t live;                     /* count of live objects */
   size_t live_after_mark;          /* old generation objects */
+  size_t tt_live[MRB_TT_MAXDEFINE];   /* live objects, by mrb_vtype */
+  size_t tt_allocs[MRB_TT_MAXDEFINE]; /* cumulative allocations, by mrb_vtype */
   size_t threshold;                /* threshold to start GC */
   size_t oldgen_threshold;         /* threshold to kick major GC */
   mrb_gc_state state;              /* current state of gc */
@@ -71,6 +73,17 @@ typedef struct mrb_gc {
 
 MRB_API mrb_bool mrb_object_dead_p(struct mrb_state *mrb, struct RBasic *object);
 MRB_API int mrb_gc_add_region(struct mrb_state *mrb, void *start, size_t size);
+
+/*
+ * Snapshot the GC's per-type live/allocation counters into caller-owned
+ * arrays of MRB_TT_MAXDEFINE size_t entries each (index by enum mrb_vtype,
+ * e.g. MRB_TT_STRING). live_out reports currently-live objects of that type;
+ * alloc_out reports cumulative allocations since mrb_open(). Either pointer
+ * may be NULL to skip that half. O(MRB_TT_MAXDEFINE) -- no heap walk, no GC
+ * triggered: the counters are maintained incrementally by mrb_obj_alloc()
+ * and the sweep phase's obj_free(), so this is safe to call every frame.
+ */
+MRB_API void mrb_gc_type_counts(struct mrb_state *mrb, size_t *live_out, size_t *alloc_out);
 
 #define MRB_GC_RED 7
 
