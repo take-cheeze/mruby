@@ -1169,14 +1169,39 @@ io_putc(mrb_state *mrb, mrb_value io)
  * String Output - Writes obj to ios. obj will be converted to a string using
  * to_s.
  */
-static mrb_value
-io_lshift(mrb_state *mrb, mrb_value io)
+MRB_BEGIN_DECL
+MRB_API mrb_value mrb_io_lshift_impl(mrb_state *mrb, mrb_value io, mrb_value str);
+MRB_END_DECL
+
+static int
+io_lshift_fd(mrb_state *mrb, mrb_value io)
 {
   struct mrb_io *fptr = io_get_write_fptr(mrb, io);
   int fd = io_get_write_fd(fptr);
 
   /* Prepare IO for writing (handle read buffer adjustment) */
   io_prepare_write(mrb, fptr);
+  return fd;
+}
+
+mrb_value
+mrb_io_lshift_impl(mrb_state *mrb, mrb_value io, mrb_value str)
+{
+  int fd = io_lshift_fd(mrb, io);
+
+  str = mrb_obj_as_string(mrb, str);
+  fd_write(mrb, fd, str);
+
+  return io;
+}
+
+static mrb_value
+io_lshift(mrb_state *mrb, mrb_value io)
+{
+  if (mrb_get_argc(mrb) == 1) {
+    return mrb_io_lshift_impl(mrb, io, mrb_get_arg1(mrb));
+  }
+  int fd = io_lshift_fd(mrb, io);
 
   mrb_value str = mrb_get_arg1(mrb);
   str = mrb_obj_as_string(mrb, str);

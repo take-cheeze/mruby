@@ -151,9 +151,23 @@ str_concat0(mrb_state *mrb, mrb_value self, mrb_bool binary)
  *    s.concat(32, 'bar', 32, 'baz') # => "foo bar baz"
  *
  */
+MRB_BEGIN_DECL
+MRB_API mrb_value mrb_str_ext_concat_impl(mrb_state *mrb, mrb_value self, mrb_value other);
+MRB_END_DECL
+
+mrb_value
+mrb_str_ext_concat_impl(mrb_state *mrb, mrb_value self, mrb_value other)
+{
+  str_concat(mrb, self, other, RSTR_BINARY_P(mrb_str_ptr(self)));
+  return self;
+}
+
 static mrb_value
 str_concat_m(mrb_state *mrb, mrb_value self)
 {
+  if (mrb_get_argc(mrb) == 1) {
+    return mrb_str_ext_concat_impl(mrb, self, mrb_get_arg1(mrb));
+  }
   mrb_bool binary = RSTR_BINARY_P(mrb_str_ptr(self));
   return str_concat0(mrb, self, binary);
 }

@@ -29,6 +29,12 @@ KHASH_DEFINE(ary_set, mrb_value, char, 0, ary_set_hash_func, ary_set_equal_func)
 
 typedef khash_t(ary_set) ary_set_t;
 
+MRB_BEGIN_DECL
+MRB_API mrb_value mrb_ary_ext_sub_impl(mrb_state *mrb, mrb_value self, mrb_value other);
+MRB_API mrb_value mrb_ary_ext_or_impl(mrb_state *mrb, mrb_value self, mrb_value other);
+MRB_API mrb_value mrb_ary_ext_and_impl(mrb_state *mrb, mrb_value self, mrb_value other);
+MRB_END_DECL
+
 /* Combination state structure for repeated_combination optimization */
 struct mrb_combination_state {
   mrb_int *indices;
@@ -546,12 +552,18 @@ ary_subtract_internal(mrb_state *mrb, mrb_value self, mrb_int argc, const mrb_va
  *     [ 1, 1, 2, 2, 3, 3, 4, 5 ] - [ 1, 2, 4 ]  #=> [ 3, 3, 5 ]
  */
 
+mrb_value
+mrb_ary_ext_sub_impl(mrb_state *mrb, mrb_value self, mrb_value other)
+{
+  return ary_subtract_internal(mrb, self, 1, &other);
+}
+
 static mrb_value
 ary_sub(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
   mrb_get_args(mrb, "A", &other);
-  return ary_subtract_internal(mrb, self, 1, &other);
+  return mrb_ary_ext_sub_impl(mrb, self, other);
 }
 
 /*
@@ -690,12 +702,18 @@ ary_union_internal(mrb_state *mrb, mrb_value self, mrb_int argc, const mrb_value
  *           #=> [ "a", "b", "c", "d" ]
  */
 
+mrb_value
+mrb_ary_ext_or_impl(mrb_state *mrb, mrb_value self, mrb_value other)
+{
+  return ary_union_internal(mrb, self, 1, &other);
+}
+
 static mrb_value
 ary_union(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
   mrb_get_args(mrb, "A", &other);
-  return ary_union_internal(mrb, self, 1, &other);
+  return mrb_ary_ext_or_impl(mrb, self, other);
 }
 
 /*
@@ -825,12 +843,18 @@ ary_intersection_internal(mrb_state *mrb, mrb_value self, mrb_int argc, const mr
  *     [ 1, 1, 3, 5 ] & [ 1, 2, 3 ]   #=> [ 1, 3 ]
  */
 
+mrb_value
+mrb_ary_ext_and_impl(mrb_state *mrb, mrb_value self, mrb_value other)
+{
+  return ary_intersection_internal(mrb, self, 1, &other);
+}
+
 static mrb_value
 ary_intersection(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
   mrb_get_args(mrb, "A", &other);
-  return ary_intersection_internal(mrb, self, 1, &other);
+  return mrb_ary_ext_and_impl(mrb, self, other);
 }
 
 /*
