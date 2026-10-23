@@ -480,6 +480,18 @@ end
     assert_false((2**64) == Complex(2**64, 1))
   end
 end
+assert 'Bigint Barrett reduction with a modulus near a power of two' do
+  # Barrett leaves x - q3*m below 3m and recovers it modulo a power of
+  # two; 2^(bits(m)+1) is too small for that once m passes 2/3 of
+  # 2^bits(m).  m is even so that pow takes Barrett, not Montgomery.
+  m = 2692385342303581121715657560162688559353896
+  e = 2636694112147897610634825765964664103373605
+  r = 323246457632324592119281372143493075137137
+  assert_equal r, (e * e) % m
+  assert_equal r, (e * e).remainder(m)
+  assert_equal r, e.pow(2, m)
+end
+
 
 assert 'Bigint in Array hash keys' do
   h = {[2**64, 1] => :big, [2**40] => :mid}
