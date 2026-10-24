@@ -2300,6 +2300,19 @@ num_infinite_p(mrb_state *mrb, mrb_value self)
   return mrb_false_value();
 }
 
+/* Numeric#-@ is `0 - self`. Exported (no static) so bc2cpp's closed `-@` helper calls the same body. */
+mrb_value
+mrb_num_uminus_impl(mrb_state *mrb, mrb_value self)
+{
+  return mrb_num_sub(mrb, mrb_fixnum_value(0), self);
+}
+
+static mrb_value
+num_uminus(mrb_state *mrb, mrb_value self)
+{
+  return mrb_num_uminus_impl(mrb, self);
+}
+
 #ifndef MRB_NO_FLOAT
 static mrb_value
 flo_hash(mrb_state *mrb, mrb_value flo)
@@ -2319,6 +2332,7 @@ static const mrb_mt_entry numeric_rom_entries[] = {
 #ifndef MRB_NO_FLOAT
   MRB_MT_ENTRY(num_fdiv, MRB_SYM(fdiv), MRB_ARGS_REQ(1)),
 #endif
+  MRB_MT_ENTRY(num_uminus, MRB_OPSYM(minus), MRB_ARGS_NONE()),
 };
 
 static const mrb_mt_entry integer_rom_entries[] = {

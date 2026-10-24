@@ -13,14 +13,6 @@ class Numeric
   end
 
   ##
-  # Returns the receiver's value, negated.
-  #
-  # ISO 15.2.7.4.2
-  def -@
-    0 - self
-  end
-
-  ##
   # Returns the absolute value of the receiver.
   #
   # ISO 15.2.7.4.3
