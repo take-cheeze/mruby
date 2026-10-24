@@ -7,6 +7,7 @@
 #include <mruby.h>
 #include <mruby/string.h>
 #include <mruby/array.h>
+#include <mruby/class.h>
 #include <mruby/hash.h>
 #include <mruby/numeric.h>
 #include <mruby/internal.h>
@@ -937,6 +938,11 @@ str_mod(mrb_state *mrb, mrb_value self)
   return mrb_str_mod_impl(mrb, self, mrb_get_arg1(mrb));
 }
 
+/* A ROM entry (not mrb_define_method) so bc2cpp's registration scan attributes String#% to its owner. */
+static const mrb_mt_entry sprintf_string_rom_entries[] = {
+  MRB_MT_ENTRY(str_mod, MRB_OPSYM(mod), MRB_ARGS_REQ(1)),
+};
+
 /*
  *  call-seq:
  *     format(format_string [, arguments...] )   -> string
@@ -1217,7 +1223,8 @@ mrb_mruby_sprintf_gem_init(mrb_state *mrb)
   struct RClass *krn = mrb->kernel_module;
   mrb_define_module_function_id(mrb, krn, MRB_SYM(sprintf), mrb_f_sprintf, MRB_ARGS_ANY());
   mrb_define_module_function_id(mrb, krn, MRB_SYM(format),  mrb_f_sprintf, MRB_ARGS_ANY());
-  mrb_define_method_id(mrb, mrb->string_class, MRB_OPSYM(mod), str_mod, MRB_ARGS_REQ(1));
+  struct RClass *s = mrb->string_class;
+  MRB_MT_INIT_ROM(mrb, s, sprintf_string_rom_entries);
 }
 
 void
