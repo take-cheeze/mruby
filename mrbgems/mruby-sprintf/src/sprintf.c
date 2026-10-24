@@ -921,6 +921,21 @@ mrb_str_format_impl(mrb_state *mrb, mrb_int argc, const mrb_value *argv, mrb_val
   return mrb_str_format(mrb, argc, argv, fmt);
 }
 
+/* String#% is `sprintf(self, *args)`; an Array supplies the values, anything else is the one value. Exported for
+ * bc2cpp's closed `%` helper, see numeric_slow_closed_mod_source. */
+mrb_value
+mrb_str_mod_impl(mrb_state *mrb, mrb_value fmt, mrb_value args)
+{
+  if (mrb_array_p(args)) return mrb_str_format(mrb, RARRAY_LEN(args), RARRAY_PTR(args), fmt);
+  return mrb_str_format(mrb, 1, &args, fmt);
+}
+
+static mrb_value
+str_mod(mrb_state *mrb, mrb_value self)
+{
+  return mrb_str_mod_impl(mrb, self, mrb_get_arg1(mrb));
+}
+
 /*
  *  call-seq:
  *     format(format_string [, arguments...] )   -> string
@@ -1201,6 +1216,7 @@ mrb_mruby_sprintf_gem_init(mrb_state *mrb)
   struct RClass *krn = mrb->kernel_module;
   mrb_define_module_function_id(mrb, krn, MRB_SYM(sprintf), mrb_f_sprintf, MRB_ARGS_ANY());
   mrb_define_module_function_id(mrb, krn, MRB_SYM(format),  mrb_f_sprintf, MRB_ARGS_ANY());
+  mrb_define_method_id(mrb, mrb->string_class, MRB_OPSYM(mod), str_mod, MRB_ARGS_REQ(1));
 }
 
 void
