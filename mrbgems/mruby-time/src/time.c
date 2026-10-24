@@ -601,7 +601,7 @@ time_now(mrb_state *mrb, mrb_value self)
   return time_wrap(mrb, mrb_class_ptr(self), current_mrb_time(mrb));
 }
 
-MRB_API mrb_value
+mrb_value
 mrb_time_at(mrb_state *mrb, time_t sec, time_t usec, enum mrb_timezone zone)
 {
   time_t nsec;
@@ -863,10 +863,9 @@ int_overflow(mrb_state *mrb, const char *reason)
  *   t + 0.5     #=> 2001-09-09 10:46:40 +0900 (with 500000 usec)
  *   t + 3600    #=> 2001-09-09 11:46:40 +0900 (one hour later)
  */
-static mrb_value
-time_plus(mrb_state *mrb, mrb_value self)
+mrb_value
+mrb_time_plus_impl(mrb_state *mrb, mrb_value self, mrb_value o)
 {
-  mrb_value o = mrb_get_arg1(mrb);
   time_t sec, usec;
 
   struct mrb_time *tm = time_get_ptr(mrb, self);
@@ -910,10 +909,9 @@ time_plus(mrb_state *mrb, mrb_value self)
  *   t1 - 1      #=> 2001-09-09 10:46:39 +0900
  *   t1 - 0.5    #=> 2001-09-09 10:46:39 +0900 (with 500000 usec)
  */
-static mrb_value
-time_minus(mrb_state *mrb, mrb_value self)
+mrb_value
+mrb_time_minus_impl(mrb_state *mrb, mrb_value self, mrb_value other)
 {
-  mrb_value other = mrb_get_arg1(mrb);
   struct mrb_time *tm = time_get_ptr(mrb, self);
   struct mrb_time *tm2 = DATA_CHECK_GET_PTR(mrb, other, &time_type, struct mrb_time);
 
@@ -1660,6 +1658,18 @@ time_utc_offset(mrb_state *mrb, mrb_value self)
   mrb_int offset_seconds = (mrb_int)(tm->sec - utc_time_t);
 
   return mrb_fixnum_value(offset_seconds);
+}
+
+static mrb_value
+time_plus(mrb_state *mrb, mrb_value self)
+{
+  return mrb_time_plus_impl(mrb, self, mrb_get_arg1(mrb));
+}
+
+static mrb_value
+time_minus(mrb_state *mrb, mrb_value self)
+{
+  return mrb_time_minus_impl(mrb, self, mrb_get_arg1(mrb));
 }
 
 /* ---------------------------*/
