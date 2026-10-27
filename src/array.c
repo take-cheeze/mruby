@@ -2140,8 +2140,8 @@ sort_cmp(mrb_state *mrb, mrb_value ary, mrb_value a_val, mrb_value b_val, mrb_va
 
     if (type_a == type_b) {
       switch (type_a) {
-      case MRB_TT_FIXNUM:
-        cmp = (mrb_fixnum(a_val) > mrb_fixnum(b_val)) ? 1 : (mrb_fixnum(a_val) < mrb_fixnum(b_val)) ? -1 : 0;
+      case MRB_TT_INTEGER:
+        cmp = (mrb_integer(a_val) > mrb_integer(b_val)) ? 1 : (mrb_integer(a_val) < mrb_integer(b_val)) ? -1 : 0;
         break;
 #ifndef MRB_NO_FLOAT
       case MRB_TT_FLOAT:

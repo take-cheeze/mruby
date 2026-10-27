@@ -2099,7 +2099,7 @@ cmpnum(mrb_state *mrb, mrb_value v1, mrb_value v2)
 {
 #ifdef MRB_NO_FLOAT             /* integer version */
 
-  if (!mrb_fixnum_p(v2)) {
+  if (!mrb_integer_p(v2)) {
     if (!mrb_obj_is_kind_of(mrb, v2, mrb_class_get_id(mrb, MRB_SYM(Numeric)))) {
       return -2;
     }
@@ -2116,8 +2116,8 @@ cmpnum(mrb_state *mrb, mrb_value v1, mrb_value v2)
 
   mrb_float x, y;
 
-  if (mrb_fixnum_p(v1)) {
-    if (mrb_fixnum_p(v2)) {
+  if (mrb_integer_p(v1)) {
+    if (mrb_integer_p(v2)) {
       mrb_int x = mrb_integer(v1);
       mrb_int y = mrb_integer(v2);
 
@@ -2152,7 +2152,7 @@ cmpnum(mrb_state *mrb, mrb_value v1, mrb_value v2)
   case MRB_TT_BIGINT:
 #endif
   case MRB_TT_INTEGER:
-    if (mrb_fixnum_p(v2)) {
+    if (mrb_integer_p(v2)) {
       y = (mrb_float)mrb_integer(v2);
       break;
     }
@@ -2169,7 +2169,7 @@ cmpnum(mrb_state *mrb, mrb_value v1, mrb_value v2)
   case MRB_TT_COMPLEX:
 #endif
     v1 = mrb_funcall_argv(mrb, v2, MRB_OPSYM(cmp), 1, &v1);
-    if (mrb_fixnum_p(v1)) {
+    if (mrb_integer_p(v1)) {
       return -mrb_integer(v1);
     }
     return -2;

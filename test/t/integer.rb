@@ -99,6 +99,52 @@ assert('Integer#==', '15.2.8.3.7') do
   assert_true b
 end
 
+assert('Integer comparison past the inline fixnum range') do
+  # word boxing keeps Integers past 2**30 (32-bit word) or 2**62 (64-bit
+  # word) on the heap; they must still compare as exact integers
+  bases = [0x3fff_ffff]
+  begin
+    # 2**62-1 built at run time: a >32-bit literal needs mruby-bigint
+    bases << ((((bases[0] << 16) | 0xffff) << 16) | 0xffff)
+  rescue RangeError
+    # 32-bit mrb_int without bigint
+  end
+  bases.each do |base|
+    a = base + 1
+    b = base + 2
+    c = base + 3
+    next unless a.is_a?(Integer) && c.is_a?(Integer)
+    a2 = base + 1                       # equal value, distinct object
+
+    assert_equal(-1, a <=> b)
+    assert_equal(1, b <=> a)
+    assert_equal(0, a <=> a2)
+    assert_equal(1, -a <=> -b)
+    assert_equal(-1, base <=> a)
+    assert_equal(1, a <=> base)
+    assert_true(a.__send__(:<, b))
+    assert_false(b.__send__(:<, a))
+    assert_true(a.__send__(:<=, a2))
+    assert_true(b.__send__(:>, a))
+    assert_true(a.__send__(:>=, a2))
+    assert_false(a.__send__(:>, a2))
+    assert_true(a == a2)
+    assert_true(a.eql?(a2))
+    assert_false(a == b)
+
+    assert_equal([-c, -a, 1, a, b, c], [c, 1, a, -c, b, -a].sort)
+    assert_equal([c, b, a], [a, c, b].sort { |x, y| y <=> x })
+    assert_equal(c, [a, c, b].max)
+    assert_equal(a, [b, a, c].min)
+
+    assert_equal(a.hash, a2.hash)
+    h = { a => :a, b => :b }
+    assert_equal(:a, h[a2])
+    assert_equal(:b, h[base + 2])
+    assert_nil(h[c])
+  end
+end
+
 assert('Integer#~', '15.2.8.3.8') do
   # Complement
   assert_equal(-1, ~0)

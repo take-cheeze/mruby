@@ -346,13 +346,10 @@ mrb_obj_hash_code(mrb_state *mrb, mrb_value key)
       hash_code = U32(mrb_fixnum(key));
     }
     else {
-#ifdef MRB_USE_BIGINT
-      hash_code = U32(mrb_integer(mrb_bint_hash(mrb, key)));
-#else
-      /* This path should not be reached if bignum is not configured.
-       * Hashing object_id is a fallback to avoid uninitialized value. */
-      hash_code = U32(mrb_obj_id(key));
-#endif
+      /* a heap Integer (bigints are MRB_TT_BIGINT): hash the value, as
+         Integer#hash does, so equal values from distinct objects match */
+      mrb_int n = mrb_integer(key);
+      hash_code = mrb_byte_hash((const uint8_t*)&n, sizeof(n));
     }
     break;
 #ifndef MRB_NO_FLOAT
