@@ -334,8 +334,12 @@ mrb_obj_hash_code(mrb_state *mrb, mrb_value key)
     break;
   case MRB_TT_TRUE:
   case MRB_TT_FALSE:
-  case MRB_TT_SYMBOL:
     hash_code = U32(mrb_fixnum(key));
+    break;
+  case MRB_TT_SYMBOL:
+    /* Not mrb_fixnum(): under 64-bit word boxing the id sits above bit 32, so
+       its low 32 bits are nearly the same for every symbol. */
+    hash_code = U32(mrb_symbol(key));
     break;
   case MRB_TT_INTEGER:
     if (mrb_fixnum_p(key)) {
