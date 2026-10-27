@@ -96,18 +96,22 @@ obj_instance_exec(mrb_state *mrb, mrb_value self)
   return mrb_object_exec(mrb, self, mrb_singleton_class_ptr(mrb, self));
 }
 
+#define MRB_MT_CLASS NilClass
 static const mrb_mt_entry nil_ext_rom_entries[] = {
-  MRB_MT_ENTRY(nil_to_a, MRB_SYM(to_a), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(nil_to_h, MRB_SYM(to_h), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(nil_to_i, MRB_SYM(to_i), MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(nil_to_a, MRB_SYM(to_a), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(nil_to_h, MRB_SYM(to_h), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(nil_to_i, MRB_SYM(to_i), MRB_ARGS_NONE())
 #ifndef MRB_NO_FLOAT
-  MRB_MT_ENTRY(nil_to_f, MRB_SYM(to_f), MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(nil_to_f, MRB_SYM(to_f), MRB_ARGS_NONE())
 #endif
 };
+#undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS BasicObject
 static const mrb_mt_entry bob_ext_rom_entries[] = {
-  MRB_MT_ENTRY(obj_instance_exec, MRB_SYM(instance_exec), MRB_ARGS_ANY()|MRB_ARGS_BLOCK()),
+  MRB_MT_ENTRY(obj_instance_exec, MRB_SYM(instance_exec), MRB_ARGS_ANY()|MRB_ARGS_BLOCK())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_object_ext_gem_init(mrb_state* mrb)

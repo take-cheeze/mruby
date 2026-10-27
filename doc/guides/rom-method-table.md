@@ -81,9 +81,9 @@ Include `<mruby/class.h>` (which provides `mrb_mt_entry`,
 #include <mruby/class.h>
 
 static const mrb_mt_entry my_rom_entries[] = {
-  MRB_MT_ENTRY(my_method_a,  MRB_SYM(method_a), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(my_method_b,  MRB_SYM(method_b), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(my_method_eq, MRB_OPSYM(eq),     MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(my_method_a,  MRB_SYM(method_a), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(my_method_b,  MRB_SYM(method_b), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(my_method_eq, MRB_OPSYM(eq),     MRB_ARGS_REQ(1))
 };
 ```
 
@@ -139,9 +139,10 @@ typedef struct mrb_mt_tbl {
 
 ```c
 /* ROM table entry: 3rd param is MRB_ARGS_*() optionally OR'd with
-   MRB_MT_PRIVATE.  The macro OR's in MRB_MT_FUNC automatically. */
+   MRB_MT_PRIVATE.  The macro OR's in MRB_MT_FUNC automatically and
+   supplies its own trailing comma (write entries without one). */
 #define MRB_MT_ENTRY(fn, sym, flags) \
-  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC }
+  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC },
 
 /* Extract aspec from combined flags */
 #define MRB_MT_ASPEC(flags) ((mrb_aspec)((flags) & 0xffffff))
@@ -166,6 +167,11 @@ occupies bits 0-23 and the visibility flag occupies bit 25; these
 ranges do not overlap, so the values are simply OR'd together.
 `MRB_MT_FUNC` is set automatically. The no-arg optimization is
 derived at runtime from `aspec == 0` (`MRB_ARGS_NONE()`).
+
+Entries are written **without** a trailing comma; `MRB_MT_ENTRY()`
+emits it. This is what lets an entry excluded at build time (see
+[Build-time Exclusion](#build-time-exclusion)) disappear from the
+array instead of leaving an empty element.
 
 **How to write entries:**
 
@@ -217,8 +223,8 @@ separate entries sharing the same function pointer:
 
 ```c
 static const mrb_mt_entry str_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_str_size, MRB_SYM(size),   MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_str_size, MRB_SYM(length), MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(mrb_str_size, MRB_SYM(size),   MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_str_size, MRB_SYM(length), MRB_ARGS_NONE())
 };
 ```
 
@@ -231,10 +237,10 @@ that survive preprocessing:
 
 ```c
 static const mrb_mt_entry integer_rom_entries[] = {
-  MRB_MT_ENTRY(int_to_s, MRB_SYM(to_s), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(int_add,  MRB_OPSYM(add), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(int_to_s, MRB_SYM(to_s), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(int_add,  MRB_OPSYM(add), MRB_ARGS_REQ(1))
 #ifndef MRB_NO_FLOAT
-  MRB_MT_ENTRY(int_to_f, MRB_SYM(to_f), MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(int_to_f, MRB_SYM(to_f), MRB_ARGS_NONE())
 #endif
 };
 ```
@@ -254,6 +260,96 @@ void mrb_init_numeric(mrb_state *mrb) {
 #endif
 }
 ```
+
+## Build-time Exclusion
+
+An embedding build can drop chosen entries from the ROM tables at
+compile time. An excluded entry is not compiled into the table at all
+(the table shrinks and `MRB_MT_INIT_ROM()`'s `sizeof` follows), and a
+`static` C function referenced only by that entry becomes unused, so
+the compiler discards it. To Ruby the method was never defined on that
+class: lookup continues to the superclass, and `respond_to?`,
+`method_defined?`, `instance_methods` etc. do not see it.
+
+The feature is off unless `MRB_MT_EXCLUDE_HEADER` is defined; without
+it the generated tables and objects are unchanged.
+
+### Exclusion header
+
+Define `MRB_MT_EXCLUDE_HEADER` to a header name (with its quotes or
+angle brackets). `<mruby/class.h>` includes it; it defines one macro,
+**to `1`**, per entry to drop:
+
+```c
+/* mt_exclude.h */
+#define MRB_MT_EXCLUDE_String_SYM__squeeze 1   /* String#squeeze */
+#define MRB_MT_EXCLUDE_Array_SYM_B__rotate 1   /* Array#rotate!  */
+#define MRB_MT_EXCLUDE_Integer_OPSYM__cmp 1    /* Integer#<=>    */
+#define MRB_MT_EXCLUDE_Hash_SYM_E__default 1   /* Hash#default=  */
+#define MRB_MT_EXCLUDE_String_SYM_Q__casecmp 1 /* String#casecmp? */
+```
+
+In a build configuration:
+
+```ruby
+conf.cc.defines << %(MRB_MT_EXCLUDE_HEADER='"#{path_to}/mt_exclude.h"')
+```
+
+(the define reaches the shell unquoted, hence the inner single quotes).
+It must be seen by every compiled file that contains ROM tables, core
+and gems alike, so `conf.cc.defines` (not a single gem's) is the place.
+
+### Macro names
+
+`MRB_MT_EXCLUDE_<Class>_<sym>`, where `<sym>` is the entry's presym C
+name without the `MRB_` prefix, i.e. exactly what the entry's symbol
+macro spells:
+
+| entry symbol        | Ruby name | `<sym>`         |
+| ------------------- | --------- | --------------- |
+| `MRB_SYM(name)`     | `name`    | `SYM__name`     |
+| `MRB_SYM_Q(name)`   | `name?`   | `SYM_Q__name`   |
+| `MRB_SYM_B(name)`   | `name!`   | `SYM_B__name`   |
+| `MRB_SYM_E(name)`   | `name=`   | `SYM_E__name`   |
+| `MRB_OPSYM(op)`     | operator  | `OPSYM__op`     |
+
+Operator names follow `lib/mruby/presym.rb` (`OPERATORS`): `!` not,
+`%` mod, `&` and, `*` mul, `+` add, `-` sub, `/` div, `<` lt, `>` gt,
+`^` xor, `` ` `` tick, `|` or, `~` neg, `!=` neq, `!~` nmatch,
+`**` pow, `+@` plus, `-@` minus, `<<` lshift, `<=` le, `==` eq,
+`=~` match, `>=` ge, `>>` rshift, `[]` aref, `<=>` cmp, `===` eqq,
+`[]=` aset.
+
+`<Class>` is the name the table declares with `MRB_MT_CLASS`, which
+each table in the tree `#define`s just before its entries (and
+`#undef`s after). It is the Ruby class name, with `::` written `_`
+for nested classes (`Socket_Option`). An extension gem's table for a
+core class uses the core class name, so one macro excludes the method
+whichever file defines it. A table without `MRB_MT_CLASS` simply
+never matches.
+
+```c
+#define MRB_MT_CLASS String
+static const mrb_mt_entry string_ext_rom_entries[] = {
+  MRB_MT_ENTRY(str_squeeze_m, MRB_SYM(squeeze), MRB_ARGS_OPT(1))
+  ...
+};
+#undef MRB_MT_CLASS
+```
+
+### Notes
+
+- A non-`static` C function (exported for other files) is not dropped
+  by the compiler; link with `-ffunction-sections -Wl,--gc-sections`
+  (or the toolchain's equivalent) to let the linker remove it.
+- With exclusion on, `-Wunused-function` is turned off (GCC/Clang) in
+  files that include `<mruby/class.h>`, since excluded functions are
+  unused by design.
+- Methods implemented in Ruby (mrblib) or registered with
+  `mrb_define_method_id()` are not affected; Ruby code in the build that
+  calls an excluded method fails at run time with `NoMethodError`.
+- Excluding every entry of a table leaves an empty initializer, which
+  needs C23 or the GNU extension.
 
 ## Extension Gems
 
@@ -401,9 +497,9 @@ void mrb_mruby_foo_gem_init(mrb_state *mrb) {
 
 ```c
 static const mrb_mt_entry foo_rom_entries[] = {
-  MRB_MT_ENTRY(foo_bar, MRB_SYM(bar),  MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(foo_baz, MRB_SYM(baz),  MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(foo_eq,  MRB_OPSYM(eq), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(foo_bar, MRB_SYM(bar),  MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(foo_baz, MRB_SYM(baz),  MRB_ARGS_NONE())
+  MRB_MT_ENTRY(foo_eq,  MRB_OPSYM(eq), MRB_ARGS_REQ(1))
 };
 
 void mrb_mruby_foo_gem_init(mrb_state *mrb) {

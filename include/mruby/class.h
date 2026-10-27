@@ -126,9 +126,48 @@ typedef struct mrb_mt_tbl {
 #define MRB_MT_PUBLIC  0
 #define MRB_MT_PRIVATE (1 << 25)  /* MRB_METHOD_PRIVATE_FL */
 
-/* ROM table entry: 3rd param is MRB_ARGS_*() optionally OR'd with MRB_MT_PRIVATE. */
-#define MRB_MT_ENTRY(fn, sym, flags) \
-  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC }
+/* ROM table entry: 3rd param is MRB_ARGS_*() optionally OR'd with MRB_MT_PRIVATE.
+   The macro supplies its own trailing comma, so entries are written
+   without one; this lets an excluded entry vanish from the table. */
+#define MRB_MT_ENTRY_ROM_(fn, sym, flags) \
+  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC },
+
+#ifndef MRB_MT_EXCLUDE_HEADER
+#define MRB_MT_ENTRY(fn, sym, flags) MRB_MT_ENTRY_ROM_(fn, sym, flags)
+#else
+/* Build-time exclusion of ROM entries (see doc/guides/rom-method-table.md).
+   MRB_MT_EXCLUDE_HEADER names a header (quoted or <>) that defines
+   MRB_MT_EXCLUDE_<Class>_<presym C name> to 1 for each entry to drop, e.g.
+     #define MRB_MT_EXCLUDE_String_SYM__squeeze 1     String#squeeze
+     #define MRB_MT_EXCLUDE_Array_SYM_B__rotate 1     Array#rotate!
+     #define MRB_MT_EXCLUDE_Integer_OPSYM__cmp 1      Integer#<=>
+   <Class> is the MRB_MT_CLASS a table defines before its entries. */
+#include MRB_MT_EXCLUDE_HEADER
+
+/* MRB_SYM_x(name) -> MRB_MT_EXCLUDE_<MRB_MT_CLASS>_SYM_x__name */
+#define MRB_MT_XNAME_MRB_SYM(n)   MRB_MT_XNAME_(MRB_MT_CLASS, SYM__##n)
+#define MRB_MT_XNAME_MRB_SYM_B(n) MRB_MT_XNAME_(MRB_MT_CLASS, SYM_B__##n)
+#define MRB_MT_XNAME_MRB_SYM_Q(n) MRB_MT_XNAME_(MRB_MT_CLASS, SYM_Q__##n)
+#define MRB_MT_XNAME_MRB_SYM_E(n) MRB_MT_XNAME_(MRB_MT_CLASS, SYM_E__##n)
+#define MRB_MT_XNAME_MRB_OPSYM(n) MRB_MT_XNAME_(MRB_MT_CLASS, OPSYM__##n)
+#define MRB_MT_XNAME_(c, s) MRB_MT_XNAME2_(c, s)
+#define MRB_MT_XNAME2_(c, s) MRB_MT_EXCLUDE_##c##_##s
+
+/* select KEEP or DROP depending on whether the name is defined to 1 */
+#define MRB_MT_ENTRY(fn, sym, flags) MRB_MT_ENTRY1_(MRB_MT_XNAME_##sym, fn, sym, flags)
+#define MRB_MT_ENTRY1_(x, fn, sym, flags) MRB_MT_ENTRY2_(x, fn, sym, flags)
+#define MRB_MT_ENTRY2_(x, fn, sym, flags) MRB_MT_ENTRY3_(MRB_MT_EXCL_P_##x, fn, sym, flags)
+#define MRB_MT_ENTRY3_(p, fn, sym, flags) MRB_MT_EXPAND_(MRB_MT_SEL_(p MRB_MT_DROP_, MRB_MT_ENTRY_ROM_, ~))(fn, sym, flags)
+#define MRB_MT_EXCL_P_1 ~,
+#define MRB_MT_SEL_(a, b, ...) b
+#define MRB_MT_EXPAND_(x) x
+#define MRB_MT_DROP_(fn, sym, flags)
+
+/* an excluded C function is left unreferenced; let the compiler drop it quietly */
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#endif /* MRB_MT_EXCLUDE_HEADER */
 #define MRB_MT_ASPEC(flags) ((mrb_aspec)((flags) & 0xffffff))
 
 /* "removed" tombstone: MRB_MT_FUNC flag set with NULL function pointer.

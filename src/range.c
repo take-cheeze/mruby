@@ -561,23 +561,25 @@ mrb_range_beg_len(mrb_state *mrb, mrb_value range, mrb_int *begp, mrb_int *lenp,
 }
 
 /* ---------------------------*/
+#define MRB_MT_CLASS Range
 static const mrb_mt_entry range_rom_entries[] = {
-  MRB_MT_ENTRY(range_beg,             MRB_SYM(begin),        MRB_ARGS_NONE()),  /* 15.2.14.4.3  */
-  MRB_MT_ENTRY(range_end,             MRB_SYM(end),          MRB_ARGS_NONE()),  /* 15.2.14.4.5  */
-  MRB_MT_ENTRY(range_eq,              MRB_OPSYM(eq), MRB_ARGS_REQ(1)),  /* 15.2.14.4.1  */
-  MRB_MT_ENTRY(range_include,         MRB_OPSYM(eqq), MRB_ARGS_REQ(1)),  /* 15.2.14.4.2  */
-  MRB_MT_ENTRY(range_excl,            MRB_SYM_Q(exclude_end), MRB_ARGS_NONE()),  /* 15.2.14.4.6  */
-  MRB_MT_ENTRY(range_beg,             MRB_SYM(first),        MRB_ARGS_NONE()),  /* 15.2.14.4.7  */
-  MRB_MT_ENTRY(range_include,         MRB_SYM_Q(include), MRB_ARGS_REQ(1)),  /* 15.2.14.4.8  */
-  MRB_MT_ENTRY(range_initialize, MRB_SYM(initialize),      MRB_ARGS_ANY() | MRB_MT_PRIVATE),  /* 15.2.14.4.9  */
-  MRB_MT_ENTRY(range_end,             MRB_SYM(last),         MRB_ARGS_NONE()),  /* 15.2.14.4.10 */
-  MRB_MT_ENTRY(range_include,         MRB_SYM_Q(member), MRB_ARGS_REQ(1)),  /* 15.2.14.4.11 */
-  MRB_MT_ENTRY(range_to_s,            MRB_SYM(to_s),         MRB_ARGS_NONE()),  /* 15.2.14.4.12(x) */
-  MRB_MT_ENTRY(range_inspect,         MRB_SYM(inspect),      MRB_ARGS_NONE()),  /* 15.2.14.4.13(x) */
-  MRB_MT_ENTRY(range_eql,             MRB_SYM_Q(eql), MRB_ARGS_REQ(1)),  /* 15.2.14.4.14(x) */
-  MRB_MT_ENTRY(range_initialize_copy, MRB_SYM(initialize_copy), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE),  /* 15.2.14.4.15(x) */
-  MRB_MT_ENTRY(range_num_to_a,        MRB_SYM(__num_to_a),   MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(range_beg,             MRB_SYM(begin),        MRB_ARGS_NONE())   /* 15.2.14.4.3  */
+  MRB_MT_ENTRY(range_end,             MRB_SYM(end),          MRB_ARGS_NONE())   /* 15.2.14.4.5  */
+  MRB_MT_ENTRY(range_eq,              MRB_OPSYM(eq), MRB_ARGS_REQ(1))   /* 15.2.14.4.1  */
+  MRB_MT_ENTRY(range_include,         MRB_OPSYM(eqq), MRB_ARGS_REQ(1))   /* 15.2.14.4.2  */
+  MRB_MT_ENTRY(range_excl,            MRB_SYM_Q(exclude_end), MRB_ARGS_NONE())   /* 15.2.14.4.6  */
+  MRB_MT_ENTRY(range_beg,             MRB_SYM(first),        MRB_ARGS_NONE())   /* 15.2.14.4.7  */
+  MRB_MT_ENTRY(range_include,         MRB_SYM_Q(include), MRB_ARGS_REQ(1))   /* 15.2.14.4.8  */
+  MRB_MT_ENTRY(range_initialize, MRB_SYM(initialize),      MRB_ARGS_ANY() | MRB_MT_PRIVATE)   /* 15.2.14.4.9  */
+  MRB_MT_ENTRY(range_end,             MRB_SYM(last),         MRB_ARGS_NONE())   /* 15.2.14.4.10 */
+  MRB_MT_ENTRY(range_include,         MRB_SYM_Q(member), MRB_ARGS_REQ(1))   /* 15.2.14.4.11 */
+  MRB_MT_ENTRY(range_to_s,            MRB_SYM(to_s),         MRB_ARGS_NONE())   /* 15.2.14.4.12(x) */
+  MRB_MT_ENTRY(range_inspect,         MRB_SYM(inspect),      MRB_ARGS_NONE())   /* 15.2.14.4.13(x) */
+  MRB_MT_ENTRY(range_eql,             MRB_SYM_Q(eql), MRB_ARGS_REQ(1))   /* 15.2.14.4.14(x) */
+  MRB_MT_ENTRY(range_initialize_copy, MRB_SYM(initialize_copy), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)   /* 15.2.14.4.15(x) */
+  MRB_MT_ENTRY(range_num_to_a,        MRB_SYM(__num_to_a),   MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_init_range(mrb_state *mrb)

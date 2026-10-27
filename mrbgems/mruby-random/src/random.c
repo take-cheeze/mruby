@@ -567,12 +567,14 @@ random_f_bytes(mrb_state *mrb, mrb_value self)
 }
 
 
+#define MRB_MT_CLASS Random
 static const mrb_mt_entry random_rom_entries[] = {
-  MRB_MT_ENTRY(random_m_init,  MRB_SYM(initialize), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(random_m_rand,  MRB_SYM(rand), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(random_m_srand, MRB_SYM(srand), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(random_m_bytes, MRB_SYM(bytes), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(random_m_init,  MRB_SYM(initialize), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(random_m_rand,  MRB_SYM(rand), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(random_m_srand, MRB_SYM(srand), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(random_m_bytes, MRB_SYM(bytes), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
 
 void mrb_mruby_random_gem_init(mrb_state *mrb)
 {

@@ -243,13 +243,15 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
 }
 
 /* ---------------------------*/
+#define MRB_MT_CLASS Proc
 static const mrb_mt_entry proc_ext_rom_entries[] = {
-  MRB_MT_ENTRY(proc_inspect,         MRB_SYM(inspect),      MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(proc_lambda_p,        MRB_SYM_Q(lambda),     MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_proc_parameters,  MRB_SYM(parameters),   MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(proc_source_location, MRB_SYM(source_location), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(proc_inspect,         MRB_SYM(to_s),         MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(proc_inspect,         MRB_SYM(inspect),      MRB_ARGS_NONE())
+  MRB_MT_ENTRY(proc_lambda_p,        MRB_SYM_Q(lambda),     MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_proc_parameters,  MRB_SYM(parameters),   MRB_ARGS_NONE())
+  MRB_MT_ENTRY(proc_source_location, MRB_SYM(source_location), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(proc_inspect,         MRB_SYM(to_s),         MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_proc_ext_gem_init(mrb_state* mrb)

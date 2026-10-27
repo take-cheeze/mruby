@@ -1270,49 +1270,57 @@ mrb_win32_basicsocket_syswrite(mrb_state *mrb, mrb_value self)
 #endif
 
 /* ---------------------------*/
+#define MRB_MT_CLASS Addrinfo
 static const mrb_mt_entry addrinfo_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_addrinfo_getnameinfo, MRB_SYM(getnameinfo), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_addrinfo_unix_path,   MRB_SYM(unix_path), MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(mrb_addrinfo_getnameinfo, MRB_SYM(getnameinfo), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_addrinfo_unix_path,   MRB_SYM(unix_path), MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS BasicSocket
 static const mrb_mt_entry basicsocket_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_basicsocket_recvfrom,      MRB_SYM(_recvfrom), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_basicsocket_setnonblock,   MRB_SYM(_setnonblock), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(mrb_basicsocket_getpeereid,    MRB_SYM(getpeereid), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_basicsocket_getpeername,   MRB_SYM(getpeername), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_basicsocket_getsockname,   MRB_SYM(getsockname), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_basicsocket_getsockopt,    MRB_SYM(getsockopt), MRB_ARGS_REQ(2)),
-  MRB_MT_ENTRY(mrb_basicsocket_recv,          MRB_SYM(recv), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_basicsocket_send,          MRB_SYM(send), MRB_ARGS_REQ(2)|MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_basicsocket_setsockopt,    MRB_SYM(setsockopt), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(2)),
-  MRB_MT_ENTRY(mrb_basicsocket_shutdown,      MRB_SYM(shutdown), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_basicsocket_set_is_socket, MRB_SYM_E(_is_socket), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(mrb_basicsocket_recvfrom,      MRB_SYM(_recvfrom), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_basicsocket_setnonblock,   MRB_SYM(_setnonblock), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_basicsocket_getpeereid,    MRB_SYM(getpeereid), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_basicsocket_getpeername,   MRB_SYM(getpeername), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_basicsocket_getsockname,   MRB_SYM(getsockname), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_basicsocket_getsockopt,    MRB_SYM(getsockopt), MRB_ARGS_REQ(2))
+  MRB_MT_ENTRY(mrb_basicsocket_recv,          MRB_SYM(recv), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_basicsocket_send,          MRB_SYM(send), MRB_ARGS_REQ(2)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_basicsocket_setsockopt,    MRB_SYM(setsockopt), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(2))
+  MRB_MT_ENTRY(mrb_basicsocket_shutdown,      MRB_SYM(shutdown), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_basicsocket_set_is_socket, MRB_SYM_E(_is_socket), MRB_ARGS_REQ(1))
 #ifdef _WIN32
-  MRB_MT_ENTRY(mrb_win32_basicsocket_close,    MRB_SYM(close), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_win32_basicsocket_sysread,  MRB_SYM(sysread), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_win32_basicsocket_sysseek,  MRB_SYM(sysseek), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(mrb_win32_basicsocket_syswrite, MRB_SYM(syswrite), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(mrb_win32_basicsocket_sysread,  MRB_SYM(read), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(mrb_win32_basicsocket_syswrite, MRB_SYM(write), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(mrb_win32_basicsocket_close,    MRB_SYM(close), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_win32_basicsocket_sysread,  MRB_SYM(sysread), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_win32_basicsocket_sysseek,  MRB_SYM(sysseek), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_win32_basicsocket_syswrite, MRB_SYM(syswrite), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_win32_basicsocket_sysread,  MRB_SYM(read), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_win32_basicsocket_syswrite, MRB_SYM(write), MRB_ARGS_REQ(1))
 #endif
 };
+#undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS IPSocket
 static const mrb_mt_entry ipsocket_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_ipsocket_recvfrom, MRB_SYM(recvfrom), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1)),
+  MRB_MT_ENTRY(mrb_ipsocket_recvfrom, MRB_SYM(recvfrom), MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
 };
+#undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS Socket_Option
 static const mrb_mt_entry socket_option_rom_entries[] = {
-  MRB_MT_ENTRY(socket_option_init,    MRB_SYM(initialize), MRB_ARGS_REQ(4)),
-  MRB_MT_ENTRY(socket_option_inspect, MRB_SYM(inspect), MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_family,  MRB_SYM(family),  MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_level,   MRB_SYM(level),   MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_optname, MRB_SYM(optname), MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_data,    MRB_SYM(data),    MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_bool,    MRB_SYM(bool),    MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_int,     MRB_SYM(int),     MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_notimp,  MRB_SYM(linger),  MRB_ARGS_REQ(0)),
-  MRB_MT_ENTRY(socket_option_notimp,  MRB_SYM(unpack), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(socket_option_init,    MRB_SYM(initialize), MRB_ARGS_REQ(4))
+  MRB_MT_ENTRY(socket_option_inspect, MRB_SYM(inspect), MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_family,  MRB_SYM(family),  MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_level,   MRB_SYM(level),   MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_optname, MRB_SYM(optname), MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_data,    MRB_SYM(data),    MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_bool,    MRB_SYM(bool),    MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_int,     MRB_SYM(int),     MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_notimp,  MRB_SYM(linger),  MRB_ARGS_REQ(0))
+  MRB_MT_ENTRY(socket_option_notimp,  MRB_SYM(unpack), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_socket_gem_init(mrb_state* mrb)

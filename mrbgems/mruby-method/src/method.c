@@ -831,37 +831,41 @@ method_name(mrb_state *mrb, mrb_value self)
 }
 
 /* ---------------------------*/
+#define MRB_MT_CLASS UnboundMethod
 static const mrb_mt_entry method_ubm_rom_entries[] = {
-  MRB_MT_ENTRY(unbound_method_bind,  MRB_SYM(bind), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(method_super_method,  MRB_SYM(super_method), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_eql,           MRB_OPSYM(eq), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(method_eql,           MRB_SYM_Q(eql), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(method_to_s,          MRB_SYM(to_s),         MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_to_s,          MRB_SYM(inspect),      MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_arity,         MRB_SYM(arity),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_source_location, MRB_SYM(source_location), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_parameters,    MRB_SYM(parameters),   MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_bcall,         MRB_SYM(bind_call), MRB_ARGS_REQ(1)|MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(method_owner,         MRB_SYM(owner),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_name,          MRB_SYM(name),         MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(unbound_method_bind,  MRB_SYM(bind), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(method_super_method,  MRB_SYM(super_method), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_eql,           MRB_OPSYM(eq), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(method_eql,           MRB_SYM_Q(eql), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(method_to_s,          MRB_SYM(to_s),         MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_to_s,          MRB_SYM(inspect),      MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_arity,         MRB_SYM(arity),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_source_location, MRB_SYM(source_location), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_parameters,    MRB_SYM(parameters),   MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_bcall,         MRB_SYM(bind_call), MRB_ARGS_REQ(1)|MRB_ARGS_ANY())
+  MRB_MT_ENTRY(method_owner,         MRB_SYM(owner),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_name,          MRB_SYM(name),         MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS Method
 static const mrb_mt_entry method_mtd_rom_entries[] = {
-  MRB_MT_ENTRY(method_eql,            MRB_OPSYM(eq), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(method_eql,            MRB_SYM_Q(eql), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(method_to_s,           MRB_SYM(to_s),         MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_to_s,           MRB_SYM(inspect),      MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_call,           MRB_SYM(call), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(method_call,           MRB_OPSYM(aref), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(method_unbind,         MRB_SYM(unbind),       MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_super_method,   MRB_SYM(super_method), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_arity,          MRB_SYM(arity),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_source_location, MRB_SYM(source_location), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_parameters,     MRB_SYM(parameters),   MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_owner,          MRB_SYM(owner),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_receiver,       MRB_SYM(receiver),     MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(method_name,           MRB_SYM(name),         MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(method_eql,            MRB_OPSYM(eq), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(method_eql,            MRB_SYM_Q(eql), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(method_to_s,           MRB_SYM(to_s),         MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_to_s,           MRB_SYM(inspect),      MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_call,           MRB_SYM(call), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(method_call,           MRB_OPSYM(aref), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(method_unbind,         MRB_SYM(unbind),       MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_super_method,   MRB_SYM(super_method), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_arity,          MRB_SYM(arity),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_source_location, MRB_SYM(source_location), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_parameters,     MRB_SYM(parameters),   MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_owner,          MRB_SYM(owner),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_receiver,       MRB_SYM(receiver),     MRB_ARGS_NONE())
+  MRB_MT_ENTRY(method_name,           MRB_SYM(name),         MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_method_gem_init(mrb_state* mrb)

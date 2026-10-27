@@ -1129,14 +1129,16 @@ mrb_file_join(mrb_state *mrb, mrb_value klass)
 }
 
 /* ---------------------------*/
+#define MRB_MT_CLASS File
 static const mrb_mt_entry file_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_file_flock,    MRB_SYM(flock), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(mrb_file_atime,    MRB_SYM(_atime), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_file_ctime,    MRB_SYM(_ctime), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_file_mtime,    MRB_SYM(_mtime), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_file_size,     MRB_SYM(size),  MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_file_truncate, MRB_SYM(truncate), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(mrb_file_flock,    MRB_SYM(flock), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_file_atime,    MRB_SYM(_atime), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_file_ctime,    MRB_SYM(_ctime), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_file_mtime,    MRB_SYM(_mtime), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_file_size,     MRB_SYM(size),  MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_file_truncate, MRB_SYM(truncate), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_init_file(mrb_state *mrb)

@@ -1473,51 +1473,53 @@ set_s_create(mrb_state *mrb, mrb_value klass)
   return mrb_set_s_create_impl(mrb, klass, argc, argv);
 }
 
+#define MRB_MT_CLASS Set
 static const mrb_mt_entry set_rom_entries[] = {
-  MRB_MT_ENTRY(set_size,              MRB_SYM(size),           MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_size,              MRB_SYM(length),         MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_empty_p,           MRB_SYM_Q(empty),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_clear,             MRB_SYM(clear),          MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_to_a,              MRB_SYM(to_a),           MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_include_p,         MRB_SYM_Q(include), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_include_p,         MRB_SYM_Q(member), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_include_p,         MRB_OPSYM(eqq), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_add,               MRB_SYM(add), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_add,               MRB_OPSYM(lshift), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_add_p,             MRB_SYM_Q(add), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_delete,            MRB_SYM(delete), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_delete_p,          MRB_SYM_Q(delete), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_init,              MRB_SYM(__init),         MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_core_merge,        MRB_SYM(__merge), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_core_subtract,     MRB_SYM(__subtract), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_core_union,        MRB_SYM(__union), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_core_difference,   MRB_SYM(__difference), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_core_intersection, MRB_SYM(__intersection), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_core_xor,          MRB_SYM(__xor), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_equal,             MRB_OPSYM(eq), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_hash_m,            MRB_SYM(hash),           MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_join,              MRB_SYM(join), MRB_ARGS_OPT(1)),
-  MRB_MT_ENTRY(set_inspect,           MRB_SYM(inspect),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_inspect,           MRB_SYM(to_s),           MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_reset,             MRB_SYM(reset),          MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_add_all,           MRB_SYM(add_all), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(set_delete_all,        MRB_SYM(delete_all), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(set_include_all_p,     MRB_SYM_Q(include_all), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(set_include_any_p,     MRB_SYM_Q(include_any), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(set_superset_p,        MRB_SYM_Q(superset), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_superset_p,        MRB_OPSYM(ge), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_proper_superset_p, MRB_SYM_Q(proper_superset), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_proper_superset_p, MRB_OPSYM(gt), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_subset_p,          MRB_SYM_Q(subset), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_subset_p,          MRB_OPSYM(le), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_proper_subset_p,   MRB_SYM_Q(proper_subset), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_proper_subset_p,   MRB_OPSYM(lt), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_intersect_p,       MRB_SYM_Q(intersect), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_disjoint_p,        MRB_SYM_Q(disjoint), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_cmp,               MRB_OPSYM(cmp), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(set_flatten,           MRB_SYM(flatten),        MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(set_flatten_bang,      MRB_SYM_B(flatten),      MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(set_size,              MRB_SYM(size),           MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_size,              MRB_SYM(length),         MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_empty_p,           MRB_SYM_Q(empty),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_clear,             MRB_SYM(clear),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_to_a,              MRB_SYM(to_a),           MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_include_p,         MRB_SYM_Q(include), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_include_p,         MRB_SYM_Q(member), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_include_p,         MRB_OPSYM(eqq), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_add,               MRB_SYM(add), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_add,               MRB_OPSYM(lshift), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_add_p,             MRB_SYM_Q(add), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_delete,            MRB_SYM(delete), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_delete_p,          MRB_SYM_Q(delete), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_init,              MRB_SYM(__init),         MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_core_merge,        MRB_SYM(__merge), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_core_subtract,     MRB_SYM(__subtract), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_core_union,        MRB_SYM(__union), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_core_difference,   MRB_SYM(__difference), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_core_intersection, MRB_SYM(__intersection), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_core_xor,          MRB_SYM(__xor), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_equal,             MRB_OPSYM(eq), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_hash_m,            MRB_SYM(hash),           MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_join,              MRB_SYM(join), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(set_inspect,           MRB_SYM(inspect),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_inspect,           MRB_SYM(to_s),           MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_reset,             MRB_SYM(reset),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_add_all,           MRB_SYM(add_all), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(set_delete_all,        MRB_SYM(delete_all), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(set_include_all_p,     MRB_SYM_Q(include_all), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(set_include_any_p,     MRB_SYM_Q(include_any), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(set_superset_p,        MRB_SYM_Q(superset), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_superset_p,        MRB_OPSYM(ge), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_proper_superset_p, MRB_SYM_Q(proper_superset), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_proper_superset_p, MRB_OPSYM(gt), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_subset_p,          MRB_SYM_Q(subset), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_subset_p,          MRB_OPSYM(le), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_proper_subset_p,   MRB_SYM_Q(proper_subset), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_proper_subset_p,   MRB_OPSYM(lt), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_intersect_p,       MRB_SYM_Q(intersect), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_disjoint_p,        MRB_SYM_Q(disjoint), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_cmp,               MRB_OPSYM(cmp), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(set_flatten,           MRB_SYM(flatten),        MRB_ARGS_NONE())
+  MRB_MT_ENTRY(set_flatten_bang,      MRB_SYM_B(flatten),      MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_set_gem_init(mrb_state *mrb)

@@ -377,14 +377,16 @@ hash_merge(mrb_state *mrb, mrb_value hash)
   return hash;
 }
 
+#define MRB_MT_CLASS Hash
 static const mrb_mt_entry hash_ext_rom_entries[] = {
-  MRB_MT_ENTRY(hash_values_at, MRB_SYM(values_at), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(hash_slice,     MRB_SYM(slice), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(hash_slice_bang, MRB_SYM_B(slice), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(hash_except,    MRB_SYM(except), MRB_ARGS_ANY()),
-  MRB_MT_ENTRY(hash_key,       MRB_SYM(key), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(hash_merge,     MRB_SYM(__merge), MRB_ARGS_ANY()),
+  MRB_MT_ENTRY(hash_values_at, MRB_SYM(values_at), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(hash_slice,     MRB_SYM(slice), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(hash_slice_bang, MRB_SYM_B(slice), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(hash_except,    MRB_SYM(except), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(hash_key,       MRB_SYM(key), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(hash_merge,     MRB_SYM(__merge), MRB_ARGS_ANY())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_hash_ext_gem_init(mrb_state *mrb)

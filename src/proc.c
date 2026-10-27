@@ -566,13 +566,15 @@ mrb_proc_aref_impl(mrb_state *mrb, mrb_value proc, mrb_int argc, const mrb_value
 }
 
 /* ---------------------------*/
+#define MRB_MT_CLASS Proc
 static const mrb_mt_entry proc_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_proc_init_copy, MRB_SYM(initialize_copy), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE),
-  MRB_MT_ENTRY(proc_arity,         MRB_SYM(arity),        MRB_ARGS_NONE()),  /* 15.2.17.4.2 */
-  MRB_MT_ENTRY(proc_eql,           MRB_OPSYM(eq), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(proc_eql,           MRB_SYM_Q(eql), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(proc_hash,          MRB_SYM(hash),         MRB_ARGS_NONE()),  /* 15.2.17.4.2 */
+  MRB_MT_ENTRY(mrb_proc_init_copy, MRB_SYM(initialize_copy), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(proc_arity,         MRB_SYM(arity),        MRB_ARGS_NONE())   /* 15.2.17.4.2 */
+  MRB_MT_ENTRY(proc_eql,           MRB_OPSYM(eq), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(proc_eql,           MRB_SYM_Q(eql), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(proc_hash,          MRB_SYM(hash),         MRB_ARGS_NONE())   /* 15.2.17.4.2 */
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_init_proc(mrb_state *mrb)

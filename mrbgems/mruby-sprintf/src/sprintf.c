@@ -939,9 +939,11 @@ str_mod(mrb_state *mrb, mrb_value self)
 }
 
 /* A ROM entry (not mrb_define_method) so bc2cpp's registration scan attributes String#% to its owner. */
+#define MRB_MT_CLASS String
 static const mrb_mt_entry sprintf_string_rom_entries[] = {
-  MRB_MT_ENTRY(str_mod, MRB_OPSYM(mod), MRB_ARGS_REQ(1)),
+  MRB_MT_ENTRY(str_mod, MRB_OPSYM(mod), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
 
 /*
  *  call-seq:

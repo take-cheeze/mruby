@@ -215,11 +215,13 @@ range_empty_p(mrb_state *mrb, mrb_value range)
   return mrb_bool_value(comp == -2 || comp > 0 || (comp == 0 && excl));
 }
 
+#define MRB_MT_CLASS Range
 static const mrb_mt_entry range_ext_rom_entries[] = {
-  MRB_MT_ENTRY(range_cover,   MRB_SYM_Q(cover), MRB_ARGS_REQ(1)),
-  MRB_MT_ENTRY(range_size,    MRB_SYM(size),          MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(range_empty_p, MRB_SYM_Q(__empty_range), MRB_ARGS_REQ(3)),
+  MRB_MT_ENTRY(range_cover,   MRB_SYM_Q(cover), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(range_size,    MRB_SYM(size),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(range_empty_p, MRB_SYM_Q(__empty_range), MRB_ARGS_REQ(3))
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_range_ext_gem_init(mrb_state* mrb)

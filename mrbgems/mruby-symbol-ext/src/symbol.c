@@ -57,10 +57,12 @@ mrb_sym_length(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(len);
 }
 
+#define MRB_MT_CLASS Symbol
 static const mrb_mt_entry symbol_ext_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_sym_length, MRB_SYM(length), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(mrb_sym_length, MRB_SYM(size), MRB_ARGS_NONE()),
+  MRB_MT_ENTRY(mrb_sym_length, MRB_SYM(length), MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_sym_length, MRB_SYM(size), MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
 void
 mrb_mruby_symbol_ext_gem_init(mrb_state* mrb)
