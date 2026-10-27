@@ -1999,7 +1999,7 @@ mrb_str_empty_p(mrb_state *mrb, mrb_value self)
  *
  * Two strings are equal if the have the same length and content.
  */
-static mrb_value
+mrb_value
 mrb_str_eql(mrb_state *mrb, mrb_value self)
 {
   mrb_value str2 = mrb_get_arg1(mrb);

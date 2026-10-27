@@ -634,8 +634,8 @@ flo_mod(mrb_state *mrb, mrb_value x)
  *     1.eql?(1.0)       #=> false
  *     (1.0).eql?(1.0)   #=> true
  */
-static mrb_value
-num_eql(mrb_state *mrb, mrb_value x)
+mrb_value
+mrb_num_eql_m(mrb_state *mrb, mrb_value x)
 {
   mrb_value y = mrb_get_arg1(mrb);
 
@@ -2334,7 +2334,7 @@ flo_hash(mrb_state *mrb, mrb_value flo)
 static const mrb_mt_entry numeric_rom_entries[] = {
   MRB_MT_ENTRY(num_finite_p,   MRB_SYM_Q(finite), MRB_ARGS_NONE()),
   MRB_MT_ENTRY(num_infinite_p, MRB_SYM_Q(infinite), MRB_ARGS_NONE()),
-  MRB_MT_ENTRY(num_eql,        MRB_SYM_Q(eql), MRB_ARGS_REQ(1)),  /* 15.2.8.3.16 */
+  MRB_MT_ENTRY(mrb_num_eql_m,  MRB_SYM_Q(eql), MRB_ARGS_REQ(1)),  /* 15.2.8.3.16 */
 #ifndef MRB_NO_FLOAT
   MRB_MT_ENTRY(num_fdiv, MRB_SYM(fdiv), MRB_ARGS_REQ(1)),
 #endif

@@ -376,6 +376,100 @@ obj_hash_code(mrb_state *mrb, mrb_value key, struct RHash *h)
   return hash_code;
 }
 
+/*
+ * Array keys: answer `a.eql?(b)` the way the builtin Array#eql? would,
+ * without method dispatch, as long as every eql? it reaches is a builtin
+ * body known here. KEY_EQL_DISPATCH means some element needs Ruby code;
+ * the caller then redoes the whole comparison through mrb_eql, which is
+ * exact because nothing observable ran before the bail-out.
+ */
+#define KEY_EQL_DISPATCH (-1)
+#define KEY_EQL_MAX_DEPTH 8
+
+struct key_eql_pair {
+  mrb_value a, b;
+};
+
+static mrb_func_t
+key_eql_cfunc(mrb_state *mrb, mrb_value v)
+{
+  struct RClass *c = mrb_class(mrb, v);
+  mrb_method_t m = mrb_method_search_vm(mrb, &c, MRB_SYM_Q(eql));
+
+  if (MRB_METHOD_UNDEF_P(m)) return NULL;
+  if (MRB_METHOD_FUNC_P(m)) return MRB_METHOD_FUNC(m);
+  const struct RProc *p = MRB_METHOD_PROC(m);
+  if (MRB_PROC_CFUNC_P(p)) return MRB_PROC_CFUNC(p);
+  return NULL;
+}
+
+static int ary_key_eql(mrb_state *mrb, mrb_value a, mrb_value b,
+                       struct key_eql_pair *pairs, int depth);
+
+/* `a.eql?(b)` for an Array element; mirrors each builtin body it accepts */
+static int
+elem_key_eql(mrb_state *mrb, mrb_value a, mrb_value b,
+             struct key_eql_pair *pairs, int depth)
+{
+  mrb_func_t f = key_eql_cfunc(mrb, a);
+
+  if (f == mrb_obj_equal_m) {
+    return mrb_obj_equal(mrb, a, b);
+  }
+  if (f == mrb_num_eql_m) {     /* see mrb_num_eql_m */
+    switch (mrb_type(a)) {
+#ifdef MRB_USE_BIGINT
+    case MRB_TT_BIGINT:
+      return mrb_bint_cmp(mrb, a, b) == 0;
+#endif
+#ifndef MRB_NO_FLOAT
+    case MRB_TT_FLOAT:
+      return mrb_float_p(b) && mrb_float(a) == mrb_float(b);
+#endif
+    case MRB_TT_INTEGER:
+      return mrb_integer_p(b) && mrb_integer(a) == mrb_integer(b);
+    default:                    /* mrb_equal may dispatch == */
+      return KEY_EQL_DISPATCH;
+    }
+  }
+  if (f == mrb_str_eql) {
+    return mrb_str_equal(mrb, a, b);
+  }
+  if (f == mrb_ary_eql) {
+    return ary_key_eql(mrb, a, b, pairs, depth);
+  }
+  return KEY_EQL_DISPATCH;
+}
+
+/* the body of mrb_ary_eql; `pairs` holds the arrays being compared above */
+static int
+ary_key_eql(mrb_state *mrb, mrb_value a, mrb_value b,
+            struct key_eql_pair *pairs, int depth)
+{
+  if (mrb_obj_equal(mrb, a, b)) return TRUE;
+  if (!mrb_array_p(b)) return FALSE;
+  mrb_int len = RARRAY_LEN(a);
+  if (len != RARRAY_LEN(b)) return FALSE;
+
+  /* A pair repeating along the path is a recursive structure. The builtin
+     answers false there too: its recursion check (or a mismatch first). */
+  for (int i = 0; i < depth; i++) {
+    if (mrb_obj_eq(mrb, pairs[i].a, a) && mrb_obj_eq(mrb, pairs[i].b, b))
+      return FALSE;
+  }
+  if (depth == KEY_EQL_MAX_DEPTH) return KEY_EQL_DISPATCH;
+  pairs[depth].a = a;
+  pairs[depth].b = b;
+
+  const mrb_value *pa = RARRAY_PTR(a);
+  const mrb_value *pb = RARRAY_PTR(b);
+  for (mrb_int i = 0; i < len; i++) {
+    int r = elem_key_eql(mrb, pa[i], pb[i], pairs, depth + 1);
+    if (r != TRUE) return r;
+  }
+  return TRUE;
+}
+
 static mrb_bool
 obj_eql(mrb_state *mrb, mrb_value a, mrb_value b, struct RHash *h)
 {
@@ -398,6 +492,15 @@ obj_eql(mrb_state *mrb, mrb_value a, mrb_value b, struct RHash *h)
     if (!mrb_float_p(b)) return FALSE;
     return mrb_float(a) == mrb_float(b);
 #endif
+
+  case MRB_TT_ARRAY:
+    if (key_eql_cfunc(mrb, a) == mrb_ary_eql) {
+      struct key_eql_pair pairs[KEY_EQL_MAX_DEPTH];
+      int r = ary_key_eql(mrb, a, b, pairs, 0);
+      if (r != KEY_EQL_DISPATCH) return (mrb_bool)r;
+    }
+    H_CHECK_MODIFIED(mrb, h) {eql = mrb_eql(mrb, a, b);}
+    return eql;
 
   default:
     H_CHECK_MODIFIED(mrb, h) {eql = mrb_eql(mrb, a, b);}

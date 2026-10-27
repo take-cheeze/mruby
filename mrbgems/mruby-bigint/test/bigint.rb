@@ -194,3 +194,11 @@ assert 'Bigint ==' do
     assert_false((2**64) == Complex(2**64, 1))
   end
 end
+
+assert 'Bigint in Array hash keys' do
+  h = {[2**64, 1] => :big, [2**40] => :mid}
+  assert_equal :big, h[[2**64, 1]]
+  assert_equal :mid, h[[2**40]]
+  assert_nil h[[2**64 + 1, 1]]
+  assert_nil h[[2**64, 2]]
+end

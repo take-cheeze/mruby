@@ -974,3 +974,104 @@ assert('test value omission') do
   y = 2
   assert_equal({x:1, y:2}, {x:, y:})
 end
+
+# Array keys take a dispatch-free Array#eql? path in hash.c; each lookup
+# must answer what `key.eql?(stored)` answers.
+assert('Hash with Array keys') do
+  small = {}
+  large = {}
+  50.times { |i| large[[i, i + 1]] = i }
+  [small, large].each do |h|
+    h[[1, 2]] = :a
+    h[[[1, :s], "str", nil, true]] = :b
+    h[[1.0, 2]] = :f
+    h[[]] = :e
+
+    assert_equal(:a, h[[1, 2]])
+    assert_equal(:b, h[[[1, :s], "str", nil, true]])
+    assert_equal(:f, h[[1.0, 2]])
+    assert_equal(:e, h[[]])
+    assert_nil(h[[1, 2.0]])               # 2.eql?(2.0) is false
+    assert_nil(h[[2, 1]])
+    assert_nil(h[[1, 2, 3]])
+    assert_nil(h[[[1, :s], :str, nil, true]])
+    assert_nil(h[[[1, :s], "str", nil, false]])
+    assert_true(h.key?([1, 2]))
+    h.delete([1, 2])
+    assert_false(h.key?([1, 2]))
+  end
+  assert_equal(7, large[[7, 8]])
+
+  nan = 0.0 / 0.0
+  k = [nan]
+  h = {k => 1}
+  assert_equal(1, h[k])                   # the same key object
+  assert_equal([nan].eql?([nan]), h.key?([nan]))
+
+  # nested deeper than the C path follows, and an Array subclass element
+  deep = [1]
+  10.times { deep = [deep] }
+  deep2 = [1]
+  10.times { deep2 = [deep2] }
+  sub = Class.new(Array)
+  s = sub.new
+  s << 3
+  h = {deep => :deep, [s] => :sub}
+  assert_equal(:deep, h[deep2])
+  assert_equal(:sub, h[[[3]]])
+  assert_equal([s].eql?([[3]]), h.key?([[3]]))
+end
+
+assert('Hash with recursive Array keys') do
+  a = [1]; a << a
+  b = [1]; b << b
+  h = {a => :rec}
+  assert_equal(:rec, h[a])
+  assert_equal(b.eql?(a), h.key?(b))
+  assert_equal(:rec, h[[1, a]])           # its second element is a itself
+  assert_equal([1, b].eql?(a), h.key?([1, b]))
+end
+
+assert('Hash with Array keys honours a redefined eql?') do
+  # an element whose eql? is Ruby code
+  loose = Class.new(String) do
+    def eql?(other) = true
+    def hash = "x".hash
+  end
+  h = {["x"] => :x}
+  assert_equal(:x, h[[loose.new("y")]])
+
+  # an Array subclass with its own eql?
+  any = Class.new(Array) do
+    def eql?(other) = true
+    def hash = [1].hash
+  end
+  k = any.new
+  k << 9
+  h = {[1] => :one}
+  assert_equal(:one, h[k])
+  assert_equal(:one, {[[1]] => :one}[[k]])
+
+  # a redefined Integer#eql?
+  $hash_ary_key_eql_calls = 0
+  class Integer
+    alias __hash_ary_key_eql eql?
+    def eql?(other)
+      $hash_ary_key_eql_calls += 1
+      __hash_ary_key_eql(other)
+    end
+  end
+  begin
+    h = {[1, 2] => :a}
+    assert_equal(:a, h[[1, 2]])
+    assert_nil(h[[1, 2.0]])
+    assert_true($hash_ary_key_eql_calls >= 3)
+  ensure
+    class Integer
+      alias eql? __hash_ary_key_eql      # the builtin body again
+    end
+  end
+  $hash_ary_key_eql_calls = 0
+  assert_equal(:a, {[1, 2] => :a}[[1, 2]])
+  assert_equal(0, $hash_ary_key_eql_calls)
+end

@@ -1991,7 +1991,7 @@ mrb_ary_eq(mrb_state *mrb, mrb_value ary1)
  *  or are both arrays with the same content.
  *
  */
-static mrb_value
+mrb_value
 mrb_ary_eql(mrb_state *mrb, mrb_value ary1)
 {
   mrb_value ary2 = mrb_get_arg1(mrb);
