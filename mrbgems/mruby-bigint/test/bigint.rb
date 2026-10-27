@@ -155,3 +155,42 @@ assert 'Bigint abs' do
   assert_equal 36893488147419103232, n.abs
   assert_equal 36893488147419103232, (-n).abs
 end
+
+assert 'Bigint ==' do
+  # the receiver is a bigint; its low bits must not decide equality
+  assert_false((1 << 64) == 0)
+  assert_false((2**64 + 5) == 5)
+  assert_false((-(2**64) - 5) == -5)
+  assert_true((2**64 + 5) == 2**64 + 5)
+  assert_false((2**64 + 5) == 2**64 + 6)
+  assert_true((2**64) == 2.0**64)
+  assert_false((2**64) == 5.0)
+  assert_false((2**64) == Float::NAN)
+  assert_false((2**64) == "18446744073709551616")
+  assert_false((2**64) == nil)
+  # bigints on a 32-bit mrb_int, plain Integers on a 64-bit one
+  assert_false((1 << 32) == 0)
+  assert_false((2**40 + 5) == 5)
+  assert_true((2**40 + 5) == 2**40 + 5)
+  assert_true((2**40) == 2.0**40)
+  assert_false((2**40) == 2.0**40 + 1)
+  # the comparison is symmetric
+  assert_false(0 == (1 << 64))
+  assert_false(5 == (2**64 + 5))
+  assert_true(2.0**64 == (2**64))
+  assert_true((2**64 + 5).eql?(2**64 + 5))
+  assert_false((2**64 + 5).eql?(5))
+  assert_false((2**64 + 5) != 2**64 + 5)
+  assert_true((2**64 + 5) != 5)
+  # Array#== dispatches the element ==
+  assert_false([1 << 64] == [0])
+  assert_true([1 << 64] == [2**64])
+  if Object.const_defined?(:Rational)
+    assert_true((2**64) == Rational(2**64, 1))
+    assert_false((2**64) == Rational(2**64 + 1, 2))
+  end
+  if Object.const_defined?(:Complex)
+    assert_true((2**64) == Complex(2**64, 0))
+    assert_false((2**64) == Complex(2**64, 1))
+  end
+end

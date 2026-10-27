@@ -681,6 +681,10 @@ flo_eq(mrb_state *mrb, mrb_value x)
     return mrb_bool_value(mrb_float(x) == (mrb_float)mrb_integer(y));
   case MRB_TT_FLOAT:
     return mrb_bool_value(mrb_float(x) == mrb_float(y));
+#ifdef MRB_USE_BIGINT
+  case MRB_TT_BIGINT:
+    return mrb_bool_value(mrb_bint_cmp(mrb, y, x) == 0);
+#endif
 #ifdef MRB_USE_RATIONAL
   case MRB_TT_RATIONAL:
     return mrb_bool_value(mrb_float(x) == mrb_as_float(mrb, y));
@@ -1315,6 +1319,21 @@ int_equal(mrb_state *mrb, mrb_value x)
 {
   mrb_value y = mrb_get_arg1(mrb);
 
+#ifdef MRB_USE_BIGINT
+  /* Integer#== is also a bigint's ==; mrb_integer() on a bigint reads garbage */
+  if (mrb_bigint_p(x)) {
+    switch (mrb_type(y)) {
+    case MRB_TT_INTEGER:
+    case MRB_TT_BIGINT:
+#ifndef MRB_NO_FLOAT
+    case MRB_TT_FLOAT:
+#endif
+      return mrb_bool_value(mrb_bint_cmp(mrb, x, y) == 0);
+    default:
+      break;
+    }
+  }
+#endif
   switch (mrb_type(y)) {
   case MRB_TT_INTEGER:
     return mrb_bool_value(mrb_integer(x) == mrb_integer(y));
