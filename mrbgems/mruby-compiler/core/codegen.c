@@ -1453,7 +1453,9 @@ gen_addsub(codegen_scope *s, uint8_t op, uint16_t dst)
       /* not integer immediate */
       if (op == OP_ADD && data.insn == OP_STRING) {
         struct mrb_insn_data data0 = mrb_decode_insn(mrb_prev_pc(s, data.addr));
-        if (data0.insn == OP_STRING) {
+        /* A label at either literal means a jump lands between the two loads (a ternary's join, say), so the
+           concatenation must stay an OP_ADD on every path: `(c ? "A" : "a") + "b"` lost its `+ "b"` on the then path. */
+        if (data0.insn == OP_STRING && addr_pc(s, data.addr) != s->lastlabel && addr_pc(s, data0.addr) != s->lastlabel) {
           merge_op_string(s, dst, data0.b, data.b, data0.addr);
           return;
         }
