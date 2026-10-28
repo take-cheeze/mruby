@@ -19,32 +19,31 @@ mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, c
 mrb_value mrb_proc_aref_impl(mrb_state *mrb, mrb_value proc, mrb_int argc, const mrb_value *argv);
 MRB_END_DECL
 
-static const mrb_code call_iseq[] = {
-  OP_CALL,
-};
+/*
+ * Proc#call / Proc#[] / yield / ===: cfunc method that tail-calls the receiver
+ * exactly like OP_CALL did (arguments, keywords and block stay in place; the
+ * Proc#call frame is replaced by the proc's frame).
+ */
+static mrb_value
+proc_call(mrb_state *mrb, mrb_value self)
+{
+  mrb_callinfo *ci = mrb->c->ci;
+  const struct RProc *p = mrb_proc_ptr(self);
 
-static const mrb_irep call_irep = {
-  0,                                   /* nlocals */
-  2,                                   /* nregs */
-  0,                                   /* clen */
-  MRB_ISEQ_NO_FREE | MRB_IREP_NO_FREE, /* flags */
-  call_iseq,                           /* iseq */
-  NULL,                                /* pool */
-  NULL,                                /* syms */
-  NULL,                                /* reps */
-  MRB_IREP_DEBUG_NULL_FIELDS           /* lv, debug_info */
-  1,                                   /* ilen */
-  0,                                   /* plen */
-  0,                                   /* slen */
-  1,                                   /* rlen */
-  0,                                   /* refcnt */
-};
-
-mrb_alignas(8)
-static const struct RProc call_proc = {
-  NULL, MRB_TT_PROC, MRB_GC_RED, MRB_OBJ_IS_FROZEN, MRB_PROC_SCOPE | MRB_PROC_STRICT,
-  { &call_irep }, NULL, { NULL }
-};
+  if (MRB_PROC_ALIAS_P(p)) {
+    ci->mid = p->body.mid;
+    p = p->upper;
+  }
+  if (MRB_PROC_ENV_P(p)) {
+    ci->mid = MRB_PROC_ENV(p)->mid;
+  }
+  ci->u.target_class = MRB_PROC_TARGET_CLASS(p);
+  if (!MRB_PROC_CFUNC_P(p) && !p->body.irep) {
+    return mrb_nil_value();
+  }
+  /* cfunc procs receive the proc itself; bytecode procs their captured self */
+  return mrb_exec_irep(mrb, MRB_PROC_ENV_P(p) ? MRB_PROC_ENV(p)->stack[0] : self, p);
+}
 
 struct RProc*
 mrb_proc_new(mrb_state *mrb, const mrb_irep *irep)
@@ -553,7 +552,7 @@ mrb_proc_merge_lvar(mrb_state *mrb, mrb_irep *irep, struct REnv *env, int num, c
 }
 
 /*
- * proc[args]: what mrb_funcall(proc, "[]", ...) runs once `[]` is found on Proc (call_proc), without the lookup.
+ * proc[args]: what mrb_funcall(proc, "[]", ...) runs once `[]` is found on Proc (proc_call), without the lookup.
  * For bc2cpp-generated code (ADR 0365); the caller proves the receiver's `[]` is Proc's.
  */
 mrb_value
@@ -561,7 +560,7 @@ mrb_proc_aref_impl(mrb_state *mrb, mrb_value proc, mrb_int argc, const mrb_value
 {
   mrb_method_t m;
 
-  MRB_METHOD_FROM_PROC(m, &call_proc);
+  MRB_METHOD_FROM_FUNC(m, proc_call);
   return mrb_funcall_with_method(mrb, proc, MRB_OPSYM(aref), &m, mrb->proc_class, argc, argv, mrb_nil_value());
 }
 
@@ -572,6 +571,8 @@ static const mrb_mt_entry proc_rom_entries[] = {
   MRB_MT_ENTRY(proc_arity,         MRB_SYM(arity),        MRB_ARGS_NONE())   /* 15.2.17.4.2 */
   MRB_MT_ENTRY(proc_eql,           MRB_OPSYM(eq), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(proc_eql,           MRB_SYM_Q(eql), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(proc_call,          MRB_SYM(call),         MRB_ARGS_ANY()|MRB_ARGS_BLOCK()) /* 15.2.17.4.3 */
+  MRB_MT_ENTRY(proc_call,          MRB_OPSYM(aref),       MRB_ARGS_ANY()|MRB_ARGS_BLOCK()) /* 15.2.17.4.1 */
   MRB_MT_ENTRY(proc_hash,          MRB_SYM(hash),         MRB_ARGS_NONE())   /* 15.2.17.4.2 */
 };
 #undef MRB_MT_CLASS
@@ -579,17 +580,12 @@ static const mrb_mt_entry proc_rom_entries[] = {
 void
 mrb_init_proc(mrb_state *mrb)
 {
-  mrb_method_t m;
   struct RClass *pc = mrb->proc_class = mrb_define_class_id(mrb, MRB_SYM(Proc), mrb->object_class); /* 15.2.17 */
 
   MRB_SET_INSTANCE_TT(pc, MRB_TT_PROC);
   MRB_UNDEF_ALLOCATOR(pc);
   mrb_define_class_method_id(mrb, pc, MRB_SYM(new), mrb_proc_s_new, MRB_ARGS_NONE()|MRB_ARGS_BLOCK());
   MRB_MT_INIT_ROM(mrb, pc, proc_rom_entries);
-
-  MRB_METHOD_FROM_PROC(m, &call_proc);
-  mrb_define_method_raw(mrb, pc, MRB_SYM(call), m);   /* 15.2.17.4.3 */
-  mrb_define_method_raw(mrb, pc, MRB_OPSYM(aref), m); /* 15.2.17.4.1 */
 
   mrb_define_private_method_id(mrb, mrb->kernel_module, MRB_SYM(lambda), proc_lambda, MRB_ARGS_NONE()|MRB_ARGS_BLOCK()); /* 15.3.1.3.27 */
 }

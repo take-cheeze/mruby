@@ -4292,33 +4292,20 @@ init_class_new(mrb_state *mrb, struct RClass *cls)
   mrb_define_method_raw(mrb, cls, MRB_SYM(new), m);
 }
 
-static const mrb_code neq_iseq[] = {
-  OP_ENTER, 0x4, 0, 0,       // 000 OP_ENTER     1:0:0:0:0:0:0
-  OP_EQ, 0,                  // 004 OP_EQ        R0  (R1)
-  OP_JMPNOT, 0, 0, 5,        // 006 OP_JMPNOT    R0  015
-  OP_LOADFALSE, 0,               // 010 OP_LOADFALSE     R0  (false)
-  OP_JMP, 0, 2,              // 012 OP_JMP       017
-  OP_LOADTRUE, 0,               // 015 OP_LOADTRUE     R0  (true)
-  OP_RETURN, 0               // 017 OP_RETURN    R0
-};
-
-static const mrb_irep neq_irep = {
-  4, 6, 0, MRB_IREP_STATIC,
-  neq_iseq, NULL, NULL, NULL, MRB_IREP_DEBUG_NULL_FIELDS
-  sizeof(neq_iseq), 0, 2, 0, 0,
-};
-
-mrb_alignas(8)
-static const struct RProc neq_proc = {
-  NULL, MRB_TT_PROC, MRB_GC_RED, MRB_OBJ_IS_FROZEN, MRB_PROC_SCOPE | MRB_PROC_STRICT,
-  { &neq_irep }, NULL, { NULL }
-};
+/* BasicObject#!=: send `==` (honours a user-defined one) and negate. */
+static mrb_value
+bob_neq(mrb_state *mrb, mrb_value self)
+{
+  mrb_value other = mrb_get_arg1(mrb);
+  return mrb_bool_value(!mrb_equal(mrb, self, other));
+}
 
 /* ---------------------------*/
 #define MRB_MT_CLASS BasicObject
 static const mrb_mt_entry bob_rom_entries[] = {
   MRB_MT_ENTRY(mrb_obj_equal_m,       MRB_OPSYM(eq),                       MRB_ARGS_REQ(1))                                    /* 15.3.1.3.1  */
   MRB_MT_ENTRY(mrb_bob_not,           MRB_OPSYM(not),                      MRB_ARGS_NONE())
+  MRB_MT_ENTRY(bob_neq,               MRB_OPSYM(neq),                      MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_obj_id_m,          MRB_SYM(__id__),                     MRB_ARGS_NONE())                                    /* 15.3.1.3.4  */
   MRB_MT_ENTRY(mrb_f_send,            MRB_SYM(__send__),                   MRB_ARGS_REQ(1)|MRB_ARGS_REST()|MRB_ARGS_BLOCK())   /* 15.3.1.3.5  */
   MRB_MT_ENTRY(mrb_obj_equal_m,       MRB_SYM_Q(equal),                    MRB_ARGS_REQ(1))                                    /* 15.3.1.3.11 */
@@ -4413,10 +4400,6 @@ mrb_init_class(mrb_state *mrb)
   mrb_class_name_class(mrb, NULL, cls, MRB_SYM(Class));  /* 15.2.3 */
 
   MRB_MT_INIT_ROM(mrb, bob, bob_rom_entries);
-
-  mrb_method_t m;
-  MRB_METHOD_FROM_PROC(m, &neq_proc);
-  mrb_define_method_raw(mrb, bob, MRB_OPSYM(neq), m);
 
   mrb_define_class_method_id(mrb, cls, MRB_SYM(new),                       mrb_class_new_class,      MRB_ARGS_OPT(1)|MRB_ARGS_BLOCK());
   MRB_MT_INIT_ROM(mrb, cls, cls_rom_entries);
