@@ -116,6 +116,13 @@ assert('mrb_proc_new_cfunc_with_env') do
   assert_equal :mruby, t.mruby
 end
 
+assert('Proc#call on a cfunc proc with env passes the proc as self') do
+  pr = ProcExtTest.self_proc
+  assert_same pr, pr.call
+  assert_same pr, pr[]
+  assert_same pr, pr.()
+end
+
 assert('mrb_cfunc_env_get') do
   ProcExtTest.mrb_cfunc_env_get :get_int, [0, 1, 2]
 

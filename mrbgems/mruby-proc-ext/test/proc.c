@@ -51,6 +51,20 @@ cfunc_without_env(mrb_state *mrb, mrb_value self)
   return mrb_cfunc_env_get(mrb, 0);
 }
 
+static mrb_value
+return_self(mrb_state *mrb, mrb_value self)
+{
+  return self;
+}
+
+/* a cfunc proc with an env: called through Proc#call it must receive the proc as self (as OP_CALL did) */
+static mrb_value
+self_proc(mrb_state *mrb, mrb_value self)
+{
+  mrb_value v = mrb_symbol_value(mrb_intern_lit(mrb, "env"));
+  return mrb_obj_value(mrb_proc_new_cfunc_with_env(mrb, return_self, 1, &v));
+}
+
 void mrb_mruby_proc_ext_gem_test(mrb_state *mrb)
 {
   struct RClass *cls;
@@ -58,5 +72,6 @@ void mrb_mruby_proc_ext_gem_test(mrb_state *mrb)
   cls = mrb_define_class(mrb, "ProcExtTest", mrb->object_class);
   mrb_define_class_method(mrb, cls, "mrb_proc_new_cfunc_with_env", proc_new_cfunc_with_env, MRB_ARGS_REQ(1));
   mrb_define_class_method(mrb, cls, "mrb_cfunc_env_get", cfunc_env_get, MRB_ARGS_REQ(2));
+  mrb_define_class_method(mrb, cls, "self_proc", self_proc, MRB_ARGS_NONE());
   mrb_define_method(mrb, cls, "cfunc_without_env", cfunc_without_env, MRB_ARGS_NONE());
 }

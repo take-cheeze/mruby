@@ -37,12 +37,13 @@ proc_call(mrb_state *mrb, mrb_value self)
   if (MRB_PROC_ENV_P(p)) {
     ci->mid = MRB_PROC_ENV(p)->mid;
   }
-  ci->u.target_class = MRB_PROC_TARGET_CLASS(p);
+  /* a NULL target class would read as a context-modifying frame in the OP_SEND epilogue */
+  if (MRB_PROC_TARGET_CLASS(p)) ci->u.target_class = MRB_PROC_TARGET_CLASS(p);
   if (!MRB_PROC_CFUNC_P(p) && !p->body.irep) {
     return mrb_nil_value();
   }
   /* cfunc procs receive the proc itself; bytecode procs their captured self */
-  return mrb_exec_irep(mrb, MRB_PROC_ENV_P(p) ? MRB_PROC_ENV(p)->stack[0] : self, p);
+  return mrb_exec_irep(mrb, (MRB_PROC_ENV_P(p) && !MRB_PROC_CFUNC_P(p)) ? MRB_PROC_ENV(p)->stack[0] : self, p);
 }
 
 struct RProc*
