@@ -50,3 +50,9 @@ assert('Symbol#to_proc uses method_missing') do
   assert_equal [:zork, [1]], :zork.to_proc.call(o, 1)
   assert_raise(NoMethodError) { [1].each(&:no_such_method) }
 end
+
+assert('Symbol#to_proc sending :call to a cfunc proc') do
+  # funcall of Proc#call whose body is a cfunc must return to C, not resume a bytecode frame
+  assert_equal "A", :call.to_proc.call(:upcase.to_proc, "a")
+  assert_equal [1, 2], [lambda { 1 }, lambda { 2 }].map(&:call)
+end

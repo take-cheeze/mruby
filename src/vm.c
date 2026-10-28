@@ -2464,10 +2464,11 @@ RETRY_TRY_BLOCK:
         recv = MRB_PROC_CFUNC(p)(mrb, recv);
         mrb_gc_arena_shrink(mrb, ai);
         if (mrb_unlikely(mrb->exc)) goto L_RAISE;
-        /* pop stackpos */
-        ci = cipop(mrb);
-        ci[1].stack[0] = recv;
-        irep = ci->proc->body.irep;
+        /* return through the common path: this frame may have been entered from C (funcall of Proc#call), where the
+           caller is not a bytecode frame to resume */
+        ci->stack[0] = recv;
+        a = 0;
+        goto L_OP_RETURN_BODY;
       }
       else {
         /* setup environment for calling method */
