@@ -4,30 +4,6 @@ class File < IO
 
   #
   # call-seq:
-  #   File.new(filename, mode="r")            -> file
-  #   File.new(filename [, mode [, perm]])    -> file
-  #   File.new(fd [, mode])                   -> file
-  #
-  # Opens the file named by filename according to the given mode and returns
-  # a new File object. If a file descriptor is given instead of a filename,
-  # the new File object will be associated with that descriptor.
-  #
-  #   f = File.new("testfile", "r")
-  #   f = File.new("newfile",  "w+")
-  #   f = File.new("tmpfile",  "a")
-  #
-  def initialize(fd_or_path, mode = "r", perm = 0666)
-    if fd_or_path.kind_of? Integer
-      super(fd_or_path, mode)
-    else
-      @path = fd_or_path
-      fd = IO.sysopen(@path, mode, perm)
-      super(fd, mode)
-    end
-  end
-
-  #
-  # call-seq:
   #   file.atime    -> time
   #
   # Returns the last access time for file, or epoch if the platform

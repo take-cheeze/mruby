@@ -9,8 +9,14 @@
 #include <mruby/string.h>
 #include <mruby/io.h>
 #include <mruby/error.h>
+#include <mruby/variable.h>
 #include <mruby/internal.h>
 #include "io_hal.h"
+
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+MRB_END_DECL
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1128,9 +1134,48 @@ mrb_file_join(mrb_state *mrb, mrb_value klass)
   return result;
 }
 
+/*
+ * File#initialize(fd_or_path, mode = "r", perm = 0666): native, so File.new and File.open run no bytecode. It was
+ * mrblib/file.rb's
+ *   if fd_or_path.kind_of? Integer then super(fd_or_path, mode)
+ *   else @path = fd_or_path; super(IO.sysopen(@path, mode, perm), mode) end
+ * `super` is IO#initialize looked up from File's superclass, called with the block this call got (as an implicit
+ * super passes it, which IO#initialize warns about).
+ */
+static mrb_value
+mrb_file_init(mrb_state *mrb, mrb_value self)
+{
+  mrb_value path, mode = mrb_nil_value(), perm = mrb_nil_value(), blk;
+  mrb_bool mode_p, perm_p;
+
+  mrb_get_args(mrb, "o|o?o?&", &path, &mode, &mode_p, &perm, &perm_p, &blk);
+  if (!mode_p) mode = mrb_str_new_lit(mrb, "r");
+  if (!perm_p) perm = mrb_fixnum_value(0666);
+
+  mrb_value args[2];
+  if (mrb_obj_is_kind_of(mrb, path, mrb->integer_class)) {
+    args[0] = path;
+  }
+  else {
+    mrb_value sysopen_args[3];
+
+    mrb_iv_set(mrb, self, MRB_IVSYM(path), path);
+    sysopen_args[0] = path;
+    sysopen_args[1] = mode;
+    sysopen_args[2] = perm;
+    args[0] = mrb_funcall_argv(mrb, mrb_obj_value(mrb_class_get_id(mrb, MRB_SYM(IO))), MRB_SYM(sysopen), 3, sysopen_args);
+  }
+  args[1] = mode;
+
+  struct RClass *owner = mrb_class_get_id(mrb, MRB_SYM(File))->super;
+  mrb_method_t m = mrb_method_search_vm(mrb, &owner, MRB_SYM(initialize));
+  return mrb_funcall_with_method(mrb, self, MRB_SYM(initialize), &m, owner, 2, args, blk);
+}
+
 /* ---------------------------*/
 #define MRB_MT_CLASS File
 static const mrb_mt_entry file_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_file_init,     MRB_SYM(initialize), MRB_ARGS_ARG(1,2) | MRB_ARGS_BLOCK() | MRB_MT_PRIVATE)
   MRB_MT_ENTRY(mrb_file_flock,    MRB_SYM(flock), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_file_atime,    MRB_SYM(_atime), MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_file_ctime,    MRB_SYM(_ctime), MRB_ARGS_NONE())

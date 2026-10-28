@@ -28,6 +28,43 @@ assert('File#initialize', '15.2.21.4.1') do
   end
 end
 
+assert('File#initialize forms') do
+  # a path (mode defaults to "r"), a path with a mode and a permission, and a file descriptor
+  io = File.new($mrbtest_io_rfname)
+  assert_equal $mrbtest_io_msg, io.read
+  assert_equal $mrbtest_io_rfname, io.path
+  io.close
+
+  fd = IO.sysopen($mrbtest_io_rfname, "r")
+  io = File.new(fd, "r")
+  assert_equal $mrbtest_io_msg, io.read
+  assert_nil io.path
+  io.close
+
+  io = File.new($mrbtest_io_rfname, "r", 0644)
+  assert_equal $mrbtest_io_msg, io.read
+  io.close
+
+  assert_raise(ArgumentError) { File.new }
+  assert_raise(ArgumentError) { File.new($mrbtest_io_rfname, "r", 0644, 1) }
+  assert_raise(NoMethodError) { File.new($mrbtest_io_rfname).initialize($mrbtest_io_rfname) }
+end
+
+assert('File#initialize is reached through super') do
+  sub = Class.new(File) do
+    attr_reader :tag
+    def initialize(path, tag)
+      super(path)
+      @tag = tag
+    end
+  end
+  io = sub.new($mrbtest_io_rfname, :t)
+  assert_equal :t, io.tag
+  assert_equal $mrbtest_io_msg, io.read
+  assert_equal $mrbtest_io_rfname, io.path
+  io.close
+end
+
 assert('File#path', '15.2.21.4.2') do
   io = File.open($mrbtest_io_rfname, "r")
   assert_equal $mrbtest_io_msg, io.read
