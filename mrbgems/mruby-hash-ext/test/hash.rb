@@ -315,3 +315,25 @@ assert("Hash#except") do
   assert_equal({:a=>100}, h.except(:b, :c, :d))
   assert_equal(h, h.except)
 end
+
+assert("Hash#to_proc") do
+  h = {a: 1, "b" => 2}
+  pr = h.to_proc
+  assert_kind_of Proc, pr
+  assert_true pr.lambda? if pr.respond_to?(:lambda?)  # mruby-proc-ext
+  assert_equal 1, pr.call(:a)
+  assert_equal 2, pr.("b")
+  assert_nil pr[:none]
+  assert_equal [1, nil, 2], [:a, :c, "b"].map(&h)
+  # a lambda: exactly one argument
+  assert_raise(ArgumentError) { pr.call }
+  assert_raise(ArgumentError) { pr.call(:a, :b) }
+  # the proc reads the Hash when called
+  h[:c] = 3
+  assert_equal 3, pr.call(:c)
+  # the default value and a subclass's [] apply
+  d = Hash.new { |_, k| k.to_s }
+  assert_equal "zz", d.to_proc.call(:zz)
+  sub = Class.new(Hash) { def [](k); "sub#{k}"; end }.new
+  assert_equal "sub1", sub.to_proc.call(1)
+end

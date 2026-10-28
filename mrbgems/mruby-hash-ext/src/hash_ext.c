@@ -8,6 +8,7 @@
 #include <mruby/array.h>
 #include <mruby/hash.h>
 #include <mruby/class.h>
+#include <mruby/proc.h>
 #include <mruby/internal.h>
 
 /* Hash.[] body, which reads no argument from the call frame; called by bc2cpp-generated code (ADR 0365). */
@@ -377,6 +378,30 @@ hash_merge(mrb_state *mrb, mrb_value hash)
   return hash;
 }
 
+/*
+ * Hash#to_proc: a native lambda (no VM entry, callable from compiled code and
+ * natives alike) that reads the Hash with `[]`, as the former `->x{self[x]}` did:
+ * a subclass's `[]` and the default value or proc apply. The Hash is in the
+ * proc's env; a cfunc proc gets the proc as self.
+ */
+static mrb_value
+hash_proc_call(mrb_state *mrb, mrb_value self)
+{
+  mrb_value hash = mrb_proc_cfunc_env_get(mrb, 0);
+  mrb_value key;
+
+  mrb_get_args(mrb, "o", &key);   /* a lambda: exactly one argument */
+  return mrb_funcall_argv(mrb, hash, MRB_OPSYM(aref), 1, &key);
+}
+
+static mrb_value
+hash_to_proc(mrb_state *mrb, mrb_value self)
+{
+  struct RProc *p = mrb_proc_new_cfunc_with_env(mrb, hash_proc_call, 1, &self);
+  p->flags |= MRB_PROC_STRICT;  /* lambda? */
+  return mrb_obj_value(p);
+}
+
 #define MRB_MT_CLASS Hash
 static const mrb_mt_entry hash_ext_rom_entries[] = {
   MRB_MT_ENTRY(hash_values_at, MRB_SYM(values_at), MRB_ARGS_ANY())
@@ -385,6 +410,7 @@ static const mrb_mt_entry hash_ext_rom_entries[] = {
   MRB_MT_ENTRY(hash_except,    MRB_SYM(except), MRB_ARGS_ANY())
   MRB_MT_ENTRY(hash_key,       MRB_SYM(key), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(hash_merge,     MRB_SYM(__merge), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(hash_to_proc,   MRB_SYM(to_proc), MRB_ARGS_NONE())
 };
 #undef MRB_MT_CLASS
 
