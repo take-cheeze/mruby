@@ -158,42 +158,6 @@ module Enumerable
   end
 
   ##
-  # Call the given block for each element
-  # which is yield by `each`. Return value
-  # is the sum of all block values. Pass
-  # to each block the current sum and the
-  # current element.
-  #
-  # ISO 15.3.2.2.11
-  def inject(*args, &block)
-    raise ArgumentError, "too many arguments" if args.size > 2
-    sym = nil
-    if Symbol === args[-1]
-      sym = args[-1]
-      args.pop
-    end
-    if args.empty?
-      flag = true  # no initial argument
-      result = nil
-    else
-      flag = false
-      result = args[0]
-    end
-    self.each {|*val|
-      val = val.__svalue
-      if flag
-        # push first element as initial
-        flag = false
-        result = val
-      else
-        result = sym ? result.__send__(sym, val) : block.call(result, val)
-      end
-    }
-    result
-  end
-  alias reduce inject
-
-  ##
   # Alias for collect
   #
   # ISO 15.3.2.2.12

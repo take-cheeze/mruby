@@ -85,6 +85,33 @@ assert('Enumerable#inject', '15.3.2.2.11') do
   assert_equal 22, [1,2,3,4,5,6].inject(1) {|s, n| s + n}
 end
 
+assert('Enumerable#inject native (symbol, reduce, edge cases)') do
+  assert_equal 21, [1,2,3,4,5,6].inject(:+)
+  assert_equal 22, [1,2,3,4,5,6].inject(1, :+)
+  assert_equal 21, [1,2,3,4,5,6].reduce(:+)
+  assert_equal 22, [1,2,3,4,5,6].reduce(1) {|s, n| s + n}
+  assert_nil [].inject(:+)
+  assert_nil [].inject {|s, n| s + n}
+  assert_equal 7, [].inject(7, :+)
+  assert_equal 4, [4].inject(:+)
+  assert_equal "abc", ["a", "b", "c"].inject(:+)
+  assert_equal 9, [1,2,3].inject { break 9 }
+  assert_raise(ArgumentError) { [1].inject(1, 2, 3) {} }
+  # a multi-value yield is one value, as |*val| with __svalue gave it
+  multi = Object.new.extend(Enumerable)
+  def multi.each; yield 1, 2; yield 3; yield; end
+  assert_equal [[1, 2], 3, nil], multi.inject([]) {|a, v| a << v}
+  # the symbol is sent with __send__ semantics (private methods too)
+  klass = Class.new do
+    include Enumerable
+    attr_reader :v
+    def initialize(v); @v = v; end
+    def each; yield self; yield self.class.new(3); end
+    private def add(o); self.class.new(@v + o.v); end
+  end
+  assert_equal 5, klass.new(2).inject(:add).v
+end
+
 assert('Enumerable#map', '15.3.2.2.12') do
   assert_equal [2,4,6], [1,2,3].map { |i| i + i }
 end
