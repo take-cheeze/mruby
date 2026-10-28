@@ -60,6 +60,38 @@ assert('Class#new', '15.2.3.3.3') do
   # with block doesn't work yet
 end
 
+assert('Class#new passes arguments, keywords and block to initialize') do
+  c = Class.new do
+    attr_reader :got
+    def initialize(a, b = 2, *r, k: 0, **o, &blk)
+      @got = [a, b, r, k, o, blk && blk.call]
+    end
+  end
+  assert_equal [1, 2, [], 0, {}, nil], c.new(1).got
+  assert_equal [1, 5, [], 0, {}, nil], c.new(1, 5).got
+  assert_equal [1, 2, [3, 4], 5, {z: 6}, :blk], c.new(1, 2, 3, 4, k: 5, z: 6) { :blk }.got
+  many = (1..20).to_a
+  assert_equal [1, 2, many[2, 18], 0, {}, nil], c.new(*many).got
+  assert_equal [1, 2, [], 7, {}, nil], c.new(1, **{k: 7}).got
+  assert_raise(ArgumentError) { c.new }
+  assert_raise(ArgumentError) { Object.new(1) }
+end
+
+assert('Class#new calls a private initialize and an overridden allocate') do
+  c = Class.new do
+    def self.allocate
+      @allocated = (@allocated || 0) + 1
+      super
+    end
+    def self.allocated; @allocated; end
+    def initialize; @init = true; end
+    def init; @init; end
+  end
+  assert_true c.new.init
+  assert_equal 1, c.allocated
+  assert_raise(NoMethodError) { c.new.initialize }
+end
+
 assert('Class#superclass', '15.2.3.3.4') do
   class SubClass < String; end
   assert_equal(String, SubClass.superclass)

@@ -4257,39 +4257,35 @@ inspect_main(mrb_state *mrb, mrb_value mod)
   return mrb_str_new_lit(mrb, "main");
 }
 
-static const mrb_code new_iseq[] = {
-  OP_ENTER, 0x0, 0x10, 0x3,  // 000 OP_ENTER     0:0:1:0:0:1:1
-  OP_SSEND, 4, 0, 0,         // 004 OP_SSEND     R4  :allocate  n=0
-  OP_MOVE, 0, 4,             // 008 OP_MOVE      R0  R4
-  OP_MOVE, 4, 3,             // 011 OP_MOVE      R4  R3         ; &
-  OP_MOVE, 3, 2,             // 014 OP_MOVE      R3  R2         ; **
-  OP_MOVE, 2, 1,             // 017 OP_MOVE      R2  R1         ; *
-  OP_SSENDB, 1, 1, 255,      // 020 OP_SSENDB    R1  :initialize n=*|nk=*
-  OP_RETURN, 0               // 024 OP_RETURN    R0
-};
-
-MRB_PRESYM_DEFINE_VAR_AND_INITER(new_syms, 2, MRB_SYM(allocate), MRB_SYM(initialize))
-
-static const mrb_irep new_irep = {
-  4, 6, 0, MRB_IREP_STATIC,
-  new_iseq, NULL, new_syms, NULL, MRB_IREP_DEBUG_NULL_FIELDS
-  sizeof(new_iseq), 0, 2, 0, 0,
-};
-
-mrb_alignas(8)
-static const struct RProc new_proc = {
-  NULL, MRB_TT_PROC, MRB_GC_RED, MRB_OBJ_IS_FROZEN, MRB_PROC_SCOPE | MRB_PROC_STRICT,
-  { &new_irep }, NULL, { NULL }
-};
-
-static void
-init_class_new(mrb_state *mrb, struct RClass *cls)
+/*
+ * Class#new: allocates, then sends `initialize` with the arguments, keywords and block as given.
+ * Both are sends from the class itself (private methods are callable, `method_missing` applies, the callee's argument
+ * count is checked). Native, so a `new` the compiler did not inline runs no bytecode; it was a hand-written irep of
+ * `obj = allocate; obj.initialize(*args, **kw, &blk)`. The callee runs under a C frame, as it already does under
+ * mrb_instance_new (Exception.exception).
+ */
+static mrb_value
+class_new_instance(mrb_state *mrb, mrb_value cls)
 {
-  mrb_method_t m;
+  mrb_callinfo *ci = mrb->c->ci;
+  mrb_value kdict = mrb_nil_value();
+  const mrb_value *argv;
+  mrb_int argc = ci->n;
 
-  MRB_PRESYM_INIT_SYMBOLS(mrb, new_syms);
-  MRB_METHOD_FROM_PROC(m, &new_proc);
-  mrb_define_method_raw(mrb, cls, MRB_SYM(new), m);
+  /* keywords are taken from the frame so that they are forwarded as keywords, not packed into a positional Hash */
+  if (ci->nk > 0) kdict = ci->stack[mrb_ci_bidx(ci)-1];
+  if (argc == 15) {
+    mrb_value ary = ci->stack[1];
+    argc = RARRAY_LEN(ary);
+    argv = RARRAY_PTR(ary);
+  }
+  else {
+    argv = ci->stack+1;
+  }
+  mrb_value blk = ci->stack[mrb_ci_bidx(ci)];
+  mrb_value obj = mrb_funcall_send(mrb, cls, MRB_SYM(allocate), 0, NULL, mrb_nil_value(), mrb_nil_value());
+  mrb_funcall_send(mrb, obj, MRB_SYM(initialize), argc, argv, kdict, blk);
+  return obj;
 }
 
 /* BasicObject#!=: send `==` (honours a user-defined one) and negate. */
@@ -4321,6 +4317,7 @@ static const mrb_mt_entry bob_rom_entries[] = {
 #define MRB_MT_CLASS Class
 static const mrb_mt_entry cls_rom_entries[] = {
   MRB_MT_ENTRY(mrb_instance_alloc,   MRB_SYM(allocate),   MRB_ARGS_NONE())
+  MRB_MT_ENTRY(class_new_instance,   MRB_SYM(new),        MRB_ARGS_ANY()|MRB_ARGS_BLOCK())
   MRB_MT_ENTRY(mrb_do_nothing,       MRB_SYM(inherited),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
   MRB_MT_ENTRY(mrb_class_initialize, MRB_SYM(initialize), MRB_ARGS_OPT(1) | MRB_MT_PRIVATE)   /* 15.2.3.3.1 */
   MRB_MT_ENTRY(mrb_class_superclass, MRB_SYM(superclass), MRB_ARGS_NONE())                    /* 15.2.3.3.4 */
@@ -4403,8 +4400,6 @@ mrb_init_class(mrb_state *mrb)
 
   mrb_define_class_method_id(mrb, cls, MRB_SYM(new),                       mrb_class_new_class,      MRB_ARGS_OPT(1)|MRB_ARGS_BLOCK());
   MRB_MT_INIT_ROM(mrb, cls, cls_rom_entries);
-
-  init_class_new(mrb, cls);
 
   MRB_MT_INIT_ROM(mrb, mod, mod_rom_entries);
   mrb_define_alias_id(mrb, mod, MRB_SYM(attr), MRB_SYM(attr_reader));                                                  /* 15.2.2.4.11 */
