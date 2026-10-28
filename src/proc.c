@@ -37,13 +37,22 @@ proc_call(mrb_state *mrb, mrb_value self)
   if (MRB_PROC_ENV_P(p)) {
     ci->mid = MRB_PROC_ENV(p)->mid;
   }
-  /* a NULL target class would read as a context-modifying frame in the OP_SEND epilogue */
-  if (MRB_PROC_TARGET_CLASS(p)) ci->u.target_class = MRB_PROC_TARGET_CLASS(p);
   if (!MRB_PROC_CFUNC_P(p) && !p->body.irep) {
     return mrb_nil_value();
   }
-  /* cfunc procs receive the proc itself; bytecode procs their captured self */
-  return mrb_exec_irep(mrb, (MRB_PROC_ENV_P(p) && !MRB_PROC_CFUNC_P(p)) ? MRB_PROC_ENV(p)->stack[0] : self, p);
+  /* As OP_CALL: the proc's own target class (even NULL) is what the callee sees. */
+  if (MRB_PROC_CFUNC_P(p)) {
+    /* cfunc procs, env or not, receive the proc itself. This frame stays, so restore its target class afterwards: NULL
+       there would read as a context-modifying frame in the OP_SEND epilogue. */
+    struct RClass *saved = ci->u.target_class;
+    ci->u.target_class = MRB_PROC_TARGET_CLASS(p);
+    mrb_value ret = mrb_exec_irep(mrb, self, p);
+    if (mrb->c->ci == ci) ci->u.target_class = saved;
+    return ret;
+  }
+  /* bytecode procs run under their captured self (the proc itself without an env) */
+  ci->u.target_class = MRB_PROC_TARGET_CLASS(p);
+  return mrb_exec_irep(mrb, MRB_PROC_ENV_P(p) ? MRB_PROC_ENV(p)->stack[0] : self, p);
 }
 
 struct RProc*
