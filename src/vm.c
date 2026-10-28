@@ -2461,14 +2461,21 @@ RETRY_TRY_BLOCK:
 
       /* prepare stack */
       if (MRB_PROC_CFUNC_P(p)) {
+        mrb_bool from_c = ci->cci != CINFO_NONE;  /* read before the call: it may switch fibers */
         recv = MRB_PROC_CFUNC(p)(mrb, recv);
         mrb_gc_arena_shrink(mrb, ai);
         if (mrb_unlikely(mrb->exc)) goto L_RAISE;
-        /* return through the common path: this frame may have been entered from C (funcall of Proc#call), where the
-           caller is not a bytecode frame to resume */
-        ci->stack[0] = recv;
-        a = 0;
-        goto L_OP_RETURN_BODY;
+        if (from_c) {
+          /* entered from C (mrb_funcall of Proc#call): the caller is not a bytecode frame to resume, so return
+             through the common path */
+          ci->stack[0] = recv;
+          a = 0;
+          goto L_OP_RETURN_BODY;
+        }
+        /* pop stackpos */
+        ci = cipop(mrb);
+        ci[1].stack[0] = recv;
+        irep = ci->proc->body.irep;
       }
       else {
         /* setup environment for calling method */
