@@ -116,6 +116,16 @@ assert('mrb_proc_new_cfunc_with_env') do
   assert_equal :mruby, t.mruby
 end
 
+assert('Proc#call on a cfunc proc with env (a compiled block) behaves as OP_CALL') do
+  creator = Object.new
+  pr = ProcExtTest.self_proc(creator)
+  [pr.call, pr[], pr.()].each do |slf, tc_ok|
+    # OP_CALL hands a cfunc proc itself, with the proc's own target class; the env's slot 0 is not self
+    assert_same pr, slf
+    assert_true tc_ok
+  end
+end
+
 assert('mrb_cfunc_env_get') do
   ProcExtTest.mrb_cfunc_env_get :get_int, [0, 1, 2]
 
