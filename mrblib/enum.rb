@@ -102,20 +102,6 @@ module Enumerable
   end
 
   ##
-  # Return an array of all elements which
-  # are yield by `each`.
-  #
-  # ISO 15.3.2.2.6
-  def entries
-    ary = []
-    self.each {|*val|
-      # __svalue is an internal method
-      ary.push val.__svalue
-    }
-    ary
-  end
-
-  ##
   # Alias for find
   #
   # ISO 15.3.2.2.7
@@ -333,12 +319,6 @@ module Enumerable
   def sort(&block)
     self.map {|*val| val.__svalue}.sort(&block)
   end
-
-  ##
-  # Alias for entries.
-  #
-  # ISO 15.3.2.2.20
-  alias to_a entries
 
   # redefine #hash 15.3.1.3.15
   def hash

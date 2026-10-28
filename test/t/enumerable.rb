@@ -132,3 +132,80 @@ end
 assert('Enumerable#to_a', '15.3.2.2.20') do
   assert_equal [1], [1].to_a
 end
+
+# Enumerable#entries and Enumerable#to_a are native (src/enum.c, ROM table)
+assert('Enumerable#entries/#to_a native') do
+  skip unless Object.const_defined?(:UnboundMethod) && Module.method_defined?(:instance_method)
+  assert_nil Enumerable.instance_method(:to_a).source_location
+  assert_nil Enumerable.instance_method(:entries).source_location
+end
+
+assert('Enumerable#to_a with one value per yield') do
+  c = Class.new do
+    include Enumerable
+    def each
+      yield 1
+      yield 'two'
+      yield nil
+    end
+  end
+  assert_equal [1, 'two', nil], c.new.to_a
+  assert_equal [1, 'two', nil], c.new.entries
+end
+
+assert('Enumerable#to_a with a multi-value yield') do
+  c = Class.new do
+    include Enumerable
+    def each
+      yield 1, 2
+      yield 3
+      yield 4, 5, 6
+    end
+  end
+  assert_equal [[1, 2], 3, [4, 5, 6]], c.new.to_a
+end
+
+assert('Enumerable#to_a with an each that yields nothing') do
+  c = Class.new do
+    include Enumerable
+    def each
+    end
+  end
+  assert_equal [], c.new.to_a
+  assert_equal [], c.new.entries
+
+  c2 = Class.new do
+    include Enumerable
+    def each
+      yield
+      yield
+    end
+  end
+  assert_equal [nil, nil], c2.new.to_a
+end
+
+assert('Enumerable#to_a dispatches to a subclass each') do
+  base = Class.new do
+    include Enumerable
+    def each
+      yield :base
+    end
+  end
+  sub = Class.new(base) do
+    def each
+      yield :sub
+      super
+    end
+  end
+  assert_equal [:sub, :base], sub.new.to_a
+  assert_equal [:sub, :base], sub.new.entries
+end
+
+assert('Enumerable#to_a on Range and Enumerator unchanged') do
+  assert_equal [1, 2, 3], (1..3).to_a
+  assert_equal [1, 2, 3], (1...4).entries
+  if Object.const_defined?(:Enumerator)
+    assert_equal [1, 2], Enumerator.new { |y| y << 1 << 2 }.to_a
+    assert_equal [[1, 2]], Enumerator.new { |y| y.yield 1, 2 }.to_a
+  end
+end
