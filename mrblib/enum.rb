@@ -181,9 +181,9 @@ module Enumerable
   # ISO 15.3.2.2.11
   def inject(*args, &block)
     raise ArgumentError, "too many arguments" if args.size > 2
+    sym = nil
     if Symbol === args[-1]
       sym = args[-1]
-      block = ->(x,y){x.__send__(sym,y)}
       args.pop
     end
     if args.empty?
@@ -200,7 +200,7 @@ module Enumerable
         flag = false
         result = val
       else
-        result = block.call(result, val)
+        result = sym ? result.__send__(sym, val) : block.call(result, val)
       end
     }
     result
