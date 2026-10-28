@@ -33,6 +33,15 @@ assert('String#+', '15.2.10.5.4') do
   assert_equal 'ab', 'a' + 'b'
 end
 
+assert('String#+ after a ternary keeps the add on every path') do
+  # the literal pair must not merge across the ternary's join point
+  x = true
+  assert_equal 'Ab', (x ? 'A' : 'a') + 'b'
+  x = false
+  assert_equal 'ab', (x ? 'A' : 'a') + 'b'
+  assert_equal 'Abc', (x = true; (x ? 'A' : 'a') + 'b' + 'c')
+end
+
 assert('String#*', '15.2.10.5.5') do
   assert_equal 'aaaaa', 'a' * 5
   assert_equal '', 'a' * 0
