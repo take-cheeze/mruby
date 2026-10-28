@@ -128,3 +128,7 @@ assert('mrb_cfunc_env_get') do
 
   assert_equal 1, t.get_int(1)
 end
+
+assert('Symbol#to_proc is a lambda') do
+  assert_true :upcase.to_proc.lambda?
+end

@@ -9,6 +9,8 @@
 #include <mruby/string.h>
 #include <mruby/dump.h>
 #include <mruby/class.h>
+#include <mruby/proc.h>
+#include <mruby/array.h>
 #include <mruby/internal.h>
 
 #ifndef MRB_PRESYM_SCANNING
@@ -1015,9 +1017,52 @@ sym_cmp(mrb_state *mrb, mrb_value s1)
 }
 #undef lesser
 
+/*
+ * Symbol#to_proc: a native lambda (no VM entry, callable from compiled code and
+ * natives alike) that sends the symbol to its first argument.
+ * Like the former `obj.__send__(mid, *args, &block)` lambda, private methods are
+ * callable and method_missing applies.
+ */
+static mrb_value
+sym_proc_call(mrb_state *mrb, mrb_value self)
+{
+  mrb_sym mid = mrb_symbol(mrb_proc_cfunc_env_get(mrb, 0));
+  mrb_callinfo *ci = mrb->c->ci;
+  mrb_value kdict = mrb_nil_value();
+  const mrb_value *argv;
+  mrb_int argc;
+  mrb_value blk;
+
+  /* keywords are taken from the frame so that they are forwarded as keywords, not packed into a positional Hash */
+  if (ci->nk > 0) kdict = ci->stack[mrb_ci_bidx(ci)-1];
+  argc = ci->n;
+  if (argc == 15) {
+    mrb_value ary = ci->stack[1];
+    argc = RARRAY_LEN(ary);
+    argv = RARRAY_PTR(ary);
+  }
+  else {
+    argv = ci->stack+1;
+  }
+  blk = ci->stack[mrb_ci_bidx(ci)];
+  if (argc < 1) {
+    mrb_argnum_error(mrb, 0, 1, -1);
+  }
+  return mrb_funcall_send(mrb, argv[0], mid, argc-1, argv+1, kdict, blk);
+}
+
+static mrb_value
+sym_to_proc(mrb_state *mrb, mrb_value self)
+{
+  struct RProc *p = mrb_proc_new_cfunc_with_env(mrb, sym_proc_call, 1, &self);
+  p->flags |= MRB_PROC_STRICT;  /* lambda? */
+  return mrb_obj_value(p);
+}
+
 /* ---------------------------*/
 #define MRB_MT_CLASS Symbol
 static const mrb_mt_entry symbol_rom_entries[] = {
+  MRB_MT_ENTRY(sym_to_proc,      MRB_SYM(to_proc), MRB_ARGS_NONE())
   MRB_MT_ENTRY(sym_to_s,         MRB_SYM(to_s), MRB_ARGS_NONE())   /* 15.2.11.3.3 */
   MRB_MT_ENTRY(sym_name,         MRB_SYM(name), MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_obj_itself,   MRB_SYM(to_sym), MRB_ARGS_NONE())   /* 15.2.11.3.4 */

@@ -742,30 +742,37 @@ prepare_missing(mrb_state *mrb, mrb_callinfo *ci, mrb_value recv, mrb_sym mid, m
   return m;
 }
 
+static void check_argument_count(mrb_state *mrb, const mrb_callinfo *ci, mrb_aspec aspec);
+
+/* kdict: keyword hash to pass as keyword arguments, or NULL for none */
 static void
-funcall_args_capture(mrb_state *mrb, int stoff, mrb_int argc, const mrb_value *argv, mrb_value block, mrb_callinfo *ci)
+funcall_args_capture(mrb_state *mrb, int stoff, mrb_int argc, const mrb_value *argv, const mrb_value *kdict, mrb_value block, mrb_callinfo *ci)
 {
   if (argc < 0 || argc > INT32_MAX) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "negative or too big argc for funcall (%i)", argc);
   }
 
-  ci->nk = 0;                   /* funcall does not support keyword arguments */
+  ci->nk = kdict ? 15 : 0;
+  mrb_value kd = kdict ? *kdict : mrb_nil_value();
+  int kslot = kdict ? 1 : 0;
   if (argc < CALL_MAXARGS) {
-    mrb_int extends = stoff + argc + 2 /* self + block */;
+    mrb_int extends = stoff + argc + 2 /* self + block */ + kslot;
     stack_extend_adjust(mrb, extends, &argv);
 
     mrb_value *args = mrb->c->ci->stack + stoff + 1 /* self */;
     stack_copy(args, argv, argc);
-    args[argc] = block;
+    if (kdict) args[argc] = kd;
+    args[argc+kslot] = block;
     ci->n = (uint8_t)argc;
   }
   else {
-    int extends = stoff + 3 /* self + splat + block */;
+    int extends = stoff + 3 /* self + splat + block */ + kslot;
     stack_extend_adjust(mrb, extends, &argv);
 
     mrb_value *args = mrb->c->ci->stack + stoff + 1 /* self */;
     args[0] = mrb_ary_new_from_values(mrb, argc, argv);
-    args[1] = block;
+    if (kdict) args[1] = kd;
+    args[1+kslot] = block;
     ci->n = CALL_MAXARGS;
   }
 }
@@ -799,7 +806,7 @@ ensure_block(mrb_state *mrb, mrb_value blk)
  * @raise E_STACK_ERROR if the call level exceeds `MRB_CALL_LEVEL_MAX`.
  */
 static mrb_value
-funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value blk,
+funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, const mrb_value *kdict, mrb_bool check_argc, mrb_value blk,
                      const mrb_method_t *fixed, struct RClass *fixed_owner)
 {
   mrb_value val;
@@ -812,7 +819,7 @@ funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, 
     MRB_TRY(&c_jmp) {
       mrb->jmp = &c_jmp;
       /* recursive call */
-      val = funcall_with_block_m(mrb, self, mid, argc, argv, blk, fixed, fixed_owner);
+      val = funcall_with_block_m(mrb, self, mid, argc, argv, kdict, check_argc, blk, fixed, fixed_owner);
       mrb->jmp = NULL;
     }
     MRB_CATCH(&c_jmp) { /* error */
@@ -838,7 +845,7 @@ funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, 
     }
     blk = ensure_block(mrb, blk);
     ci = cipush(mrb, n, CINFO_DIRECT, NULL, NULL, BLK_PTR(blk), 0, 0);
-    funcall_args_capture(mrb, 0, argc, argv, blk, ci);
+    funcall_args_capture(mrb, 0, argc, argv, kdict, blk, ci);
     ci->u.target_class = mrb_class(mrb, self);
     if (fixed) {
       m = *fixed;
@@ -858,6 +865,14 @@ funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, 
     if (MRB_METHOD_CFUNC_P(m)) {
       mrb->exc = NULL;
       ci->stack[0] = self;
+      if (check_argc) {
+        if (MRB_METHOD_FUNC_P(m)) {
+          check_argument_count(mrb, ci, MRB_MT_ASPEC(m.flags));
+        }
+        else if (MRB_PROC_NOARG_P(MRB_METHOD_PROC(m)) && (ci->n > 0 || ci->nk > 0)) {
+          check_argument_count(mrb, ci, 0);
+        }
+      }
       val = MRB_METHOD_CFUNC(m)(mrb, self);
       cipop(mrb);
       if (mrb->exc != NULL) {
@@ -879,7 +894,19 @@ funcall_with_block_m(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, 
 MRB_API mrb_value
 mrb_funcall_with_block(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value blk)
 {
-  return funcall_with_block_m(mrb, self, mid, argc, argv, blk, NULL, NULL);
+  return funcall_with_block_m(mrb, self, mid, argc, argv, NULL, FALSE, blk, NULL, NULL);
+}
+
+/*
+ * mrb_funcall_with_block with __send__ semantics, used by the native Symbol#to_proc:
+ * `kdict` (a Hash or nil) is forwarded as keyword arguments and the callee's
+ * argument count is checked, as a VM-level send does (plain funcall does neither).
+ */
+mrb_value
+mrb_funcall_send(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, const mrb_value *argv, mrb_value kdict, mrb_value blk)
+{
+  const mrb_value *kdict_p = mrb_hash_p(kdict) ? &kdict : NULL;
+  return funcall_with_block_m(mrb, self, mid, argc, argv, kdict_p, TRUE, blk, NULL, NULL);
 }
 
 /*
@@ -890,7 +917,7 @@ mrb_value
 mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
                         mrb_int argc, const mrb_value *argv, mrb_value blk)
 {
-  return funcall_with_block_m(mrb, self, mid, argc, argv, blk, m, owner);
+  return funcall_with_block_m(mrb, self, mid, argc, argv, NULL, FALSE, blk, m, owner);
 }
 
 /**
@@ -1265,7 +1292,7 @@ yield_with_attr(mrb_state *mrb, mrb_value b, mrb_int argc, const mrb_value *argv
     mid = ci->mid;
   }
   ci = cipush(mrb, n, CINFO_DIRECT, NULL, NULL, NULL, mid, 0);
-  funcall_args_capture(mrb, 0, argc, argv, mrb_nil_value(), ci);
+  funcall_args_capture(mrb, 0, argc, argv, NULL, mrb_nil_value(), ci);
   ci->u.target_class = c;
   ci->proc = p;
   if (vis_break) {
@@ -2487,6 +2514,8 @@ RETRY_TRY_BLOCK:
       CI_PROC_SET(ci, p);
 
       if (MRB_PROC_CFUNC_P(p)) {
+        /* a yield passes no block; the slot was only reserved by codegen, so a cfunc must not see stale data */
+        SET_NIL_VALUE(regs[b+1]);  /* regs is the new frame here */
         recv = MRB_PROC_CFUNC(p)(mrb, recv);
         mrb_gc_arena_shrink(mrb, ai);
         if (mrb_unlikely(mrb->exc)) goto L_RAISE;
