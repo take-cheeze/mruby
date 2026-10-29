@@ -1856,6 +1856,10 @@ mrb_pack_pack(mrb_state *mrb, mrb_value ary)
       if (count == 0 && !(flags & PACK_FLAG_WIDTH))
         break;
 
+      /* What converting and packing one element allocates (a Float turned
+         into a big integer, a boxed Float) is of no use past the element,
+         so the arena is given back after each one. */
+      int ai = mrb_gc_arena_save(mrb);
       o = RARRAY_PTR(ary)[aidx];
       if (type == PACK_TYPE_INTEGER) {
         o = mrb_ensure_int_type(mrb, o);
@@ -1932,6 +1936,7 @@ mrb_pack_pack(mrb_state *mrb, mrb_value ary)
       default:
         break;
       }
+      mrb_gc_arena_restore(mrb, ai);
       if (flags & PACK_FLAG_COUNT2) {
         /* always consumes 1 entry */
         aidx++;

@@ -240,3 +240,7 @@ assert 'unpack1' do
   d = "f00b00"
   assert_equal(d, [d].pack("h*").unpack1("h*"))
 end
+    # nor one made from each Float element while it is converted
+    if Object.const_defined?(:Float)
+      assert_equal [0x80, 0, 0, 0] * 128, ([2147483648.0] * 128).pack("N*").unpack("C*")
+    end
