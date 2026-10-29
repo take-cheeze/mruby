@@ -4283,7 +4283,10 @@ class_new_instance(mrb_state *mrb, mrb_value cls)
     argv = ci->stack+1;
   }
   mrb_value blk = ci->stack[mrb_ci_bidx(ci)];
-  mrb_value obj = mrb_funcall_send(mrb, cls, MRB_SYM(allocate), 0, NULL, mrb_nil_value(), mrb_nil_value());
+  /* while `allocate` is the built-in one, allocate directly; a user `allocate` is still sent by name */
+  mrb_value obj = mrb_func_basic_p(mrb, cls, MRB_SYM(allocate), mrb_instance_alloc)
+    ? mrb_instance_alloc(mrb, cls)
+    : mrb_funcall_send(mrb, cls, MRB_SYM(allocate), 0, NULL, mrb_nil_value(), mrb_nil_value());
   mrb_funcall_send(mrb, obj, MRB_SYM(initialize), argc, argv, kdict, blk);
   return obj;
 }

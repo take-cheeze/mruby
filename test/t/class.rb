@@ -535,3 +535,60 @@ assert('module with extended callback') do
   assert_true BarBeingExtended.respond_to?(:answer)
   assert_equal 42, BarBeingExtended.answer
 end
+
+# Class#new allocates and sends initialize; arguments, keywords and block are forwarded as given
+assert('Class#new forwards args, keywords and block to initialize') do
+  c = Class.new do
+    attr_reader :got
+    def initialize(*a, **k, &b)
+      @got = [a, k, b && b.call]
+    end
+  end
+  assert_equal [[1, 2], {x: 3}, :blk], c.new(1, 2, x: 3) { :blk }.got
+  assert_equal [[], {}, nil], c.new.got
+end
+
+assert('Class#new calls a private initialize') do
+  c = Class.new do
+    attr_reader :v
+    private
+    def initialize(v)
+      @v = v
+    end
+  end
+  assert_equal 5, c.new(5).v
+end
+
+assert('Class#new checks the arity of initialize') do
+  assert_raise(ArgumentError) { Object.new(1) }
+  assert_raise(ArgumentError) { Class.new { def initialize(a); end }.new }
+end
+
+assert('Class#new sends a user-defined allocate') do
+  c = Class.new do
+    def self.allocate
+      :allocated
+    end
+  end
+  assert_equal :allocated, c.new
+  d = Class.new do
+    def self.allocate
+      raise 'from allocate'
+    end
+  end
+  assert_raise(RuntimeError) { d.new }
+end
+
+assert('Class#new honours a user-defined self.new') do
+  c = Class.new do
+    def self.new(*a)
+      [:custom, *a]
+    end
+  end
+  assert_equal [:custom, 1], c.new(1)
+end
+
+assert('Class#new on a class with a builtin allocator') do
+  assert_equal 'ab', String.new('ab')
+  assert_equal [1, 2], Array.new([1, 2])
+end
