@@ -2092,6 +2092,27 @@ mrb_hash_merge_m(mrb_state *mrb, mrb_value hash)
 }
 
 /*
+ * Hash#merge (ISO 15.2.13.4.22). With a block it is the Ruby __merge_with_block
+ * (mrblib/hash.rb). Without one it is `dup.__merge(*others)`: the arguments are
+ * copied into an Array first, because `dup` runs Ruby code and may move the VM stack.
+ */
+static mrb_value
+mrb_hash_merge_method(mrb_state *mrb, mrb_value self)
+{
+  mrb_value *argv, blk, args, copy;
+  mrb_int argc;
+
+  mrb_get_args(mrb, "*&", &argv, &argc, &blk);
+  if (!mrb_nil_p(blk)) {
+    return mrb_funcall_with_block(mrb, self, MRB_SYM(__merge_with_block), argc, argv, blk);
+  }
+  args = mrb_ary_new_from_values(mrb, argc, argv);
+  mrb_gc_protect(mrb, args);
+  copy = mrb_funcall_id(mrb, self, MRB_SYM(dup), 0);
+  return mrb_funcall_with_block(mrb, copy, MRB_SYM(__merge), RARRAY_LEN(args), RARRAY_PTR(args), mrb_nil_value());
+}
+
+/*
  *  call-seq:
  *    hsh.rehash -> hsh
  *
@@ -2441,6 +2462,7 @@ static const mrb_mt_entry hash_rom_entries[] = {
   MRB_MT_ENTRY(mrb_hash_assoc,            MRB_SYM(assoc),           MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_hash_rassoc,           MRB_SYM(rassoc),          MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_hash_merge_m,          MRB_SYM(__merge),         MRB_ARGS_ANY())
+  MRB_MT_ENTRY(mrb_hash_merge_method,     MRB_SYM(merge),           MRB_ARGS_ANY())
   MRB_MT_ENTRY(mrb_hash_compact,          MRB_SYM(__compact),       MRB_ARGS_NONE())                                     /* implementation of Hash#compact! */
   MRB_MT_ENTRY(mrb_hash_pat_values,       MRB_SYM(__pat_values),    MRB_ARGS_REQ(1))                                     /* for pattern matching keys */
   MRB_MT_ENTRY(mrb_hash_except_keys,      MRB_SYM(__except),        MRB_ARGS_REQ(1))                                     /* for pattern matching **rest */

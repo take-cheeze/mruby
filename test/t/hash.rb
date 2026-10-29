@@ -684,6 +684,72 @@ assert('Hash#merge', '15.2.13.4.22') do
   end
 end
 
+class HashMergeDupProbe < Hash
+  def dup
+    $hash_merge_dup_calls += 1
+    # grow the VM stack before the arguments are used, to cover argument copying
+    deep_hash_merge_probe(300)
+    super
+  end
+
+  def deep_hash_merge_probe(n)
+    n == 0 ? 0 : 1 + deep_hash_merge_probe(n - 1)
+  end
+end
+
+assert('Hash#merge native form calls dup and __merge', '15.2.13.4.22') do
+  $hash_merge_dup_calls = 0
+  h = HashMergeDupProbe.new
+  h[:a] = 1
+  r = h.merge({b: 2}, {c: 3})
+  assert_equal({a: 1, b: 2, c: 3}, r)
+  assert_equal(1, $hash_merge_dup_calls)
+  assert_equal(HashMergeDupProbe, r.class)
+  assert_equal({a: 1}, h)
+  assert_false(r.equal?(h))
+
+  $hash_merge_dup_calls = 0
+  r = h.merge({b: 2}) { |k, o, n| o + n }
+  assert_equal({a: 1, b: 2}, r)
+  assert_equal(1, $hash_merge_dup_calls)
+end
+
+assert('Hash#merge returns an unfrozen copy and keeps defaults') do
+  frozen = {a: 1}.freeze
+  r = frozen.merge({b: 2})
+  assert_equal({a: 1, b: 2}, r)
+  assert_false(r.frozen?)
+  assert_true(frozen.frozen?)
+
+  d = Hash.new(:dflt)
+  d[:x] = 1
+  assert_equal(:dflt, d.merge({}).default)
+  assert_equal(:dflt, d.merge({y: 2}).default)
+  assert_equal({x: 1}, d.merge)
+  assert_false(d.merge.equal?(d))
+end
+
+assert('Hash#merge arguments and errors match the Ruby form') do
+  # the message is __merge's, whichever body is installed: compare with dup.__merge
+  e1 = assert_raise(TypeError) { {a: 1}.merge(3) }
+  e2 = assert_raise(TypeError) { {a: 1}.dup.__merge(3) }
+  assert_equal(e2.message, e1.message)
+  assert_raise_with_message(TypeError, 'Hash required (Integer given)') { {a: 1}.merge(3) { 1 } }
+  assert_equal({a: 1, b: 2}, {a: 1}.merge({b: 2}, {}))
+end
+
+assert('Hash#merge subclass super reaches the native form') do
+  sub = Class.new(Hash) do
+    def merge(*a, &b)
+      super
+    end
+  end
+  h = sub.new
+  h[:a] = 1
+  assert_equal({a: 1, b: 2}, h.merge({b: 2}))
+  assert_equal({a: 6}, h.merge({a: 5}) { |k, o, n| o + n })
+end
+
 assert("Hash#replace", "15.2.13.4.23") do
   cls = Class.new(Hash){attr_accessor :foo}
   e = [ar_entries, ht_entries]
@@ -1075,3 +1141,4 @@ assert('Hash with Array keys honours a redefined eql?') do
   assert_equal(:a, {[1, 2] => :a}[[1, 2]])
   assert_equal(0, $hash_ary_key_eql_calls)
 end
+

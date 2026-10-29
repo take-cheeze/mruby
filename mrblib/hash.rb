@@ -139,9 +139,11 @@ class Hash
   #   h3 # => {:foo=>0, :bar=>5, :baz=>2, :bat=>9, :bam=>5}
   #
   # ISO 15.2.13.4.22
-  def merge(*others, &block)
+  #
+  # The block form of Hash#merge. Without a block, Hash#merge is the native
+  # mrb_hash_merge_method (src/hash.c), which calls `dup` and `__merge`.
+  def __merge_with_block(*others, &block)
     h = self.dup
-    return h.__merge(*others) unless block
     i=0; len=others.size
     while i<len
       other = others[i]
