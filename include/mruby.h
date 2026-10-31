@@ -235,6 +235,11 @@ typedef struct {
   } as;
 } mrb_method_t;
 
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+typedef void (*mrb_method_lookup_hook_t)(struct mrb_state *mrb, struct RClass *start,
+                                         struct RClass *owner, mrb_sym mid, const mrb_method_t *method);
+#endif
+
 #ifndef MRB_NO_METHOD_CACHE
 struct mrb_cache_entry {
   struct RClass *c, *c0;
@@ -340,8 +345,7 @@ typedef struct mrb_state {
 #ifdef MRB_USE_METHOD_LOOKUP_HOOK
   /* Observer only: do not allocate mruby objects, dispatch, raise, or mutate tables.
    * owner is NULL for missing/undefined methods; method is valid during the callback. */
-  void (*method_lookup_hook)(struct mrb_state *mrb, struct RClass *start,
-                             struct RClass *owner, mrb_sym mid, const mrb_method_t *method);
+  mrb_method_lookup_hook_t method_lookup_hook;
 #endif
 
 #ifdef MRB_USE_DEBUG_HOOK
@@ -1295,6 +1299,10 @@ MRB_API char* mrb_locale_from_utf8(const char *p, int len);
  *      Pointer to the newly created mrb_state.
  */
 MRB_API mrb_state* mrb_open(void);
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+/* Installs the observer before core and gem initialization. */
+MRB_API mrb_state* mrb_open_with_method_lookup_hook(mrb_method_lookup_hook_t hook);
+#endif
 
 /**
  * Create new mrb_state with just the mruby core
