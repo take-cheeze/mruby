@@ -40,8 +40,13 @@ init_gc_and_core(mrb_state *mrb, void *opaque)
 }
 
 /* Initializes the core of mruby, without loading gems. */
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+static mrb_state*
+open_core_with_hook(mrb_method_lookup_hook_t hook)
+#else
 MRB_API mrb_state*
 mrb_open_core(void)
+#endif
 {
   static const mrb_state mrb_state_zero = { 0 };
   mrb_state *mrb;
@@ -50,6 +55,9 @@ mrb_open_core(void)
   if (mrb == NULL) return NULL;
 
   *mrb = mrb_state_zero;
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+  mrb->method_lookup_hook = hook;
+#endif
   mrb->atexit_stack_len = 0;
   mrb->bootstrapping = TRUE;
 
@@ -64,6 +72,14 @@ mrb_open_core(void)
   return mrb;
 }
 
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+MRB_API mrb_state*
+mrb_open_core(void)
+{
+  return open_core_with_hook(NULL);
+}
+#endif
+
 #ifndef MRB_NO_GEMS
 static void
 init_mrbgems(mrb_state *mrb, void *opaque)
@@ -73,10 +89,16 @@ init_mrbgems(mrb_state *mrb, void *opaque)
 #endif
 
 /* Initializes mruby, including loading gems. */
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+static mrb_state*
+open_with_core(mrb_state *mrb)
+{
+#else
 MRB_API mrb_state*
 mrb_open(void)
 {
   mrb_state *mrb = mrb_open_core();
+#endif
 
   /* mrb->c == NULL: mrb_core_init_abort() fired during init_gc_and_core
    * (an allocation failed before mrb->nomem_err existed to raise it
@@ -100,6 +122,20 @@ mrb_open(void)
 #endif
   return mrb;
 }
+
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+MRB_API mrb_state*
+mrb_open(void)
+{
+  return open_with_core(open_core_with_hook(NULL));
+}
+
+MRB_API mrb_state*
+mrb_open_with_method_lookup_hook(mrb_method_lookup_hook_t hook)
+{
+  return open_with_core(open_core_with_hook(hook));
+}
+#endif
 
 void mrb_free_symtbl(mrb_state *mrb);
 
