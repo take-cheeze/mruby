@@ -2634,8 +2634,13 @@ mc_clear_by_id(mrb_state *mrb, mrb_sym id)
 }
 #endif // MRB_NO_METHOD_CACHE
 
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+static mrb_method_t
+method_search_without_hook(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
+#else
 mrb_method_t
 mrb_vm_find_method(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
+#endif
 {
   mrb_method_t m;
 #ifndef MRB_NO_METHOD_CACHE
@@ -2673,6 +2678,19 @@ mrb_vm_find_method(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym
   MRB_METHOD_FROM_PROC(m, NULL);
   return m;                  /* no method */
 }
+
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+mrb_method_t
+mrb_vm_find_method(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
+{
+  mrb_method_t method = method_search_without_hook(mrb, c, cp, mid);
+  if (mrb->method_lookup_hook) {
+    struct RClass *owner = MRB_METHOD_UNDEF_P(method) ? NULL : *cp;
+    mrb->method_lookup_hook(mrb, c, owner, mid, &method);
+  }
+  return method;
+}
+#endif
 
 /*
  * Searches for a method in the method table of a class and its ancestors
