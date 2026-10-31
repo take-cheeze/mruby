@@ -337,6 +337,13 @@ typedef struct mrb_state {
   char symbuf[8];                         /* buffer for small symbol names */
 #endif
 
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+  /* Observer only: do not allocate mruby objects, dispatch, raise, or mutate tables.
+   * owner is NULL for missing/undefined methods; method is valid during the callback. */
+  void (*method_lookup_hook)(struct mrb_state *mrb, struct RClass *start,
+                             struct RClass *owner, mrb_sym mid, const mrb_method_t *method);
+#endif
+
 #ifdef MRB_USE_DEBUG_HOOK
   void (*code_fetch_hook)(struct mrb_state* mrb, const struct mrb_irep *irep, const mrb_code *pc, mrb_value *regs);
   void (*debug_op_hook)(struct mrb_state* mrb, const struct mrb_irep *irep, const mrb_code *pc, mrb_value *regs);
