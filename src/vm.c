@@ -1585,6 +1585,11 @@ prepare_tagged_break(mrb_state *mrb, uint32_t tag, const mrb_callinfo *return_ci
 #define CODE_FETCH_HOOK(mrb, irep, pc, regs)
 #endif
 
+#if defined(MRB_NATIVE_ONLY) && !defined(MRB_NATIVE_VM_DISPATCH_HEADER)
+#error MRB_NATIVE_ONLY requires MRB_NATIVE_VM_DISPATCH_HEADER
+#endif
+
+#ifndef MRB_NATIVE_ONLY
 #ifdef MRB_BYTECODE_DECODE_OPTION
 #define BYTECODE_DECODER(x) ((mrb)->bytecode_decoder)?(mrb)->bytecode_decoder((mrb), (x)):(x)
 #else
@@ -1615,6 +1620,20 @@ prepare_tagged_break(mrb_state *mrb, uint32_t tag, const mrb_callinfo *return_ci
 
 #endif
 
+#endif /* !MRB_NATIVE_ONLY */
+
+#ifdef MRB_NATIVE_ONLY
+#define INIT_DISPATCH JUMP; return mrb_nil_value();
+#define CASE(insn,ops) L_ ## insn ## _BODY:
+#define NEXT RETURN_IF_TASK_STOPPED(mrb); CALL_CODE_HOOKS()
+#define JUMP NEXT
+#define END_DISPATCH RETURN_IF_TASK_STOPPED(mrb)
+#define CALL_CODE_HOOKS() do { \
+  if (!irep->native) mrb_raise(mrb, E_RUNTIME_ERROR, "bytecode execution in a native-only runtime"); \
+  CODE_FETCH_HOOK(mrb, irep, ci->pc, regs); \
+  goto L_NATIVE_DISPATCH; \
+} while (0)
+#else
 #define DECODE_OPERANDS(ops) do { const mrb_code *pc = ci->pc+1; FETCH_ ## ops (); ci->pc = pc; } while (0)
 #ifdef MRB_NATIVE_VM_REQUIRE
 #define NATIVE_VM_CHECK() do { \
@@ -1625,6 +1644,8 @@ prepare_tagged_break(mrb_state *mrb, uint32_t tag, const mrb_callinfo *return_ci
 #define NATIVE_VM_CHECK() ((void)0)
 #endif
 #define CALL_CODE_HOOKS() do { NATIVE_VM_CHECK(); if (irep->native) { CODE_FETCH_HOOK(mrb, irep, ci->pc, regs); goto L_NATIVE_DISPATCH; } insn = BYTECODE_DECODER(*ci->pc); CODE_FETCH_HOOK(mrb, irep, ci->pc, regs); } while (0)
+
+#endif /* MRB_NATIVE_ONLY */
 
 #ifdef MRB_USE_TASK_SCHEDULER
 #define RETURN_IF_TASK_STOPPED(mrb) do { \
@@ -1808,7 +1829,7 @@ mrb_vm_exec(mrb_state *mrb, const struct RProc *begin_proc, const mrb_code *iseq
   mrb_sym mid;
   const struct mrb_irep_catch_handler *ch;
 
-#ifndef MRB_USE_VM_SWITCH_DISPATCH
+#if !defined(MRB_USE_VM_SWITCH_DISPATCH) && !defined(MRB_NATIVE_ONLY)
   static void * const optable[] = {
 #define OPCODE(x,_) &&L_OP_ ## x,
 #include <mruby/ops.h>
@@ -3766,6 +3787,7 @@ RETRY_TRY_BLOCK:
       RAISE_EXC(mrb, exc);
     }
 
+#ifndef MRB_NATIVE_ONLY
     CASE(OP_EXT1, Z) {
       const mrb_code *pc = ci->pc;
       insn = READ_B();
@@ -3796,6 +3818,8 @@ RETRY_TRY_BLOCK:
       }
       NEXT;
     }
+
+#endif /* !MRB_NATIVE_ONLY */
 
     CASE(OP_STOP, Z) {
       /*        stop VM */
@@ -3877,4 +3901,11 @@ mrb_top_run(mrb_state *mrb, const struct RProc *proc, mrb_value self, mrb_int st
   }
   return mrb_vm_run(mrb, proc, self, stack_keep);
 }
+
+MRB_API mrb_value
+mrb_load_proc(mrb_state *mrb, const struct RProc *proc)
+{
+  return mrb_top_run(mrb, proc, mrb_top_self(mrb), 0);
+}
+
 #undef CASE

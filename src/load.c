@@ -5,6 +5,8 @@
 */
 
 #include <mruby.h>
+
+#ifndef MRB_NATIVE_ONLY
 #include <mruby/dump.h>
 #include <mruby/irep.h>
 #include <mruby/proc.h>
@@ -803,12 +805,6 @@ mrb_load_irep_buf(mrb_state *mrb, const void *buf, size_t bufsize)
   return mrb_load_irep_buf_cxt(mrb, buf, bufsize, NULL);
 }
 
-MRB_API mrb_value
-mrb_load_proc(mrb_state *mrb, const struct RProc *proc)
-{
-  return mrb_top_run(mrb, proc, mrb_top_self(mrb), 0);
-}
-
 #ifndef MRB_NO_STDIO
 
 static struct RProc*
@@ -861,3 +857,5 @@ mrb_load_irep_file(mrb_state *mrb, FILE* fp)
   return mrb_load_irep_file_cxt(mrb, fp, NULL);
 }
 #endif /* MRB_NO_STDIO */
+
+#endif /* !MRB_NATIVE_ONLY */

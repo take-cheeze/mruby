@@ -290,3 +290,16 @@ deployment targets. Define one of the following:
 - For long-lived server processes.
 - Increases `MRB_METHOD_CACHE_SIZE` to `4096` and `MRB_HEAP_PAGE_SIZE`
   to `4096`.
+
+## Native-only continuation runtime
+
+`MRB_NATIVE_ONLY` requires `MRB_NATIVE_VM_DISPATCH_HEADER`, a generated native
+continuation dispatcher. It removes bytecode fetch, operand decoding, and
+extended-opcode dispatch. Attempting to execute a bytecode Proc raises
+`RuntimeError` in the root context as well as in a Fiber.
+
+Call frames, closures, exception handling, and Fiber switching remain available
+to native continuations. `mrb_load_proc` initializes statically generated native
+Procs. Binary load/dump functions and codedump are omitted; do not include the
+compiler, eval, or bytecode-loading command-line gems in the target runtime.
+The host mrbc build does not inherit the native runtime configuration.

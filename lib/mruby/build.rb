@@ -551,6 +551,10 @@ EOS
             end
         build.instance_variable_set(n, v)
       end
+      # The host compiler must keep bytecode support even when its target is native-only.
+      native_flags = /\AMRB_NATIVE_(?:ONLY|VM_REQUIRE|VM_DISPATCH_HEADER)(?:=|\z)/
+      build.defines.reject! { |flag| flag.match?(native_flags) }
+      [build.cc, build.cxx].each { |tool| tool.defines.reject! { |flag| flag.match?(native_flags) } }
       build.build_mrbc_exec
       build.disable_libmruby
       build.presym = Presym.new(build)

@@ -1,4 +1,6 @@
 #include <mruby.h>
+
+#ifndef MRB_NATIVE_ONLY
 #include <mruby/irep.h>
 #include <mruby/debug.h>
 #include <mruby/opcode.h>
@@ -703,3 +705,5 @@ mrb_codedump_all(mrb_state *mrb, struct RProc *proc)
 #endif
 }
 #undef CASE
+
+#endif /* !MRB_NATIVE_ONLY */
