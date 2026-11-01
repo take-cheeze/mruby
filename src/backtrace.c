@@ -66,8 +66,8 @@ pack_backtrace(mrb_state *mrb, ptrdiff_t ciidx, struct mrb_backtrace_location *p
       if (!loc.irep) continue;
       if (!MRB_IREP_DEBUG_INFO(loc.irep)) continue;
       if (!ci->pc) continue;
-      pc = &ci->pc[-1];
-      loc.idx = (uint32_t)(pc - loc.irep->iseq);
+      pc = ci->pc;
+      loc.idx = (uint32_t)(mrb_irep_pc_offset(loc.irep, pc) - 1);
     }
     else {
       if (!loc.method_id) continue;
@@ -83,9 +83,9 @@ pack_backtrace(mrb_state *mrb, ptrdiff_t ciidx, struct mrb_backtrace_location *p
         if (!irep) continue;
         if (!MRB_IREP_DEBUG_INFO(irep)) continue;
         if (!ci->pc) continue;
-        pc = &ci->pc[-1];
+        pc = ci->pc;
         loc.irep = irep;
-        loc.idx = (uint32_t)(pc - irep->iseq);
+        loc.idx = (uint32_t)(mrb_irep_pc_offset(irep, pc) - 1);
         break;
       }
     }

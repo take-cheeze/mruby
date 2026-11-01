@@ -65,12 +65,22 @@ mrb_binding_extract_env(mrb_state *mrb, mrb_value binding)
 static mrb_irep *
 binding_irep_new_lvspace(mrb_state *mrb)
 {
+#ifdef MRB_NATIVE_VM_DISPATCH_HEADER
+  static const struct mrb_native_irep native = {4206464619u, 0, NULL};
+#else
   static const mrb_code iseq_dummy[] = { OP_RETURN, 0 };
+#endif
 
   mrb_irep *irep = mrb_add_irep(mrb);
   irep->flags = MRB_ISEQ_NO_FREE;
+#ifdef MRB_NATIVE_VM_DISPATCH_HEADER
+  irep->native = &native;
+  irep->iseq = (const mrb_code*)(uintptr_t)1;
+  irep->ilen = 2;
+#else
   irep->iseq = iseq_dummy;
   irep->ilen = sizeof(iseq_dummy) / sizeof(iseq_dummy[0]);
+#endif
   irep->lv = NULL;
   irep->nlocals = 1;
   irep->nregs = 1;
@@ -447,7 +457,7 @@ mrb_binding_new(mrb_state *mrb, const struct RProc *proc, mrb_value recv, struct
 
   if (proc && !MRB_PROC_CFUNC_P(proc)) {
     const mrb_irep *irep = proc->body.irep;
-    mrb_obj_iv_set(mrb, binding, MRB_SYM(pc), mrb_fixnum_value(mrb->c->ci[-1].pc - irep->iseq - 1 /* step back */));
+    mrb_obj_iv_set(mrb, binding, MRB_SYM(pc), mrb_fixnum_value(mrb_irep_pc_offset(irep, mrb->c->ci[-1].pc) - 1 /* step back */));
   }
   proc = binding_wrap_lvspace(mrb, proc, &env);
 

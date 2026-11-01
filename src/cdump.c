@@ -452,7 +452,7 @@ cdump_irep_struct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE *fp,
 int
 mrb_dump_irep_cstruct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE *fp, const char *initname)
 {
-  if (fp == NULL || initname == NULL || initname[0] == '\0') {
+  if (irep->native || fp == NULL || initname == NULL || initname[0] == '\0') {
     return MRB_DUMP_INVALID_ARGUMENT;
   }
   if (fprintf(fp, "#include <mruby.h>\n"

@@ -95,6 +95,10 @@ print_args(uint16_t i, FILE *out)
 static void
 codedump(mrb_state *mrb, const mrb_irep *irep, FILE *out)
 {
+  if (irep->native) {
+    fprintf(out, "native continuation %lu\n", (unsigned long)irep->native->id);
+    return;
+  }
   const char *file = NULL;
 
   if (!irep) return;

@@ -51,6 +51,13 @@ struct mrb_irep_catch_handler {
   uint8_t target[4]; /* The address to jump to if a match is made. */
 };
 
+/* Native continuations share VM frame and unwind semantics without an instruction array. */
+struct mrb_native_irep {
+  uint32_t id;
+  mrb_aspec aspec;
+  const struct mrb_irep_catch_handler *handlers;
+};
+
 /* Program data array struct */
 struct mrb_irep {
   uint16_t nlocals; /* Number of local variables */
@@ -79,7 +86,27 @@ struct mrb_irep {
   uint16_t plen, slen;
   uint16_t rlen;
   uint16_t refcnt;
+  const struct mrb_native_irep *native;
 };
+
+/* Native PCs are integer continuation tokens, never addresses to dereference. */
+static inline ptrdiff_t
+mrb_irep_pc_offset(const struct mrb_irep *irep, const mrb_code *pc)
+{
+  return irep->native ? (pc ? (ptrdiff_t)((uintptr_t)pc - 1) : -1) : pc - irep->iseq;
+}
+
+static inline const mrb_code *
+mrb_irep_pc(const struct mrb_irep *irep, ptrdiff_t offset)
+{
+  return irep->native ? (const mrb_code*)(uintptr_t)(offset + 1) : irep->iseq + offset;
+}
+
+static inline const mrb_code *
+mrb_irep_pc_add(const struct mrb_irep *irep, const mrb_code *pc, ptrdiff_t offset)
+{
+  return mrb_irep_pc(irep, mrb_irep_pc_offset(irep, pc) + offset);
+}
 
 /*
  * MRB_NO_IREP_DEBUG drops the lv and debug_info fields from every irep: no
