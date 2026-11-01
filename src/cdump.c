@@ -5,6 +5,8 @@
 */
 
 #include <mruby.h>
+
+#ifndef MRB_NATIVE_ONLY
 #include <mruby/string.h>
 #include <mruby/dump.h>
 #include <mruby/irep.h>
@@ -498,3 +500,5 @@ mrb_dump_irep_cstruct(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, FILE 
   return MRB_DUMP_OK;
 }
 #endif
+
+#endif /* !MRB_NATIVE_ONLY */
