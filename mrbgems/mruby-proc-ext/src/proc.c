@@ -187,7 +187,7 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     return mrb_ary_new(mrb);
   }
   const struct mrb_irep *irep = proc->body.irep;
-  if (!irep || !MRB_IREP_LV(irep) || *irep->iseq != OP_ENTER) {
+  if (!irep || !MRB_IREP_LV(irep) || (!irep->native && *irep->iseq != OP_ENTER)) {
     return mrb_ary_new(mrb);
   }
 
@@ -196,7 +196,7 @@ mrb_proc_parameters(mrb_state *mrb, mrb_value self)
     parameters_list[3].name = MRB_SYM(opt);
   }
 
-  mrb_aspec aspec = PEEK_W(irep->iseq+1);
+  mrb_aspec aspec = irep->native ? irep->native->aspec : PEEK_W(irep->iseq+1);
   parameters_list[0].size = MRB_ASPEC_REQ(aspec);
   parameters_list[1].size = MRB_ASPEC_OPT(aspec);
   parameters_list[2].size = MRB_ASPEC_REST(aspec);

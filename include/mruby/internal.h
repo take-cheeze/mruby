@@ -96,6 +96,7 @@ void mrb_irep_free(mrb_state*, struct mrb_irep*);
 static inline const struct mrb_irep_catch_handler *
 mrb_irep_catch_handler_table(const struct mrb_irep *irep)
 {
+  if (irep->native) return irep->native->handlers;
   if (irep->clen > 0) {
     return (const struct mrb_irep_catch_handler*)(irep->iseq + irep->ilen);
   }

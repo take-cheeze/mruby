@@ -437,11 +437,11 @@ mrb_proc_arity(const struct RProc *p)
 
   pc = irep->iseq;
   /* arity is depend on OP_ENTER */
-  if (*pc != OP_ENTER) {
+  if (!irep->native && *pc != OP_ENTER) {
     return 0;
   }
 
-  aspec = PEEK_W(pc+1);
+  aspec = irep->native ? irep->native->aspec : PEEK_W(pc+1);
   ma = MRB_ASPEC_REQ(aspec);
   op = MRB_ASPEC_OPT(aspec);
   ra = MRB_ASPEC_REST(aspec);
