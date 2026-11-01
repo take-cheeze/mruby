@@ -305,13 +305,13 @@ and gems alike, so `conf.cc.defines` (not a single gem's) is the place.
 name without the `MRB_` prefix, i.e. exactly what the entry's symbol
 macro spells:
 
-| entry symbol        | Ruby name | `<sym>`         |
-| ------------------- | --------- | --------------- |
-| `MRB_SYM(name)`     | `name`    | `SYM__name`     |
-| `MRB_SYM_Q(name)`   | `name?`   | `SYM_Q__name`   |
-| `MRB_SYM_B(name)`   | `name!`   | `SYM_B__name`   |
-| `MRB_SYM_E(name)`   | `name=`   | `SYM_E__name`   |
-| `MRB_OPSYM(op)`     | operator  | `OPSYM__op`     |
+| entry symbol      | Ruby name | `<sym>`       |
+| ----------------- | --------- | ------------- |
+| `MRB_SYM(name)`   | `name`    | `SYM__name`   |
+| `MRB_SYM_Q(name)` | `name?`   | `SYM_Q__name` |
+| `MRB_SYM_B(name)` | `name!`   | `SYM_B__name` |
+| `MRB_SYM_E(name)` | `name=`   | `SYM_E__name` |
+| `MRB_OPSYM(op)`   | operator  | `OPSYM__op`   |
 
 Operator names follow `lib/mruby/presym.rb` (`OPERATORS`): `!` not,
 `%` mod, `&` and, `*` mul, `+` add, `-` sub, `/` div, `<` lt, `>` gt,

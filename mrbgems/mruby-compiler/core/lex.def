@@ -218,4 +218,3 @@ mrb_reserved_word (register const char *str, register size_t len)
   return (struct kwtable *) 0;
 }
 #line 53 "mrbgems/mruby-compiler/core/keywords"
-
