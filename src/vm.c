@@ -1466,7 +1466,7 @@ catch_handler_find(const mrb_irep *irep, const mrb_code *pc, uint32_t filter)
 #define catch_cover_p(pc, beg, end) ((pc) > (ptrdiff_t)(beg) && (pc) <= (ptrdiff_t)(end))
 
   mrb_assert(irep && irep->clen > 0);
-  ptrdiff_t xpc = pc - irep->iseq;
+  ptrdiff_t xpc = mrb_irep_pc_offset(irep, pc);
   /* If it retry at the top level, pc will be 0, so check with -1 as the start position */
   mrb_assert(catch_cover_p(xpc, -1, irep->ilen));
   if (!catch_cover_p(xpc, -1, irep->ilen)) return NULL;
@@ -1616,7 +1616,15 @@ prepare_tagged_break(mrb_state *mrb, uint32_t tag, const mrb_callinfo *return_ci
 #endif
 
 #define DECODE_OPERANDS(ops) do { const mrb_code *pc = ci->pc+1; FETCH_ ## ops (); ci->pc = pc; } while (0)
-#define CALL_CODE_HOOKS() do { insn = BYTECODE_DECODER(*ci->pc); CODE_FETCH_HOOK(mrb, irep, ci->pc, regs); } while (0)
+#ifdef MRB_NATIVE_VM_REQUIRE
+#define NATIVE_VM_CHECK() do { \
+  if (mrb->c != mrb->root_c && !irep->native) \
+    mrb_raise(mrb, E_RUNTIME_ERROR, "bytecode execution in a native-only Fiber"); \
+} while (0)
+#else
+#define NATIVE_VM_CHECK() ((void)0)
+#endif
+#define CALL_CODE_HOOKS() do { NATIVE_VM_CHECK(); if (irep->native) { CODE_FETCH_HOOK(mrb, irep, ci->pc, regs); goto L_NATIVE_DISPATCH; } insn = BYTECODE_DECODER(*ci->pc); CODE_FETCH_HOOK(mrb, irep, ci->pc, regs); } while (0)
 
 #ifdef MRB_USE_TASK_SCHEDULER
 #define RETURN_IF_TASK_STOPPED(mrb) do { \
@@ -2179,33 +2187,33 @@ RETRY_TRY_BLOCK:
     }
 
     CASE(OP_JMP, S) {
-      ci->pc += (int16_t)a;
+      ci->pc = mrb_irep_pc_add(irep, ci->pc, (int16_t)a);
       JUMP;
     }
     CASE(OP_JMPIF, BS) {
       if (mrb_test(regs[a])) {
-        ci->pc += (int16_t)b;
+        ci->pc = mrb_irep_pc_add(irep, ci->pc, (int16_t)b);
         JUMP;
       }
       NEXT;
     }
     CASE(OP_JMPNOT, BS) {
       if (!mrb_test(regs[a])) {
-        ci->pc += (int16_t)b;
+        ci->pc = mrb_irep_pc_add(irep, ci->pc, (int16_t)b);
         JUMP;
       }
       NEXT;
     }
     CASE(OP_JMPNIL, BS) {
       if (mrb_nil_p(regs[a])) {
-        ci->pc += (int16_t)b;
+        ci->pc = mrb_irep_pc_add(irep, ci->pc, (int16_t)b);
         JUMP;
       }
       NEXT;
     }
 
     CASE(OP_JMPUW, S) {
-      a = (uint32_t)((ci->pc - irep->iseq) + (int16_t)a);
+      a = (uint32_t)(mrb_irep_pc_offset(irep, ci->pc) + (int16_t)a);
       CHECKPOINT_RESTORE(RBREAK_TAG_JUMP) {
         struct RBreak *brk = (struct RBreak*)mrb->exc;
         mrb_value target = mrb_break_value_get(brk);
@@ -2225,7 +2233,7 @@ RETRY_TRY_BLOCK:
       CHECKPOINT_END(RBREAK_TAG_JUMP);
 
       mrb->exc = NULL; /* clear break object */
-      ci->pc = irep->iseq + a;
+      ci->pc = mrb_irep_pc(irep, a);
       JUMP;
     }
 
@@ -2334,7 +2342,7 @@ RETRY_TRY_BLOCK:
         }
         irep = ci->proc->body.irep;
         stack_extend(mrb, irep->nregs);
-        ci->pc = irep->iseq + mrb_irep_catch_handler_unpack(ch->target);
+        ci->pc = mrb_irep_pc(irep, mrb_irep_catch_handler_unpack(ch->target));
       }
       NEXT;
     }
@@ -2795,7 +2803,7 @@ RETRY_TRY_BLOCK:
         }
         /* skip initializer of passed arguments */
         if (o > 0 && argc > m1+m2)
-          ci->pc += (argc - m1 - m2)*3;
+          ci->pc = mrb_irep_pc_add(irep, ci->pc, (argc - m1 - m2)*3);
       }
       else {
         mrb_int rnum = 0;
@@ -2811,7 +2819,7 @@ RETRY_TRY_BLOCK:
         if (m2 > 0 && argc-m2 > m1) {
           value_move(&regs[m1+o+r+1], &argv[m1+o+rnum], m2);
         }
-        ci->pc += o*3;
+        ci->pc = mrb_irep_pc_add(irep, ci->pc, o*3);
       }
 
       /* need to be update blk first to protect blk from GC */
@@ -3813,6 +3821,13 @@ RETRY_TRY_BLOCK:
     }
   }
   END_DISPATCH;
+  L_NATIVE_DISPATCH:
+#if defined(MRB_NATIVE_VM_DISPATCH_HEADER) && !defined(MRB_NO_GEMS)
+#ifndef MRB_PRESYM_SCANNING
+#include MRB_NATIVE_VM_DISPATCH_HEADER
+#endif
+#endif
+    mrb_raise(mrb, E_RUNTIME_ERROR, "missing native continuation");
 #undef regs
   }
   MRB_CATCH(&c_jmp) {

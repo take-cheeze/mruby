@@ -17,6 +17,7 @@ MRB_PRESYM_DEFINE_VAR_AND_INITER(catch_syms, 3, MRB_SYM(Object), MRB_SYM(new), M
  * This creates a default tag (Object.new) if none provided, then calls
  * the block with the tag as argument.
  */
+#ifndef MRB_NATIVE_VM_DISPATCH_HEADER
 static const mrb_code catch_iseq[] = {
   OP_ENTER,    0x00, 0x20, 0x01,     // 000 ENTER         0:1:0:0:0:0:1 (0x2001)
   OP_JMP,      0x00, 0x06,           // 004 JMP           013
@@ -35,13 +36,25 @@ static const mrb_code catch_iseq[] = {
   OP_RETURN,   0x02,                 // 027 RETURN        R2
 };
 
-/* Instruction representation for catch method bytecode */
+#else
+static const struct mrb_native_irep catch_native = {166470989u, 0x2001, NULL};
+#endif
+
+/* Catch must remain a VM frame so throw can find its tag and unwind it. */
 static const mrb_irep catch_irep = {
   3,5,0,
+#ifdef MRB_NATIVE_VM_DISPATCH_HEADER
+  MRB_IREP_STATIC,(const mrb_code*)(uintptr_t)1,
+#else
   MRB_IREP_STATIC,catch_iseq,
+#endif
   NULL,catch_syms,NULL,
   MRB_IREP_DEBUG_NULL_FIELDS
-  sizeof(catch_iseq),0,3,0,0
+#ifdef MRB_NATIVE_VM_DISPATCH_HEADER
+  29,0,3,0,0,&catch_native
+#else
+  sizeof(catch_iseq),0,3,0,0,NULL
+#endif
 };
 
 /* Procedure object for catch method - used to identify catch blocks in call stack */

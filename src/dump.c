@@ -819,6 +819,11 @@ lv_defined_p(const mrb_irep *irep)
 int
 mrb_dump_irep(mrb_state *mrb, const mrb_irep *irep, uint8_t flags, uint8_t **bin, size_t *bin_size)
 {
+  if (irep->native) {
+    *bin = NULL;
+    *bin_size = 0;
+    return MRB_DUMP_INVALID_ARGUMENT;
+  }
   size_t section_lineno_size = 0, section_lv_size = 0;
   uint8_t *cur = NULL;
   mrb_bool const debug_info_defined = (flags & MRB_DUMP_DEBUG_INFO) ? debug_info_defined_p(irep) : FALSE;
