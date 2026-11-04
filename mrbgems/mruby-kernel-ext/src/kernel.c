@@ -8,6 +8,9 @@
 #include <mruby/proc.h>
 #include <mruby/class.h>
 #include <mruby/internal.h>
+#include <mruby/debug.h>
+#include <mruby/irep.h>
+#include <string.h>
 
 /*
  * call-seq:
@@ -287,6 +290,32 @@ mrb_f_hash(mrb_state *mrb, mrb_value self)
   return arg;
 }
 
+/*
+ * Kernel#__dir__: the directory part of the path of the Ruby file that called it, as recorded in that file's debug
+ * info. The path is not resolved, so a relative load path gives a relative directory. Returns nil when the caller
+ * has no debug info (for example code compiled without it).
+ */
+static mrb_value
+mrb_f_dir(mrb_state *mrb, mrb_value self)
+{
+  mrb_callinfo *cibase = mrb->c->cibase;
+  for (mrb_callinfo *ci = mrb->c->ci - 1; ci >= cibase; ci--) {
+    if (!ci->proc || MRB_PROC_CFUNC_P(ci->proc) || MRB_PROC_ALIAS_P(ci->proc)) continue;
+
+    const mrb_irep *irep = ci->proc->body.irep;
+    if (!irep || !MRB_IREP_DEBUG_INFO(irep) || !ci->pc) return mrb_nil_value();
+
+    const char *file = mrb_debug_get_filename(mrb, irep, (uint32_t)(mrb_irep_pc_offset(irep, ci->pc) - 1));
+    if (!file) return mrb_nil_value();
+
+    const char *slash = strrchr(file, '/');
+    if (!slash) return mrb_str_new_cstr(mrb, ".");
+    if (slash == file) return mrb_str_new_cstr(mrb, "/");
+    return mrb_str_new(mrb, file, (mrb_int)(slash - file));
+  }
+  return mrb_nil_value();
+}
+
 #define MRB_MT_CLASS Kernel
 static const mrb_mt_entry kernel_ext_rom_entries[] = {
   MRB_MT_ENTRY(mrb_f_raise, MRB_SYM(fail),      MRB_ARGS_OPT(2) | MRB_MT_PRIVATE)
@@ -309,6 +338,7 @@ mrb_mruby_kernel_ext_gem_init(mrb_state *mrb)
   struct RClass *krn = mrb->kernel_module;
 
   MRB_MT_INIT_ROM(mrb, krn, kernel_ext_rom_entries);
+  mrb_define_private_method(mrb, krn, "__dir__", mrb_f_dir, MRB_ARGS_NONE());
 }
 
 void
