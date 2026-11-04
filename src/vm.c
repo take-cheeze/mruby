@@ -1817,6 +1817,12 @@ static void vmcnt_hit(mrb_state *mrb, mrb_sym mid, struct RClass *klass, const m
 MRB_API mrb_value
 mrb_vm_exec(mrb_state *mrb, const struct RProc *begin_proc, const mrb_code *iseq)
 {
+#if defined(MRB_VM_FREE)
+  /* VM-free build: no bytecode interpreter. Any bytecode run is a bug; it raises instead of executing. */
+  (void)begin_proc; (void)iseq;
+  mrb_raise(mrb, E_RUNTIME_ERROR, "bytecode interpreter is not built in (VM-free build)");
+  return mrb_nil_value();
+#endif
   /* mrb_assert(MRB_PROC_CFUNC_P(begin_proc)) */
   const mrb_irep *irep = begin_proc->body.irep;
   mrb_code insn;
