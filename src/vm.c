@@ -353,6 +353,8 @@ mrb_vm_ci_env_set(mrb_callinfo *ci, struct REnv *e)
 MRB_API void
 mrb_vm_ci_env_clear(mrb_state *mrb, mrb_callinfo *ci)
 {
+  // No call frame yet (a gem init before any VM run): nothing to unshare.
+  if (!ci) return;
   struct REnv *e = ci->u.env;
   if (e && e->tt == MRB_TT_ENV) {
     ci->u.target_class = e->c;
