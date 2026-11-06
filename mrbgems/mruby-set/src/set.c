@@ -238,6 +238,11 @@ set_init_copy(mrb_state *mrb, mrb_value self)
   }
   kset_init_data(mrb, self_set, kset_size(orig_set));
   kh_replace(set_val, mrb, self_set, orig_set);
+  /* kh_replace leaves data NULL for an empty source, which is the uninitialized marker; a copy of an empty set
+   * must still be a usable (empty) set. */
+  if (kset_is_uninitialized(self_set)) {
+    kset_init_data(mrb, self_set, KSET_INITIAL_SIZE);
+  }
 
   return self;
 }
