@@ -355,7 +355,8 @@ local_var_p(parser_state *p, mrb_sym sym)
     l = l->cdr;
   }
 
-  u = p->upper;
+  /* A method body (def/def self.x) does not see the locals of the code it is compiled in (an eval's caller). */
+  u = (p->in_def || p->in_single || p->in_class) ? NULL : p->upper;
   while (u && !MRB_PROC_CFUNC_P(u)) {
     const struct mrb_irep *ir = u->body.irep;
     const mrb_sym *v = ir->lv;
@@ -2066,7 +2067,7 @@ prohibit_literals(parser_state *p, node *n)
 /* xxx ----------------------------- */
 
 
-#line 2070 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 2071 "mrbgems/mruby-compiler/core/y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -2238,7 +2239,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 2013 "mrbgems/mruby-compiler/core/parse.y"
+#line 2014 "mrbgems/mruby-compiler/core/parse.y"
 
     node *nd;
     mrb_sym id;
@@ -2246,7 +2247,7 @@ union YYSTYPE
     stack_type stack;
     const struct vtable *vars;
 
-#line 2250 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 2251 "mrbgems/mruby-compiler/core/y.tab.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -3029,76 +3030,76 @@ static const yytype_uint8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,  2189,  2189,  2189,  2199,  2205,  2209,  2213,  2217,  2223,
-    2225,  2224,  2238,  2264,  2270,  2274,  2278,  2282,  2288,  2288,
-    2292,  2296,  2300,  2304,  2313,  2322,  2326,  2331,  2332,  2336,
-    2340,  2344,  2348,  2351,  2355,  2359,  2363,  2367,  2371,  2376,
-    2380,  2389,  2398,  2407,  2416,  2423,  2424,  2428,  2431,  2432,
-    2436,  2440,  2444,  2448,  2452,  2452,  2458,  2458,  2464,  2467,
-    2477,  2476,  2491,  2500,  2501,  2504,  2505,  2512,  2511,  2526,
-    2530,  2535,  2539,  2544,  2548,  2553,  2557,  2561,  2565,  2569,
-    2575,  2579,  2585,  2586,  2592,  2596,  2600,  2604,  2608,  2612,
-    2616,  2620,  2624,  2628,  2634,  2635,  2641,  2645,  2651,  2655,
-    2661,  2665,  2669,  2673,  2677,  2681,  2687,  2693,  2700,  2704,
-    2708,  2712,  2716,  2720,  2726,  2732,  2737,  2743,  2747,  2750,
-    2754,  2758,  2765,  2766,  2767,  2768,  2773,  2780,  2781,  2784,
-    2788,  2788,  2794,  2795,  2796,  2797,  2798,  2799,  2800,  2801,
-    2802,  2803,  2804,  2805,  2806,  2807,  2808,  2809,  2810,  2811,
-    2812,  2813,  2814,  2815,  2816,  2817,  2818,  2819,  2820,  2821,
-    2822,  2823,  2826,  2826,  2826,  2827,  2827,  2828,  2828,  2828,
-    2829,  2829,  2829,  2829,  2830,  2830,  2830,  2830,  2831,  2831,
-    2831,  2832,  2832,  2832,  2832,  2833,  2833,  2833,  2833,  2834,
-    2834,  2834,  2834,  2835,  2835,  2835,  2835,  2836,  2836,  2836,
-    2836,  2837,  2837,  2840,  2844,  2848,  2852,  2856,  2860,  2864,
-    2869,  2874,  2879,  2883,  2887,  2891,  2895,  2899,  2903,  2907,
-    2911,  2915,  2919,  2923,  2927,  2931,  2935,  2939,  2943,  2947,
-    2951,  2955,  2959,  2963,  2967,  2971,  2975,  2979,  2983,  2987,
-    2991,  2995,  2999,  3003,  3007,  3011,  3015,  3019,  3023,  3027,
-    3036,  3045,  3054,  3063,  3069,  3070,  3074,  3078,  3084,  3088,
-    3095,  3099,  3108,  3125,  3126,  3129,  3130,  3131,  3135,  3139,
-    3145,  3150,  3154,  3158,  3162,  3168,  3168,  3179,  3183,  3189,
-    3193,  3199,  3202,  3207,  3211,  3215,  3220,  3224,  3230,  3235,
-    3239,  3245,  3246,  3250,  3254,  3255,  3256,  3257,  3258,  3263,
-    3262,  3274,  3278,  3273,  3283,  3283,  3287,  3291,  3295,  3299,
-    3303,  3307,  3311,  3315,  3319,  3323,  3327,  3331,  3332,  3338,
-    3345,  3337,  3358,  3366,  3374,  3374,  3374,  3381,  3381,  3381,
-    3388,  3394,  3398,  3407,  3416,  3426,  3428,  3425,  3437,  3435,
-    3453,  3458,  3451,  3475,  3473,  3489,  3499,  3510,  3514,  3518,
-    3522,  3528,  3535,  3536,  3537,  3540,  3541,  3544,  3545,  3553,
-    3554,  3560,  3564,  3567,  3571,  3575,  3579,  3584,  3588,  3592,
-    3596,  3602,  3601,  3611,  3615,  3619,  3623,  3629,  3634,  3639,
-    3643,  3647,  3651,  3655,  3659,  3663,  3667,  3671,  3675,  3679,
-    3683,  3687,  3691,  3695,  3701,  3706,  3713,  3713,  3717,  3722,
-    3728,  3732,  3738,  3739,  3742,  3747,  3750,  3754,  3760,  3764,
-    3771,  3770,  3787,  3792,  3796,  3801,  3808,  3812,  3816,  3820,
-    3824,  3828,  3832,  3836,  3840,  3847,  3846,  3861,  3860,  3876,
-    3884,  3893,  3898,  3902,  3902,  3907,  3907,  3912,  3912,  3922,
-    3923,  3927,  3931,  3935,  3939,  3943,  3948,  3953,  3961,  3965,
-    3972,  3976,  3982,  3983,  3989,  3990,  3996,  3997,  4001,  4005,
-    4009,  4013,  4017,  4021,  4025,  4026,  4027,  4034,  4038,  4045,
-    4050,  4055,  4060,  4065,  4070,  4078,  4082,  4089,  4093,  4101,
-    4105,  4109,  4116,  4120,  4127,  4131,  4135,  4142,  4146,  4155,
-    4160,  4168,  4172,  4177,  4184,  4190,  4197,  4200,  4204,  4205,
-    4208,  4212,  4215,  4219,  4222,  4223,  4224,  4225,  4228,  4229,
-    4235,  4240,  4245,  4250,  4256,  4257,  4263,  4269,  4268,  4280,
-    4284,  4290,  4294,  4300,  4309,  4320,  4323,  4324,  4327,  4333,
-    4339,  4340,  4343,  4350,  4349,  4364,  4368,  4376,  4380,  4392,
-    4399,  4406,  4407,  4408,  4409,  4410,  4414,  4420,  4424,  4432,
-    4433,  4434,  4438,  4444,  4448,  4452,  4456,  4460,  4466,  4470,
-    4476,  4480,  4484,  4488,  4492,  4496,  4500,  4508,  4515,  4521,
-    4522,  4526,  4530,  4529,  4546,  4547,  4550,  4556,  4560,  4566,
-    4567,  4571,  4575,  4581,  4587,  4595,  4601,  4608,  4614,  4621,
-    4625,  4631,  4635,  4641,  4642,  4645,  4649,  4655,  4659,  4663,
-    4667,  4673,  4677,  4682,  4687,  4691,  4695,  4699,  4703,  4707,
-    4711,  4715,  4719,  4723,  4727,  4731,  4735,  4739,  4744,  4750,
-    4755,  4760,  4765,  4770,  4777,  4781,  4788,  4793,  4792,  4804,
-    4808,  4814,  4822,  4830,  4838,  4842,  4848,  4852,  4858,  4859,
-    4862,  4867,  4874,  4875,  4878,  4882,  4886,  4892,  4896,  4900,
-    4906,  4912,  4912,  4919,  4920,  4926,  4930,  4936,  4942,  4947,
-    4951,  4956,  4961,  4977,  4982,  4988,  4989,  4990,  4993,  4994,
-    4995,  4996,  4999,  5000,  5001,  5004,  5005,  5008,  5012,  5018,
-    5019,  5025,  5026,  5029,  5030,  5033,  5036,  5037,  5038,  5041,
-    5042,  5045,  5050,  5053,  5054,  5058
+       0,  2190,  2190,  2190,  2200,  2206,  2210,  2214,  2218,  2224,
+    2226,  2225,  2239,  2265,  2271,  2275,  2279,  2283,  2289,  2289,
+    2293,  2297,  2301,  2305,  2314,  2323,  2327,  2332,  2333,  2337,
+    2341,  2345,  2349,  2352,  2356,  2360,  2364,  2368,  2372,  2377,
+    2381,  2390,  2399,  2408,  2417,  2424,  2425,  2429,  2432,  2433,
+    2437,  2441,  2445,  2449,  2453,  2453,  2459,  2459,  2465,  2468,
+    2478,  2477,  2492,  2501,  2502,  2505,  2506,  2513,  2512,  2527,
+    2531,  2536,  2540,  2545,  2549,  2554,  2558,  2562,  2566,  2570,
+    2576,  2580,  2586,  2587,  2593,  2597,  2601,  2605,  2609,  2613,
+    2617,  2621,  2625,  2629,  2635,  2636,  2642,  2646,  2652,  2656,
+    2662,  2666,  2670,  2674,  2678,  2682,  2688,  2694,  2701,  2705,
+    2709,  2713,  2717,  2721,  2727,  2733,  2738,  2744,  2748,  2751,
+    2755,  2759,  2766,  2767,  2768,  2769,  2774,  2781,  2782,  2785,
+    2789,  2789,  2795,  2796,  2797,  2798,  2799,  2800,  2801,  2802,
+    2803,  2804,  2805,  2806,  2807,  2808,  2809,  2810,  2811,  2812,
+    2813,  2814,  2815,  2816,  2817,  2818,  2819,  2820,  2821,  2822,
+    2823,  2824,  2827,  2827,  2827,  2828,  2828,  2829,  2829,  2829,
+    2830,  2830,  2830,  2830,  2831,  2831,  2831,  2831,  2832,  2832,
+    2832,  2833,  2833,  2833,  2833,  2834,  2834,  2834,  2834,  2835,
+    2835,  2835,  2835,  2836,  2836,  2836,  2836,  2837,  2837,  2837,
+    2837,  2838,  2838,  2841,  2845,  2849,  2853,  2857,  2861,  2865,
+    2870,  2875,  2880,  2884,  2888,  2892,  2896,  2900,  2904,  2908,
+    2912,  2916,  2920,  2924,  2928,  2932,  2936,  2940,  2944,  2948,
+    2952,  2956,  2960,  2964,  2968,  2972,  2976,  2980,  2984,  2988,
+    2992,  2996,  3000,  3004,  3008,  3012,  3016,  3020,  3024,  3028,
+    3037,  3046,  3055,  3064,  3070,  3071,  3075,  3079,  3085,  3089,
+    3096,  3100,  3109,  3126,  3127,  3130,  3131,  3132,  3136,  3140,
+    3146,  3151,  3155,  3159,  3163,  3169,  3169,  3180,  3184,  3190,
+    3194,  3200,  3203,  3208,  3212,  3216,  3221,  3225,  3231,  3236,
+    3240,  3246,  3247,  3251,  3255,  3256,  3257,  3258,  3259,  3264,
+    3263,  3275,  3279,  3274,  3284,  3284,  3288,  3292,  3296,  3300,
+    3304,  3308,  3312,  3316,  3320,  3324,  3328,  3332,  3333,  3339,
+    3346,  3338,  3359,  3367,  3375,  3375,  3375,  3382,  3382,  3382,
+    3389,  3395,  3399,  3408,  3417,  3427,  3429,  3426,  3438,  3436,
+    3456,  3461,  3454,  3480,  3478,  3496,  3506,  3517,  3521,  3525,
+    3529,  3535,  3542,  3543,  3544,  3547,  3548,  3551,  3552,  3560,
+    3561,  3567,  3571,  3574,  3578,  3582,  3586,  3591,  3595,  3599,
+    3603,  3609,  3608,  3618,  3622,  3626,  3630,  3636,  3641,  3646,
+    3650,  3654,  3658,  3662,  3666,  3670,  3674,  3678,  3682,  3686,
+    3690,  3694,  3698,  3702,  3708,  3713,  3720,  3720,  3724,  3729,
+    3735,  3739,  3745,  3746,  3749,  3754,  3757,  3761,  3767,  3771,
+    3778,  3777,  3794,  3799,  3803,  3808,  3815,  3819,  3823,  3827,
+    3831,  3835,  3839,  3843,  3847,  3854,  3853,  3868,  3867,  3883,
+    3891,  3900,  3905,  3909,  3909,  3914,  3914,  3919,  3919,  3929,
+    3930,  3934,  3938,  3942,  3946,  3950,  3955,  3960,  3968,  3972,
+    3979,  3983,  3989,  3990,  3996,  3997,  4003,  4004,  4008,  4012,
+    4016,  4020,  4024,  4028,  4032,  4033,  4034,  4041,  4045,  4052,
+    4057,  4062,  4067,  4072,  4077,  4085,  4089,  4096,  4100,  4108,
+    4112,  4116,  4123,  4127,  4134,  4138,  4142,  4149,  4153,  4162,
+    4167,  4175,  4179,  4184,  4191,  4197,  4204,  4207,  4211,  4212,
+    4215,  4219,  4222,  4226,  4229,  4230,  4231,  4232,  4235,  4236,
+    4242,  4247,  4252,  4257,  4263,  4264,  4270,  4276,  4275,  4287,
+    4291,  4297,  4301,  4307,  4316,  4327,  4330,  4331,  4334,  4340,
+    4346,  4347,  4350,  4357,  4356,  4371,  4375,  4383,  4387,  4399,
+    4406,  4413,  4414,  4415,  4416,  4417,  4421,  4427,  4431,  4439,
+    4440,  4441,  4445,  4451,  4455,  4459,  4463,  4467,  4473,  4477,
+    4483,  4487,  4491,  4495,  4499,  4503,  4507,  4515,  4522,  4528,
+    4529,  4533,  4537,  4536,  4553,  4554,  4557,  4563,  4567,  4573,
+    4574,  4578,  4582,  4588,  4594,  4602,  4608,  4615,  4621,  4628,
+    4632,  4638,  4642,  4648,  4649,  4652,  4656,  4662,  4666,  4670,
+    4674,  4680,  4684,  4689,  4694,  4698,  4702,  4706,  4710,  4714,
+    4718,  4722,  4726,  4730,  4734,  4738,  4742,  4746,  4751,  4757,
+    4762,  4767,  4772,  4777,  4784,  4788,  4795,  4800,  4799,  4811,
+    4815,  4821,  4829,  4837,  4845,  4849,  4855,  4859,  4865,  4866,
+    4869,  4874,  4881,  4882,  4885,  4889,  4893,  4899,  4903,  4907,
+    4913,  4919,  4919,  4926,  4927,  4933,  4937,  4943,  4949,  4954,
+    4958,  4963,  4968,  4984,  4989,  4995,  4996,  4997,  5000,  5001,
+    5002,  5003,  5006,  5007,  5008,  5011,  5012,  5015,  5019,  5025,
+    5026,  5032,  5033,  5036,  5037,  5040,  5043,  5044,  5045,  5048,
+    5049,  5052,  5057,  5060,  5061,  5065
 };
 #endif
 
@@ -7300,7 +7301,7 @@ YYLTYPE yylloc = yyloc_default;
 
 
 
-#line 7304 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7305 "mrbgems/mruby-compiler/core/y.tab.c"
 
   yylsp[0] = yylloc;
   goto yysetstate;
@@ -7513,84 +7514,84 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* $@1: %empty  */
-#line 2189 "mrbgems/mruby-compiler/core/parse.y"
+#line 2190 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lstate = EXPR_BEG;
                       if (!p->locals) p->locals = cons(0,0);
                     }
-#line 7522 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7523 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 3: /* program: $@1 top_compstmt  */
-#line 2194 "mrbgems/mruby-compiler/core/parse.y"
+#line 2195 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->tree = new_scope(p, (yyvsp[0].nd));
                     }
-#line 7530 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7531 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 4: /* top_compstmt: top_stmts opt_terms  */
-#line 2200 "mrbgems/mruby-compiler/core/parse.y"
+#line 2201 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 7538 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7539 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 5: /* top_stmts: none  */
-#line 2206 "mrbgems/mruby-compiler/core/parse.y"
+#line 2207 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 7546 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7547 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 6: /* top_stmts: top_stmt  */
-#line 2210 "mrbgems/mruby-compiler/core/parse.y"
+#line 2211 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_stmts(p, (yyvsp[0].nd));
                     }
-#line 7554 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7555 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 7: /* top_stmts: top_stmts terms top_stmt  */
-#line 2214 "mrbgems/mruby-compiler/core/parse.y"
+#line 2215 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = stmts_push(p, (yyvsp[-2].nd), newline_node((yyvsp[0].nd)));
                     }
-#line 7562 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7563 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 8: /* top_stmts: error top_stmt  */
-#line 2218 "mrbgems/mruby-compiler/core/parse.y"
+#line 2219 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 7570 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7571 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 10: /* @2: %empty  */
-#line 2225 "mrbgems/mruby-compiler/core/parse.y"
+#line 2226 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = local_switch(p);
                       nvars_block(p);
                     }
-#line 7579 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7580 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 11: /* top_stmt: "'BEGIN'" @2 '{' top_compstmt '}'  */
-#line 2230 "mrbgems/mruby-compiler/core/parse.y"
+#line 2231 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[-4]), p, "BEGIN not supported");
                       local_resume(p, (yyvsp[-3].nd));
                       nvars_unnest(p);
                       (yyval.nd) = 0;
                     }
-#line 7590 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7591 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 12: /* bodystmt: compstmt opt_rescue opt_else opt_ensure  */
-#line 2242 "mrbgems/mruby-compiler/core/parse.y"
+#line 2243 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if ((yyvsp[-2].nd)) {
                         (yyval.nd) = new_rescue(p, (yyvsp[-3].nd), (yyvsp[-2].nd), (yyvsp[-1].nd));
@@ -7611,89 +7612,89 @@ yyreduce:
                         }
                       }
                     }
-#line 7615 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7616 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 13: /* compstmt: stmts opt_terms  */
-#line 2265 "mrbgems/mruby-compiler/core/parse.y"
+#line 2266 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 7623 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7624 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 14: /* stmts: none  */
-#line 2271 "mrbgems/mruby-compiler/core/parse.y"
+#line 2272 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 7631 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7632 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 15: /* stmts: stmt  */
-#line 2275 "mrbgems/mruby-compiler/core/parse.y"
+#line 2276 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_stmts(p, (yyvsp[0].nd));
                     }
-#line 7639 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7640 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 16: /* stmts: stmts terms stmt  */
-#line 2279 "mrbgems/mruby-compiler/core/parse.y"
+#line 2280 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = stmts_push(p, (yyvsp[-2].nd), newline_node((yyvsp[0].nd)));
                     }
-#line 7647 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7648 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 17: /* stmts: error stmt  */
-#line 2283 "mrbgems/mruby-compiler/core/parse.y"
+#line 2284 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_stmts(p, (yyvsp[0].nd));
                     }
-#line 7655 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7656 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 18: /* $@3: %empty  */
-#line 2288 "mrbgems/mruby-compiler/core/parse.y"
+#line 2289 "mrbgems/mruby-compiler/core/parse.y"
                                      {p->lstate = EXPR_FNAME;}
-#line 7661 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7662 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 19: /* stmt: "'alias'" fsym $@3 fsym  */
-#line 2289 "mrbgems/mruby-compiler/core/parse.y"
+#line 2290 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_alias(p, (yyvsp[-2].id), (yyvsp[0].id));
                     }
-#line 7669 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7670 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 20: /* stmt: "'undef'" undef_list  */
-#line 2293 "mrbgems/mruby-compiler/core/parse.y"
+#line 2294 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_undef(p, (yyvsp[0].nd));
                     }
-#line 7677 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7678 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 21: /* stmt: stmt "'if' modifier" expr_value  */
-#line 2297 "mrbgems/mruby-compiler/core/parse.y"
+#line 2298 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[0].nd)), (yyvsp[-2].nd), 0);
                     }
-#line 7685 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7686 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 22: /* stmt: stmt "'unless' modifier" expr_value  */
-#line 2301 "mrbgems/mruby-compiler/core/parse.y"
+#line 2302 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[0].nd)), 0, (yyvsp[-2].nd));
                     }
-#line 7693 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7694 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 23: /* stmt: stmt "'while' modifier" expr_value  */
-#line 2305 "mrbgems/mruby-compiler/core/parse.y"
+#line 2306 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if ((yyvsp[-2].nd) && node_type_p((yyvsp[-2].nd), NODE_BEGIN)) {
                         (yyval.nd) = new_while_mod(p, cond((yyvsp[0].nd)), (yyvsp[-2].nd));
@@ -7702,11 +7703,11 @@ yyreduce:
                         (yyval.nd) = new_while(p, cond((yyvsp[0].nd)), (yyvsp[-2].nd));
                       }
                     }
-#line 7706 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7707 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 24: /* stmt: stmt "'until' modifier" expr_value  */
-#line 2314 "mrbgems/mruby-compiler/core/parse.y"
+#line 2315 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if ((yyvsp[-2].nd) && node_type_p((yyvsp[-2].nd), NODE_BEGIN)) {
                         (yyval.nd) = new_until_mod(p, cond((yyvsp[0].nd)), (yyvsp[-2].nd));
@@ -7715,117 +7716,117 @@ yyreduce:
                         (yyval.nd) = new_until(p, cond((yyvsp[0].nd)), (yyvsp[-2].nd));
                       }
                     }
-#line 7719 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7720 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 25: /* stmt: stmt "'rescue' modifier" stmt  */
-#line 2323 "mrbgems/mruby-compiler/core/parse.y"
+#line 2324 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_mod_rescue(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7727 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7728 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 26: /* stmt: "'END'" '{' compstmt '}'  */
-#line 2327 "mrbgems/mruby-compiler/core/parse.y"
+#line 2328 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[-3]), p, "END not supported");
                       (yyval.nd) = new_postexe(p, (yyvsp[-1].nd));
                     }
-#line 7736 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7737 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 28: /* stmt: mlhs '=' command_call  */
-#line 2333 "mrbgems/mruby-compiler/core/parse.y"
+#line 2334 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_masgn(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7744 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7745 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 29: /* stmt: lhs '=' mrhs  */
-#line 2337 "mrbgems/mruby-compiler/core/parse.y"
+#line 2338 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_asgn(p, (yyvsp[-2].nd), new_array(p, (yyvsp[0].nd)));
                     }
-#line 7752 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7753 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 30: /* stmt: mlhs '=' arg  */
-#line 2341 "mrbgems/mruby-compiler/core/parse.y"
+#line 2342 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_masgn(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7760 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7761 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 31: /* stmt: mlhs '=' mrhs  */
-#line 2345 "mrbgems/mruby-compiler/core/parse.y"
+#line 2346 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_masgn(p, (yyvsp[-2].nd), new_array(p, (yyvsp[0].nd)));
                     }
-#line 7768 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7769 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 33: /* command_asgn: lhs '=' command_rhs  */
-#line 2352 "mrbgems/mruby-compiler/core/parse.y"
+#line 2353 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_asgn(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7776 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7777 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 34: /* command_asgn: var_lhs tOP_ASGN command_rhs  */
-#line 2356 "mrbgems/mruby-compiler/core/parse.y"
+#line 2357 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, (yyvsp[-2].nd), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 7784 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7785 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 35: /* command_asgn: primary_value '[' opt_call_args ']' tOP_ASGN command_rhs  */
-#line 2360 "mrbgems/mruby-compiler/core/parse.y"
+#line 2361 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-5].nd), intern_op(aref), (yyvsp[-3].nd), '.'), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 7792 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7793 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 36: /* command_asgn: primary_value call_op "local variable or method" tOP_ASGN command_rhs  */
-#line 2364 "mrbgems/mruby-compiler/core/parse.y"
+#line 2365 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), 0, (yyvsp[-3].num)), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 7800 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7801 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 37: /* command_asgn: primary_value call_op "constant" tOP_ASGN command_rhs  */
-#line 2368 "mrbgems/mruby-compiler/core/parse.y"
+#line 2369 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), 0, (yyvsp[-3].num)), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 7808 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7809 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 38: /* command_asgn: primary_value "::" "constant" tOP_ASGN command_call  */
-#line 2372 "mrbgems/mruby-compiler/core/parse.y"
+#line 2373 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[-4]), p, "constant re-assignment");
                       (yyval.nd) = 0;
                     }
-#line 7817 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7818 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 39: /* command_asgn: primary_value "::" "local variable or method" tOP_ASGN command_rhs  */
-#line 2377 "mrbgems/mruby-compiler/core/parse.y"
+#line 2378 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), 0, tCOLON2), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 7825 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7826 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 40: /* command_asgn: defn_head f_opt_arglist_paren '=' command  */
-#line 2381 "mrbgems/mruby-compiler/core/parse.y"
+#line 2382 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-3].nd);
                       endless_method_name(p, (yyvsp[-3].nd));
@@ -7834,11 +7835,11 @@ yyreduce:
                       nvars_unnest(p);
                       p->in_def--;
                     }
-#line 7838 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7839 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 41: /* command_asgn: defn_head f_opt_arglist_paren '=' command "'rescue' modifier" arg  */
-#line 2390 "mrbgems/mruby-compiler/core/parse.y"
+#line 2391 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-5].nd);
                       endless_method_name(p, (yyvsp[-5].nd));
@@ -7847,11 +7848,11 @@ yyreduce:
                       nvars_unnest(p);
                       p->in_def--;
                     }
-#line 7851 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7852 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 42: /* command_asgn: defs_head f_opt_arglist_paren '=' command  */
-#line 2399 "mrbgems/mruby-compiler/core/parse.y"
+#line 2400 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-3].nd);
                       void_expr_error(p, (yyvsp[0].nd));
@@ -7860,11 +7861,11 @@ yyreduce:
                       p->in_def--;
                       p->in_single--;
                     }
-#line 7864 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7865 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 43: /* command_asgn: defs_head f_opt_arglist_paren '=' command "'rescue' modifier" arg  */
-#line 2408 "mrbgems/mruby-compiler/core/parse.y"
+#line 2409 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-5].nd);
                       void_expr_error(p, (yyvsp[-2].nd));
@@ -7873,119 +7874,119 @@ yyreduce:
                       p->in_def--;
                       p->in_single--;
                     }
-#line 7877 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7878 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 44: /* command_asgn: backref tOP_ASGN command_rhs  */
-#line 2417 "mrbgems/mruby-compiler/core/parse.y"
+#line 2418 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       backref_error(p, (yyvsp[-2].nd));
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 7886 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7887 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 46: /* command_rhs: command_call "'rescue' modifier" stmt  */
-#line 2425 "mrbgems/mruby-compiler/core/parse.y"
+#line 2426 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_mod_rescue(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7894 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7895 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 49: /* expr: expr "'and'" expr  */
-#line 2433 "mrbgems/mruby-compiler/core/parse.y"
+#line 2434 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_and(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7902 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7903 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 50: /* expr: expr "'or'" expr  */
-#line 2437 "mrbgems/mruby-compiler/core/parse.y"
+#line 2438 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_or(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 7910 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7911 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 51: /* expr: "'not'" opt_nl expr  */
-#line 2441 "mrbgems/mruby-compiler/core/parse.y"
+#line 2442 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, cond((yyvsp[0].nd)), "!");
                     }
-#line 7918 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7919 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 52: /* expr: "'defined?'" opt_nl expr  */
-#line 2445 "mrbgems/mruby-compiler/core/parse.y"
+#line 2446 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_defined(p, (yyvsp[0].nd));
                     }
-#line 7926 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7927 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 53: /* expr: '!' command_call  */
-#line 2449 "mrbgems/mruby-compiler/core/parse.y"
+#line 2450 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, cond((yyvsp[0].nd)), "!");
                     }
-#line 7934 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7935 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 54: /* $@4: %empty  */
-#line 2452 "mrbgems/mruby-compiler/core/parse.y"
+#line 2453 "mrbgems/mruby-compiler/core/parse.y"
                              {p->in_kwarg++;}
-#line 7940 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7941 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 55: /* expr: arg "=>" $@4 p_expr  */
-#line 2453 "mrbgems/mruby-compiler/core/parse.y"
+#line 2454 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* expr => pattern (raises NoMatchingPatternError on failure) */
                       p->in_kwarg--;
                       (yyval.nd) = new_match_pat(p, (yyvsp[-3].nd), (yyvsp[0].nd), TRUE);
                     }
-#line 7950 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7951 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 56: /* $@5: %empty  */
-#line 2458 "mrbgems/mruby-compiler/core/parse.y"
+#line 2459 "mrbgems/mruby-compiler/core/parse.y"
                                  {p->in_kwarg++;}
-#line 7956 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7957 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 57: /* expr: arg "'in'" $@5 p_expr  */
-#line 2459 "mrbgems/mruby-compiler/core/parse.y"
+#line 2460 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* expr in pattern (returns true/false) */
                       p->in_kwarg--;
                       (yyval.nd) = new_match_pat(p, (yyvsp[-3].nd), (yyvsp[0].nd), FALSE);
                     }
-#line 7966 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7967 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 59: /* defn_head: "'def'" fname  */
-#line 2468 "mrbgems/mruby-compiler/core/parse.y"
+#line 2469 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_def(p, (yyvsp[0].id));
                       p->cmdarg_stack = 0;
                       p->in_def++;
                       nvars_block(p);
                     }
-#line 7977 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7978 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 60: /* $@6: %empty  */
-#line 2477 "mrbgems/mruby-compiler/core/parse.y"
+#line 2478 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lstate = EXPR_FNAME;
                     }
-#line 7985 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7986 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 61: /* defs_head: "'def'" singleton dot_or_colon $@6 fname  */
-#line 2481 "mrbgems/mruby-compiler/core/parse.y"
+#line 2482 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_sdef(p, (yyvsp[-3].nd), (yyvsp[0].id));
                       p->cmdarg_stack = 0;
@@ -7994,1054 +7995,1054 @@ yyreduce:
                       nvars_block(p);
                       p->lstate = EXPR_ENDFN; /* force for args */
                     }
-#line 7998 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 7999 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 62: /* expr_value: expr  */
-#line 2492 "mrbgems/mruby-compiler/core/parse.y"
+#line 2493 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (!(yyvsp[0].nd)) (yyval.nd) = new_nil(p);
                       else {
                         (yyval.nd) = (yyvsp[0].nd);
                       }
                     }
-#line 8009 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8010 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 66: /* block_command: block_call call_op2 operation2 command_args  */
-#line 2506 "mrbgems/mruby-compiler/core/parse.y"
+#line 2507 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].nd), (yyvsp[-2].num));
                     }
-#line 8017 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8018 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 67: /* $@7: %empty  */
-#line 2512 "mrbgems/mruby-compiler/core/parse.y"
+#line 2513 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_nest(p);
                       nvars_nest(p);
                     }
-#line 8026 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8027 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 68: /* cmd_brace_block: "{" $@7 opt_block_param compstmt '}'  */
-#line 2519 "mrbgems/mruby-compiler/core/parse.y"
+#line 2520 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_block(p, (yyvsp[-2].nd), (yyvsp[-1].nd));
                       local_unnest(p);
                       nvars_unnest(p);
                     }
-#line 8036 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8037 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 69: /* command: operation command_args  */
-#line 2527 "mrbgems/mruby-compiler/core/parse.y"
+#line 2528 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_fcall(p, (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 8044 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8045 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 70: /* command: operation command_args cmd_brace_block  */
-#line 2531 "mrbgems/mruby-compiler/core/parse.y"
+#line 2532 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       args_with_block(p, (yyvsp[-1].nd), (yyvsp[0].nd));
                       (yyval.nd) = new_fcall(p, (yyvsp[-2].id), (yyvsp[-1].nd));
                     }
-#line 8053 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8054 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 71: /* command: primary_value call_op operation2 command_args  */
-#line 2536 "mrbgems/mruby-compiler/core/parse.y"
+#line 2537 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].nd), (yyvsp[-2].num));
                     }
-#line 8061 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8062 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 72: /* command: primary_value call_op operation2 command_args cmd_brace_block  */
-#line 2540 "mrbgems/mruby-compiler/core/parse.y"
+#line 2541 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       args_with_block(p, (yyvsp[-1].nd), (yyvsp[0].nd));
                       (yyval.nd) = new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), (yyvsp[-1].nd), (yyvsp[-3].num));
                    }
-#line 8070 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8071 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 73: /* command: primary_value "::" operation2 command_args  */
-#line 2545 "mrbgems/mruby-compiler/core/parse.y"
+#line 2546 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].nd), tCOLON2);
                     }
-#line 8078 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8079 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 74: /* command: primary_value "::" operation2 command_args cmd_brace_block  */
-#line 2549 "mrbgems/mruby-compiler/core/parse.y"
+#line 2550 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       args_with_block(p, (yyvsp[-1].nd), (yyvsp[0].nd));
                       (yyval.nd) = new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), (yyvsp[-1].nd), tCOLON2);
                     }
-#line 8087 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8088 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 75: /* command: "'super'" command_args  */
-#line 2554 "mrbgems/mruby-compiler/core/parse.y"
+#line 2555 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_super(p, (yyvsp[0].nd));
                     }
-#line 8095 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8096 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 76: /* command: "'yield'" command_args  */
-#line 2558 "mrbgems/mruby-compiler/core/parse.y"
+#line 2559 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_yield(p, (yyvsp[0].nd));
                     }
-#line 8103 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8104 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 77: /* command: "'return'" call_args  */
-#line 2562 "mrbgems/mruby-compiler/core/parse.y"
+#line 2563 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_return(p, ret_args(p, (yyvsp[0].nd)));
                     }
-#line 8111 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8112 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 78: /* command: "'break'" call_args  */
-#line 2566 "mrbgems/mruby-compiler/core/parse.y"
+#line 2567 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_break(p, ret_args(p, (yyvsp[0].nd)));
                     }
-#line 8119 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8120 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 79: /* command: "'next'" call_args  */
-#line 2570 "mrbgems/mruby-compiler/core/parse.y"
+#line 2571 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_next(p, ret_args(p, (yyvsp[0].nd)));
                     }
-#line 8127 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8128 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 80: /* mlhs: mlhs_basic  */
-#line 2576 "mrbgems/mruby-compiler/core/parse.y"
+#line 2577 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 8135 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8136 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 81: /* mlhs: tLPAREN mlhs_inner rparen  */
-#line 2580 "mrbgems/mruby-compiler/core/parse.y"
+#line 2581 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 8143 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8144 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 83: /* mlhs_inner: tLPAREN mlhs_inner rparen  */
-#line 2587 "mrbgems/mruby-compiler/core/parse.y"
+#line 2588 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 8151 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8152 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 84: /* mlhs_basic: mlhs_list  */
-#line 2593 "mrbgems/mruby-compiler/core/parse.y"
+#line 2594 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 8159 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8160 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 85: /* mlhs_basic: mlhs_list mlhs_item  */
-#line 2597 "mrbgems/mruby-compiler/core/parse.y"
+#line 2598 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(push((yyvsp[-1].nd),(yyvsp[0].nd)));
                     }
-#line 8167 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8168 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 86: /* mlhs_basic: mlhs_list "*" mlhs_node  */
-#line 2601 "mrbgems/mruby-compiler/core/parse.y"
+#line 2602 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list2((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 8175 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8176 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 87: /* mlhs_basic: mlhs_list "*" mlhs_node ',' mlhs_post  */
-#line 2605 "mrbgems/mruby-compiler/core/parse.y"
+#line 2606 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3((yyvsp[-4].nd), (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 8183 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8184 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 88: /* mlhs_basic: mlhs_list "*"  */
-#line 2609 "mrbgems/mruby-compiler/core/parse.y"
+#line 2610 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list2((yyvsp[-1].nd), new_nil(p));
                     }
-#line 8191 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8192 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 89: /* mlhs_basic: mlhs_list "*" ',' mlhs_post  */
-#line 2613 "mrbgems/mruby-compiler/core/parse.y"
+#line 2614 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3((yyvsp[-3].nd), new_nil(p), (yyvsp[0].nd));
                     }
-#line 8199 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8200 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 90: /* mlhs_basic: "*" mlhs_node  */
-#line 2617 "mrbgems/mruby-compiler/core/parse.y"
+#line 2618 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list2(0, (yyvsp[0].nd));
                     }
-#line 8207 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8208 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 91: /* mlhs_basic: "*" mlhs_node ',' mlhs_post  */
-#line 2621 "mrbgems/mruby-compiler/core/parse.y"
+#line 2622 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3(0, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 8215 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8216 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 92: /* mlhs_basic: "*"  */
-#line 2625 "mrbgems/mruby-compiler/core/parse.y"
+#line 2626 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list2(0, new_nil(p));
                     }
-#line 8223 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8224 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 93: /* mlhs_basic: "*" ',' mlhs_post  */
-#line 2629 "mrbgems/mruby-compiler/core/parse.y"
+#line 2630 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3(0, new_nil(p), (yyvsp[0].nd));
                     }
-#line 8231 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8232 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 95: /* mlhs_item: tLPAREN mlhs_inner rparen  */
-#line 2636 "mrbgems/mruby-compiler/core/parse.y"
+#line 2637 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_masgn(p, (yyvsp[-1].nd), NULL);
                     }
-#line 8239 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8240 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 96: /* mlhs_list: mlhs_item ','  */
-#line 2642 "mrbgems/mruby-compiler/core/parse.y"
+#line 2643 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[-1].nd));
                     }
-#line 8247 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8248 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 97: /* mlhs_list: mlhs_list mlhs_item ','  */
-#line 2646 "mrbgems/mruby-compiler/core/parse.y"
+#line 2647 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[-1].nd));
                     }
-#line 8255 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8256 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 98: /* mlhs_post: mlhs_item  */
-#line 2652 "mrbgems/mruby-compiler/core/parse.y"
+#line 2653 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 8263 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8264 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 99: /* mlhs_post: mlhs_list mlhs_item  */
-#line 2656 "mrbgems/mruby-compiler/core/parse.y"
+#line 2657 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 8271 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8272 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 100: /* mlhs_node: variable  */
-#line 2662 "mrbgems/mruby-compiler/core/parse.y"
+#line 2663 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       assignable(p, (yyvsp[0].nd));
                     }
-#line 8279 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8280 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 101: /* mlhs_node: primary_value '[' opt_call_args ']'  */
-#line 2666 "mrbgems/mruby-compiler/core/parse.y"
+#line 2667 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), intern_op(aref), (yyvsp[-1].nd), '.');
                     }
-#line 8287 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8288 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 102: /* mlhs_node: primary_value call_op "local variable or method"  */
-#line 2670 "mrbgems/mruby-compiler/core/parse.y"
+#line 2671 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, (yyvsp[-1].num));
                     }
-#line 8295 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8296 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 103: /* mlhs_node: primary_value "::" "local variable or method"  */
-#line 2674 "mrbgems/mruby-compiler/core/parse.y"
+#line 2675 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, tCOLON2);
                     }
-#line 8303 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8304 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 104: /* mlhs_node: primary_value call_op "constant"  */
-#line 2678 "mrbgems/mruby-compiler/core/parse.y"
+#line 2679 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, (yyvsp[-1].num));
                     }
-#line 8311 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8312 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 105: /* mlhs_node: primary_value "::" "constant"  */
-#line 2682 "mrbgems/mruby-compiler/core/parse.y"
+#line 2683 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (p->in_def || p->in_single)
                         yyerror(&(yylsp[-2]), p, "dynamic constant assignment");
                       (yyval.nd) = new_colon2(p, (yyvsp[-2].nd), (yyvsp[0].id));
                     }
-#line 8321 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8322 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 106: /* mlhs_node: tCOLON3 "constant"  */
-#line 2688 "mrbgems/mruby-compiler/core/parse.y"
+#line 2689 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (p->in_def || p->in_single)
                         yyerror(&(yylsp[-1]), p, "dynamic constant assignment");
                       (yyval.nd) = new_colon3(p, (yyvsp[0].id));
                     }
-#line 8331 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8332 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 107: /* mlhs_node: backref  */
-#line 2694 "mrbgems/mruby-compiler/core/parse.y"
+#line 2695 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       backref_error(p, (yyvsp[0].nd));
                       (yyval.nd) = 0;
                     }
-#line 8340 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8341 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 108: /* lhs: variable  */
-#line 2701 "mrbgems/mruby-compiler/core/parse.y"
+#line 2702 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       assignable(p, (yyvsp[0].nd));
                     }
-#line 8348 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8349 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 109: /* lhs: primary_value '[' opt_call_args ']'  */
-#line 2705 "mrbgems/mruby-compiler/core/parse.y"
+#line 2706 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), intern_op(aref), (yyvsp[-1].nd), '.');
                     }
-#line 8356 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8357 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 110: /* lhs: primary_value call_op "local variable or method"  */
-#line 2709 "mrbgems/mruby-compiler/core/parse.y"
+#line 2710 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, (yyvsp[-1].num));
                     }
-#line 8364 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8365 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 111: /* lhs: primary_value "::" "local variable or method"  */
-#line 2713 "mrbgems/mruby-compiler/core/parse.y"
+#line 2714 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, tCOLON2);
                     }
-#line 8372 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8373 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 112: /* lhs: primary_value call_op "constant"  */
-#line 2717 "mrbgems/mruby-compiler/core/parse.y"
+#line 2718 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, (yyvsp[-1].num));
                     }
-#line 8380 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8381 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 113: /* lhs: primary_value "::" "constant"  */
-#line 2721 "mrbgems/mruby-compiler/core/parse.y"
+#line 2722 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (p->in_def || p->in_single)
                         yyerror(&(yylsp[-2]), p, "dynamic constant assignment");
                       (yyval.nd) = new_colon2(p, (yyvsp[-2].nd), (yyvsp[0].id));
                     }
-#line 8390 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8391 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 114: /* lhs: tCOLON3 "constant"  */
-#line 2727 "mrbgems/mruby-compiler/core/parse.y"
+#line 2728 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (p->in_def || p->in_single)
                         yyerror(&(yylsp[-1]), p, "dynamic constant assignment");
                       (yyval.nd) = new_colon3(p, (yyvsp[0].id));
                     }
-#line 8400 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8401 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 115: /* lhs: backref  */
-#line 2733 "mrbgems/mruby-compiler/core/parse.y"
+#line 2734 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       backref_error(p, (yyvsp[0].nd));
                       (yyval.nd) = 0;
                     }
-#line 8409 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8410 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 116: /* lhs: "numbered parameter"  */
-#line 2738 "mrbgems/mruby-compiler/core/parse.y"
+#line 2739 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "can't assign to numbered parameter");
                     }
-#line 8417 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8418 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 117: /* cname: "local variable or method"  */
-#line 2744 "mrbgems/mruby-compiler/core/parse.y"
+#line 2745 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "class/module name must be CONSTANT");
                     }
-#line 8425 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8426 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 119: /* cpath: tCOLON3 cname  */
-#line 2751 "mrbgems/mruby-compiler/core/parse.y"
+#line 2752 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(int_to_node(1), sym_to_node((yyvsp[0].id)));
                     }
-#line 8433 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8434 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 120: /* cpath: cname  */
-#line 2755 "mrbgems/mruby-compiler/core/parse.y"
+#line 2756 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(int_to_node(0), sym_to_node((yyvsp[0].id)));
                     }
-#line 8441 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8442 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 121: /* cpath: primary_value "::" cname  */
-#line 2759 "mrbgems/mruby-compiler/core/parse.y"
+#line 2760 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[-2].nd));
                       (yyval.nd) = cons((yyvsp[-2].nd), sym_to_node((yyvsp[0].id)));
                     }
-#line 8450 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8451 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 125: /* fname: op  */
-#line 2769 "mrbgems/mruby-compiler/core/parse.y"
+#line 2770 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lstate = EXPR_ENDFN;
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 8459 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8460 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 126: /* fname: reswords  */
-#line 2774 "mrbgems/mruby-compiler/core/parse.y"
+#line 2775 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lstate = EXPR_ENDFN;
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 8468 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8469 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 129: /* undef_list: fsym  */
-#line 2785 "mrbgems/mruby-compiler/core/parse.y"
+#line 2786 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(sym_to_node((yyvsp[0].id)), 0);
                     }
-#line 8476 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8477 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 130: /* $@8: %empty  */
-#line 2788 "mrbgems/mruby-compiler/core/parse.y"
+#line 2789 "mrbgems/mruby-compiler/core/parse.y"
                                  {p->lstate = EXPR_FNAME;}
-#line 8482 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8483 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 131: /* undef_list: undef_list ',' $@8 fsym  */
-#line 2789 "mrbgems/mruby-compiler/core/parse.y"
+#line 2790 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-3].nd), sym_to_node((yyvsp[0].id)));
                     }
-#line 8490 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8491 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 132: /* op: '|'  */
-#line 2794 "mrbgems/mruby-compiler/core/parse.y"
+#line 2795 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(or);     }
-#line 8496 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8497 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 133: /* op: '^'  */
-#line 2795 "mrbgems/mruby-compiler/core/parse.y"
+#line 2796 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(xor);    }
-#line 8502 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8503 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 134: /* op: '&'  */
-#line 2796 "mrbgems/mruby-compiler/core/parse.y"
+#line 2797 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(and);    }
-#line 8508 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8509 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 135: /* op: "<=>"  */
-#line 2797 "mrbgems/mruby-compiler/core/parse.y"
+#line 2798 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(cmp);    }
-#line 8514 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8515 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 136: /* op: "=="  */
-#line 2798 "mrbgems/mruby-compiler/core/parse.y"
+#line 2799 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(eq);     }
-#line 8520 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8521 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 137: /* op: "==="  */
-#line 2799 "mrbgems/mruby-compiler/core/parse.y"
+#line 2800 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(eqq);    }
-#line 8526 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8527 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 138: /* op: "=~"  */
-#line 2800 "mrbgems/mruby-compiler/core/parse.y"
+#line 2801 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(match);  }
-#line 8532 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8533 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 139: /* op: "!~"  */
-#line 2801 "mrbgems/mruby-compiler/core/parse.y"
+#line 2802 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(nmatch); }
-#line 8538 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8539 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 140: /* op: '>'  */
-#line 2802 "mrbgems/mruby-compiler/core/parse.y"
+#line 2803 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(gt);     }
-#line 8544 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8545 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 141: /* op: ">="  */
-#line 2803 "mrbgems/mruby-compiler/core/parse.y"
+#line 2804 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(ge);     }
-#line 8550 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8551 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 142: /* op: '<'  */
-#line 2804 "mrbgems/mruby-compiler/core/parse.y"
+#line 2805 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(lt);     }
-#line 8556 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8557 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 143: /* op: "<="  */
-#line 2805 "mrbgems/mruby-compiler/core/parse.y"
+#line 2806 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(le);     }
-#line 8562 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8563 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 144: /* op: "!="  */
-#line 2806 "mrbgems/mruby-compiler/core/parse.y"
+#line 2807 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(neq);    }
-#line 8568 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8569 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 145: /* op: "<<"  */
-#line 2807 "mrbgems/mruby-compiler/core/parse.y"
+#line 2808 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(lshift); }
-#line 8574 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8575 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 146: /* op: ">>"  */
-#line 2808 "mrbgems/mruby-compiler/core/parse.y"
+#line 2809 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(rshift); }
-#line 8580 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8581 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 147: /* op: '+'  */
-#line 2809 "mrbgems/mruby-compiler/core/parse.y"
+#line 2810 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(add);    }
-#line 8586 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8587 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 148: /* op: '-'  */
-#line 2810 "mrbgems/mruby-compiler/core/parse.y"
+#line 2811 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(sub);    }
-#line 8592 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8593 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 149: /* op: '*'  */
-#line 2811 "mrbgems/mruby-compiler/core/parse.y"
+#line 2812 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(mul);    }
-#line 8598 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8599 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 150: /* op: "*"  */
-#line 2812 "mrbgems/mruby-compiler/core/parse.y"
+#line 2813 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(mul);    }
-#line 8604 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8605 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 151: /* op: '/'  */
-#line 2813 "mrbgems/mruby-compiler/core/parse.y"
+#line 2814 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(div);    }
-#line 8610 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8611 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 152: /* op: '%'  */
-#line 2814 "mrbgems/mruby-compiler/core/parse.y"
+#line 2815 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(mod);    }
-#line 8616 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8617 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 153: /* op: tPOW  */
-#line 2815 "mrbgems/mruby-compiler/core/parse.y"
+#line 2816 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(pow);    }
-#line 8622 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8623 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 154: /* op: "**"  */
-#line 2816 "mrbgems/mruby-compiler/core/parse.y"
+#line 2817 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(pow);    }
-#line 8628 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8629 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 155: /* op: '!'  */
-#line 2817 "mrbgems/mruby-compiler/core/parse.y"
+#line 2818 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(not);    }
-#line 8634 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8635 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 156: /* op: '~'  */
-#line 2818 "mrbgems/mruby-compiler/core/parse.y"
+#line 2819 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(neg);    }
-#line 8640 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8641 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 157: /* op: "unary plus"  */
-#line 2819 "mrbgems/mruby-compiler/core/parse.y"
+#line 2820 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(plus);   }
-#line 8646 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8647 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 158: /* op: "unary minus"  */
-#line 2820 "mrbgems/mruby-compiler/core/parse.y"
+#line 2821 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(minus);  }
-#line 8652 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8653 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 159: /* op: tAREF  */
-#line 2821 "mrbgems/mruby-compiler/core/parse.y"
+#line 2822 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(aref);   }
-#line 8658 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8659 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 160: /* op: tASET  */
-#line 2822 "mrbgems/mruby-compiler/core/parse.y"
+#line 2823 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(aset);   }
-#line 8664 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8665 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 161: /* op: '`'  */
-#line 2823 "mrbgems/mruby-compiler/core/parse.y"
+#line 2824 "mrbgems/mruby-compiler/core/parse.y"
                                 { (yyval.id) = intern_op(tick);   }
-#line 8670 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8671 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 203: /* arg: lhs '=' arg_rhs  */
-#line 2841 "mrbgems/mruby-compiler/core/parse.y"
+#line 2842 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_asgn(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 8678 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8679 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 204: /* arg: var_lhs tOP_ASGN arg_rhs  */
-#line 2845 "mrbgems/mruby-compiler/core/parse.y"
+#line 2846 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, (yyvsp[-2].nd), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 8686 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8687 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 205: /* arg: primary_value '[' opt_call_args ']' tOP_ASGN arg_rhs  */
-#line 2849 "mrbgems/mruby-compiler/core/parse.y"
+#line 2850 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-5].nd), intern_op(aref), (yyvsp[-3].nd), '.'), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 8694 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8695 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 206: /* arg: primary_value call_op "local variable or method" tOP_ASGN arg_rhs  */
-#line 2853 "mrbgems/mruby-compiler/core/parse.y"
+#line 2854 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), 0, (yyvsp[-3].num)), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 8702 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8703 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 207: /* arg: primary_value call_op "constant" tOP_ASGN arg_rhs  */
-#line 2857 "mrbgems/mruby-compiler/core/parse.y"
+#line 2858 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), 0, (yyvsp[-3].num)), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 8710 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8711 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 208: /* arg: primary_value "::" "local variable or method" tOP_ASGN arg_rhs  */
-#line 2861 "mrbgems/mruby-compiler/core/parse.y"
+#line 2862 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_op_asgn(p, new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), 0, tCOLON2), (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 8718 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8719 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 209: /* arg: primary_value "::" "constant" tOP_ASGN arg_rhs  */
-#line 2865 "mrbgems/mruby-compiler/core/parse.y"
+#line 2866 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[-4]), p, "constant re-assignment");
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 8727 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8728 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 210: /* arg: tCOLON3 "constant" tOP_ASGN arg_rhs  */
-#line 2870 "mrbgems/mruby-compiler/core/parse.y"
+#line 2871 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[-3]), p, "constant re-assignment");
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 8736 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8737 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 211: /* arg: backref tOP_ASGN arg_rhs  */
-#line 2875 "mrbgems/mruby-compiler/core/parse.y"
+#line 2876 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       backref_error(p, (yyvsp[-2].nd));
                       (yyval.nd) = new_stmts(p, 0);
                     }
-#line 8745 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8746 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 212: /* arg: arg ".." arg  */
-#line 2880 "mrbgems/mruby-compiler/core/parse.y"
+#line 2881 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_dot2(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 8753 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8754 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 213: /* arg: arg ".."  */
-#line 2884 "mrbgems/mruby-compiler/core/parse.y"
+#line 2885 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_dot2(p, (yyvsp[-1].nd), new_nil(p));
                     }
-#line 8761 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8762 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 214: /* arg: tBDOT2 arg  */
-#line 2888 "mrbgems/mruby-compiler/core/parse.y"
+#line 2889 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_dot2(p, new_nil(p), (yyvsp[0].nd));
                     }
-#line 8769 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8770 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 215: /* arg: arg "..." arg  */
-#line 2892 "mrbgems/mruby-compiler/core/parse.y"
+#line 2893 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_dot3(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 8777 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8778 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 216: /* arg: arg "..."  */
-#line 2896 "mrbgems/mruby-compiler/core/parse.y"
+#line 2897 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_dot3(p, (yyvsp[-1].nd), new_nil(p));
                     }
-#line 8785 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8786 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 217: /* arg: tBDOT3 arg  */
-#line 2900 "mrbgems/mruby-compiler/core/parse.y"
+#line 2901 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_dot3(p, new_nil(p), (yyvsp[0].nd));
                     }
-#line 8793 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8794 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 218: /* arg: arg '+' arg  */
-#line 2904 "mrbgems/mruby-compiler/core/parse.y"
+#line 2905 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "+", (yyvsp[0].nd));
                     }
-#line 8801 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8802 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 219: /* arg: arg '-' arg  */
-#line 2908 "mrbgems/mruby-compiler/core/parse.y"
+#line 2909 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "-", (yyvsp[0].nd));
                     }
-#line 8809 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8810 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 220: /* arg: arg '*' arg  */
-#line 2912 "mrbgems/mruby-compiler/core/parse.y"
+#line 2913 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "*", (yyvsp[0].nd));
                     }
-#line 8817 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8818 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 221: /* arg: arg '/' arg  */
-#line 2916 "mrbgems/mruby-compiler/core/parse.y"
+#line 2917 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "/", (yyvsp[0].nd));
                     }
-#line 8825 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8826 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 222: /* arg: arg '%' arg  */
-#line 2920 "mrbgems/mruby-compiler/core/parse.y"
+#line 2921 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "%", (yyvsp[0].nd));
                     }
-#line 8833 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8834 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 223: /* arg: arg tPOW arg  */
-#line 2924 "mrbgems/mruby-compiler/core/parse.y"
+#line 2925 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "**", (yyvsp[0].nd));
                     }
-#line 8841 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8842 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 224: /* arg: tUMINUS_NUM "integer literal" tPOW arg  */
-#line 2928 "mrbgems/mruby-compiler/core/parse.y"
+#line 2929 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_negate(p, call_bin_op(p, (yyvsp[-2].nd), "**", (yyvsp[0].nd)));
                     }
-#line 8849 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8850 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 225: /* arg: tUMINUS_NUM "float literal" tPOW arg  */
-#line 2932 "mrbgems/mruby-compiler/core/parse.y"
+#line 2933 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_negate(p, call_bin_op(p, (yyvsp[-2].nd), "**", (yyvsp[0].nd)));
                     }
-#line 8857 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8858 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 226: /* arg: "unary plus" arg  */
-#line 2936 "mrbgems/mruby-compiler/core/parse.y"
+#line 2937 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, (yyvsp[0].nd), "+@");
                     }
-#line 8865 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8866 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 227: /* arg: "unary minus" arg  */
-#line 2940 "mrbgems/mruby-compiler/core/parse.y"
+#line 2941 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_negate(p, (yyvsp[0].nd));
                     }
-#line 8873 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8874 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 228: /* arg: arg '|' arg  */
-#line 2944 "mrbgems/mruby-compiler/core/parse.y"
+#line 2945 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "|", (yyvsp[0].nd));
                     }
-#line 8881 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8882 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 229: /* arg: arg '^' arg  */
-#line 2948 "mrbgems/mruby-compiler/core/parse.y"
+#line 2949 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "^", (yyvsp[0].nd));
                     }
-#line 8889 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8890 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 230: /* arg: arg '&' arg  */
-#line 2952 "mrbgems/mruby-compiler/core/parse.y"
+#line 2953 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "&", (yyvsp[0].nd));
                     }
-#line 8897 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8898 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 231: /* arg: arg "<=>" arg  */
-#line 2956 "mrbgems/mruby-compiler/core/parse.y"
+#line 2957 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "<=>", (yyvsp[0].nd));
                     }
-#line 8905 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8906 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 232: /* arg: arg '>' arg  */
-#line 2960 "mrbgems/mruby-compiler/core/parse.y"
+#line 2961 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), ">", (yyvsp[0].nd));
                     }
-#line 8913 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8914 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 233: /* arg: arg ">=" arg  */
-#line 2964 "mrbgems/mruby-compiler/core/parse.y"
+#line 2965 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), ">=", (yyvsp[0].nd));
                     }
-#line 8921 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8922 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 234: /* arg: arg '<' arg  */
-#line 2968 "mrbgems/mruby-compiler/core/parse.y"
+#line 2969 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "<", (yyvsp[0].nd));
                     }
-#line 8929 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8930 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 235: /* arg: arg "<=" arg  */
-#line 2972 "mrbgems/mruby-compiler/core/parse.y"
+#line 2973 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "<=", (yyvsp[0].nd));
                     }
-#line 8937 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8938 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 236: /* arg: arg "==" arg  */
-#line 2976 "mrbgems/mruby-compiler/core/parse.y"
+#line 2977 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "==", (yyvsp[0].nd));
                     }
-#line 8945 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8946 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 237: /* arg: arg "===" arg  */
-#line 2980 "mrbgems/mruby-compiler/core/parse.y"
+#line 2981 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "===", (yyvsp[0].nd));
                     }
-#line 8953 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8954 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 238: /* arg: arg "!=" arg  */
-#line 2984 "mrbgems/mruby-compiler/core/parse.y"
+#line 2985 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "!=", (yyvsp[0].nd));
                     }
-#line 8961 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8962 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 239: /* arg: arg "=~" arg  */
-#line 2988 "mrbgems/mruby-compiler/core/parse.y"
+#line 2989 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "=~", (yyvsp[0].nd));
                     }
-#line 8969 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8970 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 240: /* arg: arg "!~" arg  */
-#line 2992 "mrbgems/mruby-compiler/core/parse.y"
+#line 2993 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "!~", (yyvsp[0].nd));
                     }
-#line 8977 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8978 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 241: /* arg: '!' arg  */
-#line 2996 "mrbgems/mruby-compiler/core/parse.y"
+#line 2997 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, cond((yyvsp[0].nd)), "!");
                     }
-#line 8985 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8986 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 242: /* arg: '~' arg  */
-#line 3000 "mrbgems/mruby-compiler/core/parse.y"
+#line 3001 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, cond((yyvsp[0].nd)), "~");
                     }
-#line 8993 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 8994 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 243: /* arg: arg "<<" arg  */
-#line 3004 "mrbgems/mruby-compiler/core/parse.y"
+#line 3005 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), "<<", (yyvsp[0].nd));
                     }
-#line 9001 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9002 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 244: /* arg: arg ">>" arg  */
-#line 3008 "mrbgems/mruby-compiler/core/parse.y"
+#line 3009 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_bin_op(p, (yyvsp[-2].nd), ">>", (yyvsp[0].nd));
                     }
-#line 9009 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9010 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 245: /* arg: arg "&&" arg  */
-#line 3012 "mrbgems/mruby-compiler/core/parse.y"
+#line 3013 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_and(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 9017 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9018 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 246: /* arg: arg "||" arg  */
-#line 3016 "mrbgems/mruby-compiler/core/parse.y"
+#line 3017 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_or(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 9025 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9026 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 247: /* arg: arg '?' arg opt_nl ':' arg  */
-#line 3020 "mrbgems/mruby-compiler/core/parse.y"
+#line 3021 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[-5].nd)), (yyvsp[-3].nd), (yyvsp[0].nd));
                     }
-#line 9033 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9034 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 248: /* arg: arg '?' arg opt_nl "label" arg  */
-#line 3024 "mrbgems/mruby-compiler/core/parse.y"
+#line 3025 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[-5].nd)), (yyvsp[-3].nd), (yyvsp[0].nd));
                     }
-#line 9041 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9042 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 249: /* arg: defn_head f_opt_arglist_paren '=' arg  */
-#line 3028 "mrbgems/mruby-compiler/core/parse.y"
+#line 3029 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-3].nd);
                       endless_method_name(p, (yyvsp[-3].nd));
@@ -9050,11 +9051,11 @@ yyreduce:
                       nvars_unnest(p);
                       p->in_def--;
                     }
-#line 9054 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9055 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 250: /* arg: defn_head f_opt_arglist_paren '=' arg "'rescue' modifier" arg  */
-#line 3037 "mrbgems/mruby-compiler/core/parse.y"
+#line 3038 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-5].nd);
                       endless_method_name(p, (yyvsp[-5].nd));
@@ -9063,11 +9064,11 @@ yyreduce:
                       nvars_unnest(p);
                       p->in_def--;
                     }
-#line 9067 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9068 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 251: /* arg: defs_head f_opt_arglist_paren '=' arg  */
-#line 3046 "mrbgems/mruby-compiler/core/parse.y"
+#line 3047 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-3].nd);
                       void_expr_error(p, (yyvsp[0].nd));
@@ -9076,11 +9077,11 @@ yyreduce:
                       p->in_def--;
                       p->in_single--;
                     }
-#line 9080 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9081 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 252: /* arg: defs_head f_opt_arglist_paren '=' arg "'rescue' modifier" arg  */
-#line 3055 "mrbgems/mruby-compiler/core/parse.y"
+#line 3056 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-5].nd);
                       void_expr_error(p, (yyvsp[-2].nd));
@@ -9089,68 +9090,68 @@ yyreduce:
                       p->in_def--;
                       p->in_single--;
                     }
-#line 9093 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9094 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 253: /* arg: primary  */
-#line 3064 "mrbgems/mruby-compiler/core/parse.y"
+#line 3065 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 9101 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9102 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 255: /* aref_args: args trailer  */
-#line 3071 "mrbgems/mruby-compiler/core/parse.y"
+#line 3072 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 9109 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9110 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 256: /* aref_args: args comma assocs trailer  */
-#line 3075 "mrbgems/mruby-compiler/core/parse.y"
+#line 3076 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-3].nd), new_hash(p, (yyvsp[-1].nd)));
                     }
-#line 9117 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9118 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 257: /* aref_args: assocs trailer  */
-#line 3079 "mrbgems/mruby-compiler/core/parse.y"
+#line 3080 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(new_hash(p, (yyvsp[-1].nd)), 0);
                     }
-#line 9125 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9126 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 258: /* arg_rhs: arg  */
-#line 3085 "mrbgems/mruby-compiler/core/parse.y"
+#line 3086 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 9133 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9134 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 259: /* arg_rhs: arg "'rescue' modifier" arg  */
-#line 3089 "mrbgems/mruby-compiler/core/parse.y"
+#line 3090 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[-2].nd));
                       (yyval.nd) = new_mod_rescue(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 9142 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9143 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 260: /* paren_args: '(' opt_call_args ')'  */
-#line 3096 "mrbgems/mruby-compiler/core/parse.y"
+#line 3097 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 9150 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9151 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 261: /* paren_args: '(' args comma tBDOT3 rparen  */
-#line 3100 "mrbgems/mruby-compiler/core/parse.y"
+#line 3101 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       mrb_sym r = intern_op(mul);
                       mrb_sym k = intern_op(pow);
@@ -9159,11 +9160,11 @@ yyreduce:
                                         list1(cons(new_kw_rest_args(p, 0), new_lvar(p, k))),
                                         new_block_arg(p, new_lvar(p, b)));
                     }
-#line 9163 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9164 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 262: /* paren_args: '(' tBDOT3 rparen  */
-#line 3109 "mrbgems/mruby-compiler/core/parse.y"
+#line 3110 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       mrb_sym r = intern_op(mul);
                       mrb_sym k = intern_op(pow);
@@ -9178,398 +9179,398 @@ yyreduce:
                         (yyval.nd) = 0;
                       }
                     }
-#line 9182 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9183 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 267: /* opt_call_args: args comma  */
-#line 3132 "mrbgems/mruby-compiler/core/parse.y"
+#line 3133 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p,(yyvsp[-1].nd),0,0);
                     }
-#line 9190 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9191 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 268: /* opt_call_args: args comma assocs comma  */
-#line 3136 "mrbgems/mruby-compiler/core/parse.y"
+#line 3137 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p,(yyvsp[-3].nd),(yyvsp[-1].nd),0);
                     }
-#line 9198 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9199 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 269: /* opt_call_args: assocs comma  */
-#line 3140 "mrbgems/mruby-compiler/core/parse.y"
+#line 3141 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p,0,(yyvsp[-1].nd),0);
                     }
-#line 9206 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9207 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 270: /* call_args: command  */
-#line 3146 "mrbgems/mruby-compiler/core/parse.y"
+#line 3147 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = new_callargs(p, list1((yyvsp[0].nd)), 0, 0);
                     }
-#line 9215 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9216 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 271: /* call_args: args opt_block_arg  */
-#line 3151 "mrbgems/mruby-compiler/core/parse.y"
+#line 3152 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p, (yyvsp[-1].nd), 0, (yyvsp[0].nd));
                     }
-#line 9223 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9224 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 272: /* call_args: assocs opt_block_arg  */
-#line 3155 "mrbgems/mruby-compiler/core/parse.y"
+#line 3156 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p, 0, (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 9231 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9232 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 273: /* call_args: args comma assocs opt_block_arg  */
-#line 3159 "mrbgems/mruby-compiler/core/parse.y"
+#line 3160 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p, (yyvsp[-3].nd), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 9239 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9240 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 274: /* call_args: block_arg  */
-#line 3163 "mrbgems/mruby-compiler/core/parse.y"
+#line 3164 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_callargs(p, 0, 0, (yyvsp[0].nd));
                     }
-#line 9247 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9248 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 275: /* @9: %empty  */
-#line 3168 "mrbgems/mruby-compiler/core/parse.y"
+#line 3169 "mrbgems/mruby-compiler/core/parse.y"
                    {
                       (yyval.stack) = p->cmdarg_stack;
                       CMDARG_PUSH(1);
                     }
-#line 9256 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9257 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 276: /* command_args: @9 call_args  */
-#line 3173 "mrbgems/mruby-compiler/core/parse.y"
+#line 3174 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->cmdarg_stack = (yyvsp[-1].stack);
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 9265 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9266 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 277: /* block_arg: "&" arg  */
-#line 3180 "mrbgems/mruby-compiler/core/parse.y"
+#line 3181 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_block_arg(p, (yyvsp[0].nd));
                     }
-#line 9273 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9274 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 278: /* block_arg: "&"  */
-#line 3184 "mrbgems/mruby-compiler/core/parse.y"
+#line 3185 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_block_arg(p, 0);
                     }
-#line 9281 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9282 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 279: /* opt_block_arg: comma block_arg  */
-#line 3190 "mrbgems/mruby-compiler/core/parse.y"
+#line 3191 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 9289 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9290 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 280: /* opt_block_arg: none  */
-#line 3194 "mrbgems/mruby-compiler/core/parse.y"
+#line 3195 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = 0;
                     }
-#line 9297 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9298 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 282: /* args: arg  */
-#line 3203 "mrbgems/mruby-compiler/core/parse.y"
+#line 3204 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 9306 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9307 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 283: /* args: "*"  */
-#line 3208 "mrbgems/mruby-compiler/core/parse.y"
+#line 3209 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(new_splat(p, new_lvar(p, intern_op(mul))));
                     }
-#line 9314 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9315 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 284: /* args: "*" arg  */
-#line 3212 "mrbgems/mruby-compiler/core/parse.y"
+#line 3213 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(new_splat(p, (yyvsp[0].nd)));
                     }
-#line 9322 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9323 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 285: /* args: args comma arg  */
-#line 3216 "mrbgems/mruby-compiler/core/parse.y"
+#line 3217 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 9331 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9332 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 286: /* args: args comma "*"  */
-#line 3221 "mrbgems/mruby-compiler/core/parse.y"
+#line 3222 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), new_splat(p, new_lvar(p, intern_op(mul))));
                     }
-#line 9339 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9340 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 287: /* args: args comma "*" arg  */
-#line 3225 "mrbgems/mruby-compiler/core/parse.y"
+#line 3226 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-3].nd), new_splat(p, (yyvsp[0].nd)));
                     }
-#line 9347 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9348 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 288: /* mrhs: args comma arg  */
-#line 3231 "mrbgems/mruby-compiler/core/parse.y"
+#line 3232 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 9356 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9357 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 289: /* mrhs: args comma "*" arg  */
-#line 3236 "mrbgems/mruby-compiler/core/parse.y"
+#line 3237 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-3].nd), new_splat(p, (yyvsp[0].nd)));
                     }
-#line 9364 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9365 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 290: /* mrhs: "*" arg  */
-#line 3240 "mrbgems/mruby-compiler/core/parse.y"
+#line 3241 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(new_splat(p, (yyvsp[0].nd)));
                     }
-#line 9372 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9373 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 292: /* primary: string  */
-#line 3247 "mrbgems/mruby-compiler/core/parse.y"
+#line 3248 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_str(p, (yyvsp[0].nd));
                     }
-#line 9380 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9381 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 293: /* primary: xstring  */
-#line 3251 "mrbgems/mruby-compiler/core/parse.y"
+#line 3252 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_xstr(p, (yyvsp[0].nd));
                     }
-#line 9388 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9389 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 298: /* primary: "method"  */
-#line 3259 "mrbgems/mruby-compiler/core/parse.y"
+#line 3260 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_fcall(p, (yyvsp[0].id), 0);
                     }
-#line 9396 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9397 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 299: /* @10: %empty  */
-#line 3263 "mrbgems/mruby-compiler/core/parse.y"
+#line 3264 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.stack) = p->cmdarg_stack;
                       p->cmdarg_stack = 0;
                     }
-#line 9405 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9406 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 300: /* primary: "'begin'" @10 bodystmt "'end'"  */
-#line 3269 "mrbgems/mruby-compiler/core/parse.y"
+#line 3270 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->cmdarg_stack = (yyvsp[-2].stack);
                       (yyval.nd) = new_begin(p, (yyvsp[-1].nd));
                     }
-#line 9414 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9415 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 301: /* @11: %empty  */
-#line 3274 "mrbgems/mruby-compiler/core/parse.y"
+#line 3275 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.stack) = p->cmdarg_stack;
                       p->cmdarg_stack = 0;
                     }
-#line 9423 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9424 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 302: /* $@12: %empty  */
-#line 3278 "mrbgems/mruby-compiler/core/parse.y"
+#line 3279 "mrbgems/mruby-compiler/core/parse.y"
                            {p->lstate = EXPR_ENDARG;}
-#line 9429 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9430 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 303: /* primary: "(" @11 compstmt $@12 rparen  */
-#line 3279 "mrbgems/mruby-compiler/core/parse.y"
+#line 3280 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->cmdarg_stack = (yyvsp[-3].stack);
                       (yyval.nd) = (yyvsp[-2].nd);
                     }
-#line 9438 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9439 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 304: /* $@13: %empty  */
-#line 3283 "mrbgems/mruby-compiler/core/parse.y"
+#line 3284 "mrbgems/mruby-compiler/core/parse.y"
                               {p->lstate = EXPR_ENDARG;}
-#line 9444 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9445 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 305: /* primary: "(" $@13 rparen  */
-#line 3284 "mrbgems/mruby-compiler/core/parse.y"
+#line 3285 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_nil(p);
                     }
-#line 9452 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9453 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 306: /* primary: tLPAREN compstmt ')'  */
-#line 3288 "mrbgems/mruby-compiler/core/parse.y"
+#line 3289 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 9460 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9461 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 307: /* primary: primary_value "::" "constant"  */
-#line 3292 "mrbgems/mruby-compiler/core/parse.y"
+#line 3293 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_colon2(p, (yyvsp[-2].nd), (yyvsp[0].id));
                     }
-#line 9468 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9469 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 308: /* primary: tCOLON3 "constant"  */
-#line 3296 "mrbgems/mruby-compiler/core/parse.y"
+#line 3297 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_colon3(p, (yyvsp[0].id));
                     }
-#line 9476 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9477 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 309: /* primary: "[" aref_args ']'  */
-#line 3300 "mrbgems/mruby-compiler/core/parse.y"
+#line 3301 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_array(p, (yyvsp[-1].nd));
                     }
-#line 9484 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9485 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 310: /* primary: tLBRACE assoc_list '}'  */
-#line 3304 "mrbgems/mruby-compiler/core/parse.y"
+#line 3305 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_hash(p, (yyvsp[-1].nd));
                     }
-#line 9492 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9493 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 311: /* primary: "'return'"  */
-#line 3308 "mrbgems/mruby-compiler/core/parse.y"
+#line 3309 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_return(p, 0);
                     }
-#line 9500 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9501 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 312: /* primary: "'yield'" opt_paren_args  */
-#line 3312 "mrbgems/mruby-compiler/core/parse.y"
+#line 3313 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_yield(p, (yyvsp[0].nd));
                     }
-#line 9508 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9509 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 313: /* primary: "'not'" '(' expr rparen  */
-#line 3316 "mrbgems/mruby-compiler/core/parse.y"
+#line 3317 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, cond((yyvsp[-1].nd)), "!");
                     }
-#line 9516 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9517 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 314: /* primary: "'not'" '(' rparen  */
-#line 3320 "mrbgems/mruby-compiler/core/parse.y"
+#line 3321 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = call_uni_op(p, new_nil(p), "!");
                     }
-#line 9524 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9525 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 315: /* primary: "'defined?'" '(' expr rparen  */
-#line 3324 "mrbgems/mruby-compiler/core/parse.y"
+#line 3325 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_defined(p, (yyvsp[-1].nd));
                     }
-#line 9532 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9533 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 316: /* primary: operation brace_block  */
-#line 3328 "mrbgems/mruby-compiler/core/parse.y"
+#line 3329 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_fcall(p, (yyvsp[-1].id), new_callargs(p, 0, 0, (yyvsp[0].nd)));
                     }
-#line 9540 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9541 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 318: /* primary: method_call brace_block  */
-#line 3333 "mrbgems/mruby-compiler/core/parse.y"
+#line 3334 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       call_with_block(p, (yyvsp[-1].nd), (yyvsp[0].nd));
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 9549 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9550 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 319: /* @14: %empty  */
-#line 3338 "mrbgems/mruby-compiler/core/parse.y"
+#line 3339 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_nest(p);
                       nvars_nest(p);
                       (yyval.num) = p->lpar_beg;
                       p->lpar_beg = ++p->paren_nest;
                     }
-#line 9560 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9561 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 320: /* @15: %empty  */
-#line 3345 "mrbgems/mruby-compiler/core/parse.y"
+#line 3346 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.stack) = p->cmdarg_stack;
                       p->cmdarg_stack = 0;
                     }
-#line 9569 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9570 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 321: /* primary: "->" @14 f_larglist @15 lambda_body  */
-#line 3350 "mrbgems/mruby-compiler/core/parse.y"
+#line 3351 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lpar_beg = (yyvsp[-3].num);
                       (yyval.nd) = new_lambda(p, (yyvsp[-2].nd), (yyvsp[0].nd));
@@ -9578,222 +9579,228 @@ yyreduce:
                       p->cmdarg_stack = (yyvsp[-1].stack);
                       CMDARG_LEXPOP();
                     }
-#line 9582 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9583 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 322: /* primary: "'if'" expr_value then compstmt if_tail "'end'"  */
-#line 3362 "mrbgems/mruby-compiler/core/parse.y"
+#line 3363 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[-4].nd)), (yyvsp[-2].nd), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-5].num));
                     }
-#line 9591 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9592 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 323: /* primary: "'unless'" expr_value then compstmt opt_else "'end'"  */
-#line 3370 "mrbgems/mruby-compiler/core/parse.y"
+#line 3371 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[-4].nd)), (yyvsp[-1].nd), (yyvsp[-2].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-5].num));
                     }
-#line 9600 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9601 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 324: /* $@16: %empty  */
-#line 3374 "mrbgems/mruby-compiler/core/parse.y"
+#line 3375 "mrbgems/mruby-compiler/core/parse.y"
                                 {COND_PUSH(1);}
-#line 9606 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9607 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 325: /* $@17: %empty  */
-#line 3374 "mrbgems/mruby-compiler/core/parse.y"
+#line 3375 "mrbgems/mruby-compiler/core/parse.y"
                                                               {COND_POP();}
-#line 9612 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9613 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 326: /* primary: "'while'" $@16 expr_value do $@17 compstmt "'end'"  */
-#line 3377 "mrbgems/mruby-compiler/core/parse.y"
+#line 3378 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_while(p, cond((yyvsp[-4].nd)), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-6].num));
                     }
-#line 9621 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9622 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 327: /* $@18: %empty  */
-#line 3381 "mrbgems/mruby-compiler/core/parse.y"
+#line 3382 "mrbgems/mruby-compiler/core/parse.y"
                                 {COND_PUSH(1);}
-#line 9627 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9628 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 328: /* $@19: %empty  */
-#line 3381 "mrbgems/mruby-compiler/core/parse.y"
+#line 3382 "mrbgems/mruby-compiler/core/parse.y"
                                                               {COND_POP();}
-#line 9633 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9634 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 329: /* primary: "'until'" $@18 expr_value do $@19 compstmt "'end'"  */
-#line 3384 "mrbgems/mruby-compiler/core/parse.y"
+#line 3385 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_until(p, cond((yyvsp[-4].nd)), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-6].num));
                     }
-#line 9642 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9643 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 330: /* primary: "'case'" expr_value opt_terms case_body "'end'"  */
-#line 3391 "mrbgems/mruby-compiler/core/parse.y"
+#line 3392 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_case(p, (yyvsp[-3].nd), (yyvsp[-1].nd));
                     }
-#line 9650 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9651 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 331: /* primary: "'case'" opt_terms case_body "'end'"  */
-#line 3395 "mrbgems/mruby-compiler/core/parse.y"
+#line 3396 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_case(p, 0, (yyvsp[-1].nd));
                     }
-#line 9658 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9659 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 332: /* primary: "'case'" expr_value opt_terms "'in'" p_expr then compstmt in_clauses "'end'"  */
-#line 3403 "mrbgems/mruby-compiler/core/parse.y"
+#line 3404 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *in_clause = new_in(p, (yyvsp[-4].nd), NULL, (yyvsp[-2].nd), FALSE);
                       (yyval.nd) = new_case_match(p, (yyvsp[-7].nd), cons(in_clause, (yyvsp[-1].nd)));
                     }
-#line 9667 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9668 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 333: /* primary: "'case'" expr_value opt_terms "'in'" p_expr "'if' modifier" expr_value then compstmt in_clauses "'end'"  */
-#line 3412 "mrbgems/mruby-compiler/core/parse.y"
+#line 3413 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *in_clause = new_in(p, (yyvsp[-6].nd), (yyvsp[-4].nd), (yyvsp[-2].nd), FALSE);
                       (yyval.nd) = new_case_match(p, (yyvsp[-9].nd), cons(in_clause, (yyvsp[-1].nd)));
                     }
-#line 9676 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9677 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 334: /* primary: "'case'" expr_value opt_terms "'in'" p_expr "'unless' modifier" expr_value then compstmt in_clauses "'end'"  */
-#line 3421 "mrbgems/mruby-compiler/core/parse.y"
+#line 3422 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *in_clause = new_in(p, (yyvsp[-6].nd), (yyvsp[-4].nd), (yyvsp[-2].nd), TRUE);
                       (yyval.nd) = new_case_match(p, (yyvsp[-9].nd), cons(in_clause, (yyvsp[-1].nd)));
                     }
-#line 9685 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9686 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 335: /* $@20: %empty  */
-#line 3426 "mrbgems/mruby-compiler/core/parse.y"
+#line 3427 "mrbgems/mruby-compiler/core/parse.y"
                   {COND_PUSH(1);}
-#line 9691 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9692 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 336: /* $@21: %empty  */
-#line 3428 "mrbgems/mruby-compiler/core/parse.y"
+#line 3429 "mrbgems/mruby-compiler/core/parse.y"
                   {COND_POP();}
-#line 9697 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9698 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 337: /* primary: "'for'" for_var "'in'" $@20 expr_value do $@21 compstmt "'end'"  */
-#line 3431 "mrbgems/mruby-compiler/core/parse.y"
+#line 3432 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_for(p, (yyvsp[-7].nd), (yyvsp[-4].nd), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-8].num));
                     }
-#line 9706 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9707 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 338: /* @22: %empty  */
-#line 3437 "mrbgems/mruby-compiler/core/parse.y"
+#line 3438 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (p->in_def || p->in_single)
                         yyerror(&(yylsp[-2]), p, "class definition in method body");
                       (yyval.nd) = local_switch(p);
+                      p->in_class++;
                       nvars_block(p);
                     }
-#line 9717 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9719 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 339: /* primary: "'class'" cpath superclass @22 bodystmt "'end'"  */
-#line 3445 "mrbgems/mruby-compiler/core/parse.y"
+#line 3447 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_class(p, (yyvsp[-4].nd), (yyvsp[-3].nd), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-5].num));
+                      p->in_class--;
                       local_resume(p, (yyvsp[-2].nd));
                       nvars_unnest(p);
                     }
-#line 9728 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9731 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 340: /* @23: %empty  */
-#line 3453 "mrbgems/mruby-compiler/core/parse.y"
+#line 3456 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.num) = p->in_def;
                       p->in_def = 0;
                     }
-#line 9737 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9740 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 341: /* @24: %empty  */
-#line 3458 "mrbgems/mruby-compiler/core/parse.y"
+#line 3461 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(local_switch(p), int_to_node(p->in_single));
+                      p->in_class++;
                       nvars_block(p);
                       p->in_single = 0;
                     }
-#line 9747 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9751 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 342: /* primary: "'class'" "<<" expr @23 term @24 bodystmt "'end'"  */
-#line 3465 "mrbgems/mruby-compiler/core/parse.y"
+#line 3469 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_sclass(p, (yyvsp[-5].nd), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-7].num));
+                      p->in_class--;
                       local_resume(p, (yyvsp[-2].nd)->car);
                       nvars_unnest(p);
                       p->in_def = (yyvsp[-4].num);
                       p->in_single = node_to_int((yyvsp[-2].nd)->cdr);
                     }
-#line 9760 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9765 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 343: /* @25: %empty  */
-#line 3475 "mrbgems/mruby-compiler/core/parse.y"
+#line 3480 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if (p->in_def || p->in_single)
                         yyerror(&(yylsp[-1]), p, "module definition in method body");
                       (yyval.nd) = local_switch(p);
+                      p->in_class++;
                       nvars_block(p);
                     }
-#line 9771 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9777 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 344: /* primary: "'module'" cpath @25 bodystmt "'end'"  */
-#line 3483 "mrbgems/mruby-compiler/core/parse.y"
+#line 3489 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_module(p, (yyvsp[-3].nd), (yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-4].num));
+                      p->in_class--;
                       local_resume(p, (yyvsp[-2].nd));
                       nvars_unnest(p);
                     }
-#line 9782 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9789 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 345: /* primary: defn_head f_arglist bodystmt "'end'"  */
-#line 3493 "mrbgems/mruby-compiler/core/parse.y"
+#line 3500 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-3].nd);
                       defn_setup(p, (yyval.nd), (yyvsp[-2].nd), (yyvsp[-1].nd));
                       nvars_unnest(p);
                       p->in_def--;
                     }
-#line 9793 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9800 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 346: /* primary: defs_head f_arglist bodystmt "'end'"  */
-#line 3503 "mrbgems/mruby-compiler/core/parse.y"
+#line 3510 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-3].nd);
                       defn_setup(p, (yyval.nd), (yyvsp[-2].nd), (yyvsp[-1].nd));
@@ -9801,610 +9808,610 @@ yyreduce:
                       p->in_def--;
                       p->in_single--;
                     }
-#line 9805 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9812 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 347: /* primary: "'break'"  */
-#line 3511 "mrbgems/mruby-compiler/core/parse.y"
+#line 3518 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_break(p, 0);
                     }
-#line 9813 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9820 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 348: /* primary: "'next'"  */
-#line 3515 "mrbgems/mruby-compiler/core/parse.y"
+#line 3522 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_next(p, 0);
                     }
-#line 9821 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9828 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 349: /* primary: "'redo'"  */
-#line 3519 "mrbgems/mruby-compiler/core/parse.y"
+#line 3526 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_redo(p);
                     }
-#line 9829 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9836 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 350: /* primary: "'retry'"  */
-#line 3523 "mrbgems/mruby-compiler/core/parse.y"
+#line 3530 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_retry(p);
                     }
-#line 9837 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9844 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 351: /* primary_value: primary  */
-#line 3529 "mrbgems/mruby-compiler/core/parse.y"
+#line 3536 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                       if (!(yyval.nd)) (yyval.nd) = new_nil(p);
                     }
-#line 9846 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9853 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 358: /* if_tail: "'elsif'" expr_value then compstmt if_tail  */
-#line 3548 "mrbgems/mruby-compiler/core/parse.y"
+#line 3555 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_if(p, cond((yyvsp[-3].nd)), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 9854 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9861 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 360: /* opt_else: "'else'" compstmt  */
-#line 3555 "mrbgems/mruby-compiler/core/parse.y"
+#line 3562 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 9862 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9869 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 361: /* for_var: lhs  */
-#line 3561 "mrbgems/mruby-compiler/core/parse.y"
+#line 3568 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(list1((yyvsp[0].nd)));
                     }
-#line 9870 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9877 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 363: /* f_margs: f_arg  */
-#line 3568 "mrbgems/mruby-compiler/core/parse.y"
+#line 3575 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3((yyvsp[0].nd),0,0);
                     }
-#line 9878 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9885 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 364: /* f_margs: f_arg ',' "*" f_norm_arg  */
-#line 3572 "mrbgems/mruby-compiler/core/parse.y"
+#line 3579 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3((yyvsp[-3].nd), new_lvar(p, (yyvsp[0].id)), 0);
                     }
-#line 9886 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9893 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 365: /* f_margs: f_arg ',' "*" f_norm_arg ',' f_arg  */
-#line 3576 "mrbgems/mruby-compiler/core/parse.y"
+#line 3583 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3((yyvsp[-5].nd), new_lvar(p, (yyvsp[-2].id)), (yyvsp[0].nd));
                     }
-#line 9894 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9901 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 366: /* f_margs: f_arg ',' "*"  */
-#line 3580 "mrbgems/mruby-compiler/core/parse.y"
+#line 3587 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, intern_op(mul));
                       (yyval.nd) = list3((yyvsp[-2].nd), int_to_node(-1), 0);
                     }
-#line 9903 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9910 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 367: /* f_margs: f_arg ',' "*" ',' f_arg  */
-#line 3585 "mrbgems/mruby-compiler/core/parse.y"
+#line 3592 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3((yyvsp[-4].nd), int_to_node(-1), (yyvsp[0].nd));
                     }
-#line 9911 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9918 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 368: /* f_margs: "*" f_norm_arg  */
-#line 3589 "mrbgems/mruby-compiler/core/parse.y"
+#line 3596 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3(0, new_lvar(p, (yyvsp[0].id)), 0);
                     }
-#line 9919 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9926 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 369: /* f_margs: "*" f_norm_arg ',' f_arg  */
-#line 3593 "mrbgems/mruby-compiler/core/parse.y"
+#line 3600 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3(0, new_lvar(p, (yyvsp[-2].id)), (yyvsp[0].nd));
                     }
-#line 9927 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9934 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 370: /* f_margs: "*"  */
-#line 3597 "mrbgems/mruby-compiler/core/parse.y"
+#line 3604 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, intern_op(mul));
                       (yyval.nd) = list3(0, int_to_node(-1), 0);
                     }
-#line 9936 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9943 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 371: /* $@26: %empty  */
-#line 3602 "mrbgems/mruby-compiler/core/parse.y"
+#line 3609 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, intern_op(mul));
                     }
-#line 9944 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9951 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 372: /* f_margs: "*" ',' $@26 f_arg  */
-#line 3606 "mrbgems/mruby-compiler/core/parse.y"
+#line 3613 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list3(0, int_to_node(-1), (yyvsp[0].nd));
                     }
-#line 9952 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9959 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 373: /* block_args_tail: f_block_kwarg ',' f_kwrest opt_f_block_arg  */
-#line 3612 "mrbgems/mruby-compiler/core/parse.y"
+#line 3619 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].id));
                     }
-#line 9960 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9967 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 374: /* block_args_tail: f_block_kwarg opt_f_block_arg  */
-#line 3616 "mrbgems/mruby-compiler/core/parse.y"
+#line 3623 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, (yyvsp[-1].nd), 0, (yyvsp[0].id));
                     }
-#line 9968 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9975 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 375: /* block_args_tail: f_kwrest opt_f_block_arg  */
-#line 3620 "mrbgems/mruby-compiler/core/parse.y"
+#line 3627 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, (yyvsp[-1].id), (yyvsp[0].id));
                     }
-#line 9976 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9983 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 376: /* block_args_tail: f_block_arg  */
-#line 3624 "mrbgems/mruby-compiler/core/parse.y"
+#line 3631 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, 0, (yyvsp[0].id));
                     }
-#line 9984 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9991 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 377: /* opt_block_args_tail: ',' block_args_tail  */
-#line 3630 "mrbgems/mruby-compiler/core/parse.y"
+#line 3637 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 9992 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 9999 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 378: /* opt_block_args_tail: %empty  */
-#line 3634 "mrbgems/mruby-compiler/core/parse.y"
+#line 3641 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, 0, 0);
                     }
-#line 10000 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10007 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 379: /* block_param: f_arg ',' f_block_optarg ',' f_rest_arg opt_block_args_tail  */
-#line 3640 "mrbgems/mruby-compiler/core/parse.y"
+#line 3647 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-5].nd), (yyvsp[-3].nd), (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 10008 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10015 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 380: /* block_param: f_arg ',' f_block_optarg ',' f_rest_arg ',' f_arg opt_block_args_tail  */
-#line 3644 "mrbgems/mruby-compiler/core/parse.y"
+#line 3651 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-7].nd), (yyvsp[-5].nd), (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10016 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10023 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 381: /* block_param: f_arg ',' f_block_optarg opt_block_args_tail  */
-#line 3648 "mrbgems/mruby-compiler/core/parse.y"
+#line 3655 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-3].nd), (yyvsp[-1].nd), 0, 0, (yyvsp[0].nd));
                     }
-#line 10024 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10031 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 382: /* block_param: f_arg ',' f_block_optarg ',' f_arg opt_block_args_tail  */
-#line 3652 "mrbgems/mruby-compiler/core/parse.y"
+#line 3659 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-5].nd), (yyvsp[-3].nd), 0, (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10032 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10039 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 383: /* block_param: f_arg ',' f_rest_arg opt_block_args_tail  */
-#line 3656 "mrbgems/mruby-compiler/core/parse.y"
+#line 3663 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-3].nd), 0, (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 10040 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10047 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 384: /* block_param: f_arg ',' opt_block_args_tail  */
-#line 3660 "mrbgems/mruby-compiler/core/parse.y"
+#line 3667 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-2].nd), 0, 0, 0, (yyvsp[0].nd));
                     }
-#line 10048 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10055 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 385: /* block_param: f_arg ',' f_rest_arg ',' f_arg opt_block_args_tail  */
-#line 3664 "mrbgems/mruby-compiler/core/parse.y"
+#line 3671 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-5].nd), 0, (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10056 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10063 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 386: /* block_param: f_arg opt_block_args_tail  */
-#line 3668 "mrbgems/mruby-compiler/core/parse.y"
+#line 3675 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-1].nd), 0, 0, 0, (yyvsp[0].nd));
                     }
-#line 10064 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10071 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 387: /* block_param: f_block_optarg ',' f_rest_arg opt_block_args_tail  */
-#line 3672 "mrbgems/mruby-compiler/core/parse.y"
+#line 3679 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-3].nd), (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 10072 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10079 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 388: /* block_param: f_block_optarg ',' f_rest_arg ',' f_arg opt_block_args_tail  */
-#line 3676 "mrbgems/mruby-compiler/core/parse.y"
+#line 3683 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-5].nd), (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10080 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10087 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 389: /* block_param: f_block_optarg opt_block_args_tail  */
-#line 3680 "mrbgems/mruby-compiler/core/parse.y"
+#line 3687 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-1].nd), 0, 0, (yyvsp[0].nd));
                     }
-#line 10088 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10095 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 390: /* block_param: f_block_optarg ',' f_arg opt_block_args_tail  */
-#line 3684 "mrbgems/mruby-compiler/core/parse.y"
+#line 3691 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-3].nd), 0, (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10096 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10103 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 391: /* block_param: f_rest_arg opt_block_args_tail  */
-#line 3688 "mrbgems/mruby-compiler/core/parse.y"
+#line 3695 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, 0, (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 10104 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10111 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 392: /* block_param: f_rest_arg ',' f_arg opt_block_args_tail  */
-#line 3692 "mrbgems/mruby-compiler/core/parse.y"
+#line 3699 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, 0, (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10112 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10119 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 393: /* block_param: block_args_tail  */
-#line 3696 "mrbgems/mruby-compiler/core/parse.y"
+#line 3703 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, 0, 0, 0, (yyvsp[0].nd));
                     }
-#line 10120 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10127 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 394: /* opt_block_param: none  */
-#line 3702 "mrbgems/mruby-compiler/core/parse.y"
+#line 3709 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_blk(p);
                       (yyval.nd) = 0;
                     }
-#line 10129 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10136 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 395: /* opt_block_param: block_param_def  */
-#line 3707 "mrbgems/mruby-compiler/core/parse.y"
+#line 3714 "mrbgems/mruby-compiler/core/parse.y"
                    {
                       p->cmd_start = TRUE;
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 10138 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10145 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 396: /* $@27: %empty  */
-#line 3713 "mrbgems/mruby-compiler/core/parse.y"
+#line 3720 "mrbgems/mruby-compiler/core/parse.y"
                       {local_add_blk(p);}
-#line 10144 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10151 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 397: /* block_param_def: '|' $@27 opt_bv_decl '|'  */
-#line 3714 "mrbgems/mruby-compiler/core/parse.y"
+#line 3721 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = 0;
                     }
-#line 10152 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10159 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 398: /* block_param_def: "||"  */
-#line 3718 "mrbgems/mruby-compiler/core/parse.y"
+#line 3725 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_blk(p);
                       (yyval.nd) = 0;
                     }
-#line 10161 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10168 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 399: /* block_param_def: '|' block_param opt_bv_decl '|'  */
-#line 3723 "mrbgems/mruby-compiler/core/parse.y"
+#line 3730 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-2].nd);
                     }
-#line 10169 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10176 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 400: /* opt_bv_decl: opt_nl  */
-#line 3729 "mrbgems/mruby-compiler/core/parse.y"
+#line 3736 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = 0;
                     }
-#line 10177 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10184 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 401: /* opt_bv_decl: opt_nl ';' bv_decls opt_nl  */
-#line 3733 "mrbgems/mruby-compiler/core/parse.y"
+#line 3740 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = 0;
                     }
-#line 10185 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10192 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 404: /* bvar: "local variable or method"  */
-#line 3743 "mrbgems/mruby-compiler/core/parse.y"
+#line 3750 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, (yyvsp[0].id));
                       new_bv(p, (yyvsp[0].id));
                     }
-#line 10194 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10201 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 406: /* f_larglist: '(' f_args opt_bv_decl ')'  */
-#line 3751 "mrbgems/mruby-compiler/core/parse.y"
+#line 3758 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-2].nd);
                     }
-#line 10202 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10209 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 407: /* f_larglist: f_args  */
-#line 3755 "mrbgems/mruby-compiler/core/parse.y"
+#line 3762 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 10210 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10217 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 408: /* lambda_body: tLAMBEG compstmt '}'  */
-#line 3761 "mrbgems/mruby-compiler/core/parse.y"
+#line 3768 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 10218 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10225 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 409: /* lambda_body: "'do' for lambda" bodystmt "'end'"  */
-#line 3765 "mrbgems/mruby-compiler/core/parse.y"
+#line 3772 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 10226 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10233 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 410: /* @28: %empty  */
-#line 3771 "mrbgems/mruby-compiler/core/parse.y"
+#line 3778 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_nest(p);
                       nvars_nest(p);
                       (yyval.num) = p->lineno;
                     }
-#line 10236 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10243 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 411: /* do_block: "'do' for block" @28 opt_block_param bodystmt "'end'"  */
-#line 3779 "mrbgems/mruby-compiler/core/parse.y"
+#line 3786 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_block(p,(yyvsp[-2].nd),(yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-3].num));
                       local_unnest(p);
                       nvars_unnest(p);
                     }
-#line 10247 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10254 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 412: /* block_call: command do_block  */
-#line 3788 "mrbgems/mruby-compiler/core/parse.y"
+#line 3795 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       call_with_block(p, (yyvsp[-1].nd), (yyvsp[0].nd));
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 10256 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10263 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 413: /* block_call: block_call call_op2 operation2 opt_paren_args  */
-#line 3793 "mrbgems/mruby-compiler/core/parse.y"
+#line 3800 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].nd), (yyvsp[-2].num));
                     }
-#line 10264 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10271 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 414: /* block_call: block_call call_op2 operation2 opt_paren_args brace_block  */
-#line 3797 "mrbgems/mruby-compiler/core/parse.y"
+#line 3804 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), (yyvsp[-1].nd), (yyvsp[-3].num));
                       call_with_block(p, (yyval.nd), (yyvsp[0].nd));
                     }
-#line 10273 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10280 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 415: /* block_call: block_call call_op2 operation2 command_args do_block  */
-#line 3802 "mrbgems/mruby-compiler/core/parse.y"
+#line 3809 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-4].nd), (yyvsp[-2].id), (yyvsp[-1].nd), (yyvsp[-3].num));
                       call_with_block(p, (yyval.nd), (yyvsp[0].nd));
                     }
-#line 10282 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10289 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 416: /* method_call: operation paren_args  */
-#line 3809 "mrbgems/mruby-compiler/core/parse.y"
+#line 3816 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_fcall(p, (yyvsp[-1].id), (yyvsp[0].nd));
                     }
-#line 10290 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10297 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 417: /* method_call: primary_value call_op operation2 opt_paren_args  */
-#line 3813 "mrbgems/mruby-compiler/core/parse.y"
+#line 3820 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].nd), (yyvsp[-2].num));
                     }
-#line 10298 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10305 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 418: /* method_call: primary_value "::" operation2 paren_args  */
-#line 3817 "mrbgems/mruby-compiler/core/parse.y"
+#line 3824 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].nd), tCOLON2);
                     }
-#line 10306 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10313 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 419: /* method_call: primary_value "::" operation3  */
-#line 3821 "mrbgems/mruby-compiler/core/parse.y"
+#line 3828 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), (yyvsp[0].id), 0, tCOLON2);
                     }
-#line 10314 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10321 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 420: /* method_call: primary_value call_op paren_args  */
-#line 3825 "mrbgems/mruby-compiler/core/parse.y"
+#line 3832 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), MRB_SYM(call), (yyvsp[0].nd), (yyvsp[-1].num));
                     }
-#line 10322 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10329 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 421: /* method_call: primary_value "::" paren_args  */
-#line 3829 "mrbgems/mruby-compiler/core/parse.y"
+#line 3836 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-2].nd), MRB_SYM(call), (yyvsp[0].nd), tCOLON2);
                     }
-#line 10330 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10337 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 422: /* method_call: "'super'" paren_args  */
-#line 3833 "mrbgems/mruby-compiler/core/parse.y"
+#line 3840 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_super(p, (yyvsp[0].nd));
                     }
-#line 10338 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10345 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 423: /* method_call: "'super'"  */
-#line 3837 "mrbgems/mruby-compiler/core/parse.y"
+#line 3844 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_zsuper(p);
                     }
-#line 10346 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10353 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 424: /* method_call: primary_value '[' opt_call_args ']'  */
-#line 3841 "mrbgems/mruby-compiler/core/parse.y"
+#line 3848 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_call(p, (yyvsp[-3].nd), intern_op(aref), (yyvsp[-1].nd), '.');
                     }
-#line 10354 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10361 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 425: /* @29: %empty  */
-#line 3847 "mrbgems/mruby-compiler/core/parse.y"
+#line 3854 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_nest(p);
                       nvars_nest(p);
                       (yyval.num) = p->lineno;
                     }
-#line 10364 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10371 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 426: /* brace_block: '{' @29 opt_block_param compstmt '}'  */
-#line 3854 "mrbgems/mruby-compiler/core/parse.y"
+#line 3861 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_block(p,(yyvsp[-2].nd),(yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-3].num));
                       local_unnest(p);
                       nvars_unnest(p);
                     }
-#line 10375 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10382 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 427: /* @30: %empty  */
-#line 3861 "mrbgems/mruby-compiler/core/parse.y"
+#line 3868 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_nest(p);
                       nvars_nest(p);
                       (yyval.num) = p->lineno;
                     }
-#line 10385 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10392 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 428: /* brace_block: "'do'" @30 opt_block_param bodystmt "'end'"  */
-#line 3868 "mrbgems/mruby-compiler/core/parse.y"
+#line 3875 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_block(p,(yyvsp[-2].nd),(yyvsp[-1].nd));
                       SET_LINENO((yyval.nd), (yyvsp[-3].num));
                       local_unnest(p);
                       nvars_unnest(p);
                     }
-#line 10396 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10403 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 429: /* case_body: "'when'" args then compstmt cases  */
-#line 3879 "mrbgems/mruby-compiler/core/parse.y"
+#line 3886 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(cons((yyvsp[-3].nd), (yyvsp[-1].nd)), (yyvsp[0].nd));
                     }
-#line 10404 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10411 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 430: /* cases: opt_else  */
-#line 3885 "mrbgems/mruby-compiler/core/parse.y"
+#line 3892 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       if ((yyvsp[0].nd)) {
                         (yyval.nd) = cons(cons(0, (yyvsp[0].nd)), 0);
@@ -10413,622 +10420,622 @@ yyreduce:
                         (yyval.nd) = 0;
                       }
                     }
-#line 10417 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10424 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 432: /* in_clauses: opt_else  */
-#line 3899 "mrbgems/mruby-compiler/core/parse.y"
+#line 3906 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd) ? list1(new_in(p, NULL, NULL, (yyvsp[0].nd), FALSE)) : 0;
                     }
-#line 10425 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10432 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 433: /* $@31: %empty  */
-#line 3902 "mrbgems/mruby-compiler/core/parse.y"
+#line 3909 "mrbgems/mruby-compiler/core/parse.y"
                                     {p->in_kwarg--;}
-#line 10431 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10438 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 434: /* in_clauses: "'in'" p_expr $@31 then compstmt in_clauses  */
-#line 3903 "mrbgems/mruby-compiler/core/parse.y"
+#line 3910 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *in_clause = new_in(p, (yyvsp[-4].nd), NULL, (yyvsp[-1].nd), FALSE);
                       (yyval.nd) = cons(in_clause, (yyvsp[0].nd));
                     }
-#line 10440 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10447 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 435: /* $@32: %empty  */
-#line 3907 "mrbgems/mruby-compiler/core/parse.y"
+#line 3914 "mrbgems/mruby-compiler/core/parse.y"
                                     {p->in_kwarg--;}
-#line 10446 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10453 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 436: /* in_clauses: "'in'" p_expr $@32 "'if' modifier" expr_value then compstmt in_clauses  */
-#line 3908 "mrbgems/mruby-compiler/core/parse.y"
+#line 3915 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *in_clause = new_in(p, (yyvsp[-6].nd), (yyvsp[-3].nd), (yyvsp[-1].nd), FALSE);
                       (yyval.nd) = cons(in_clause, (yyvsp[0].nd));
                     }
-#line 10455 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10462 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 437: /* $@33: %empty  */
-#line 3912 "mrbgems/mruby-compiler/core/parse.y"
+#line 3919 "mrbgems/mruby-compiler/core/parse.y"
                                     {p->in_kwarg--;}
-#line 10461 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10468 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 438: /* in_clauses: "'in'" p_expr $@33 "'unless' modifier" expr_value then compstmt in_clauses  */
-#line 3913 "mrbgems/mruby-compiler/core/parse.y"
+#line 3920 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *in_clause = new_in(p, (yyvsp[-6].nd), (yyvsp[-3].nd), (yyvsp[-1].nd), TRUE);
                       (yyval.nd) = cons(in_clause, (yyvsp[0].nd));
                     }
-#line 10470 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10477 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 440: /* p_expr: p_args_head p_as  */
-#line 3924 "mrbgems/mruby-compiler/core/parse.y"
+#line 3931 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_array(p, push((yyvsp[-1].nd), (yyvsp[0].nd)), 0, 0);
                     }
-#line 10478 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10485 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 441: /* p_expr: p_args_head p_rest  */
-#line 3928 "mrbgems/mruby-compiler/core/parse.y"
+#line 3935 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_array(p, (yyvsp[-1].nd), (yyvsp[0].nd), 0);
                     }
-#line 10486 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10493 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 442: /* p_expr: p_args_head p_rest ',' p_args_post  */
-#line 3932 "mrbgems/mruby-compiler/core/parse.y"
+#line 3939 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_array(p, (yyvsp[-3].nd), (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10494 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10501 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 443: /* p_expr: p_rest  */
-#line 3936 "mrbgems/mruby-compiler/core/parse.y"
+#line 3943 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_array(p, 0, (yyvsp[0].nd), 0);
                     }
-#line 10502 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10509 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 444: /* p_expr: p_rest ',' p_args_post  */
-#line 3940 "mrbgems/mruby-compiler/core/parse.y"
+#line 3947 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_array(p, 0, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10510 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10517 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 445: /* p_expr: p_hash_elems  */
-#line 3944 "mrbgems/mruby-compiler/core/parse.y"
+#line 3951 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Brace-less hash pattern: in a:, b: x */
                       (yyval.nd) = new_pat_hash(p, (yyvsp[0].nd), 0);
                     }
-#line 10519 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10526 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 446: /* p_expr: p_hash_elems ',' p_kwrest  */
-#line 3949 "mrbgems/mruby-compiler/core/parse.y"
+#line 3956 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Brace-less hash pattern with kwrest: in a:, **rest */
                       (yyval.nd) = new_pat_hash(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10528 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10535 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 447: /* p_expr: p_kwrest  */
-#line 3954 "mrbgems/mruby-compiler/core/parse.y"
+#line 3961 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Brace-less kwrest only: in **rest */
                       (yyval.nd) = new_pat_hash(p, 0, (yyvsp[0].nd));
                     }
-#line 10537 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10544 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 448: /* p_args_head: p_as ','  */
-#line 3962 "mrbgems/mruby-compiler/core/parse.y"
+#line 3969 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[-1].nd));
                     }
-#line 10545 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10552 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 449: /* p_args_head: p_args_head p_as ','  */
-#line 3966 "mrbgems/mruby-compiler/core/parse.y"
+#line 3973 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[-1].nd));
                     }
-#line 10553 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10560 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 450: /* p_args_post: p_as  */
-#line 3973 "mrbgems/mruby-compiler/core/parse.y"
+#line 3980 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10561 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10568 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 451: /* p_args_post: p_args_post ',' p_as  */
-#line 3977 "mrbgems/mruby-compiler/core/parse.y"
+#line 3984 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10569 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10576 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 453: /* p_as: p_alt "=>" "local variable or method"  */
-#line 3984 "mrbgems/mruby-compiler/core/parse.y"
+#line 3991 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_as(p, (yyvsp[-2].nd), (yyvsp[0].id));
                     }
-#line 10577 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10584 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 455: /* p_alt: p_alt '|' p_value  */
-#line 3991 "mrbgems/mruby-compiler/core/parse.y"
+#line 3998 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_alt(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10585 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10592 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 457: /* p_value: numeric  */
-#line 3998 "mrbgems/mruby-compiler/core/parse.y"
+#line 4005 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, (yyvsp[0].nd));
                     }
-#line 10593 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10600 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 458: /* p_value: symbol  */
-#line 4002 "mrbgems/mruby-compiler/core/parse.y"
+#line 4009 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, (yyvsp[0].nd));
                     }
-#line 10601 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10608 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 459: /* p_value: tSTRING  */
-#line 4006 "mrbgems/mruby-compiler/core/parse.y"
+#line 4013 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, new_str(p, list1((yyvsp[0].nd))));
                     }
-#line 10609 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10616 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 460: /* p_value: "'nil'"  */
-#line 4010 "mrbgems/mruby-compiler/core/parse.y"
+#line 4017 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, new_nil(p));
                     }
-#line 10617 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10624 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 461: /* p_value: "'true'"  */
-#line 4014 "mrbgems/mruby-compiler/core/parse.y"
+#line 4021 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, new_true(p));
                     }
-#line 10625 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10632 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 462: /* p_value: "'false'"  */
-#line 4018 "mrbgems/mruby-compiler/core/parse.y"
+#line 4025 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, new_false(p));
                     }
-#line 10633 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10640 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 463: /* p_value: p_const  */
-#line 4022 "mrbgems/mruby-compiler/core/parse.y"
+#line 4029 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_value(p, (yyvsp[0].nd));
                     }
-#line 10641 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10648 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 466: /* p_value: '^' "local variable or method"  */
-#line 4028 "mrbgems/mruby-compiler/core/parse.y"
+#line 4035 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_pin(p, (yyvsp[0].id));
                     }
-#line 10649 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10656 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 467: /* p_array: "[" p_array_body ']'  */
-#line 4035 "mrbgems/mruby-compiler/core/parse.y"
+#line 4042 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 10657 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10664 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 468: /* p_array: "[" ']'  */
-#line 4039 "mrbgems/mruby-compiler/core/parse.y"
+#line 4046 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_array(p, 0, 0, 0);
                     }
-#line 10665 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10672 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 469: /* p_array_body: p_array_elems  */
-#line 4046 "mrbgems/mruby-compiler/core/parse.y"
+#line 4053 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Just pre elements, no rest */
                       (yyval.nd) = new_pat_array(p, (yyvsp[0].nd), 0, 0);
                     }
-#line 10674 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10681 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 470: /* p_array_body: p_array_elems ',' p_rest  */
-#line 4051 "mrbgems/mruby-compiler/core/parse.y"
+#line 4058 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Pre elements + rest, no post */
                       (yyval.nd) = new_pat_array(p, (yyvsp[-2].nd), (yyvsp[0].nd), 0);
                     }
-#line 10683 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10690 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 471: /* p_array_body: p_array_elems ',' p_rest ',' p_array_elems  */
-#line 4056 "mrbgems/mruby-compiler/core/parse.y"
+#line 4063 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Pre + rest + post */
                       (yyval.nd) = new_pat_array(p, (yyvsp[-4].nd), (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10692 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10699 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 472: /* p_array_body: p_rest  */
-#line 4061 "mrbgems/mruby-compiler/core/parse.y"
+#line 4068 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Just rest, no pre or post */
                       (yyval.nd) = new_pat_array(p, 0, (yyvsp[0].nd), 0);
                     }
-#line 10701 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10708 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 473: /* p_array_body: p_rest ',' p_array_elems  */
-#line 4066 "mrbgems/mruby-compiler/core/parse.y"
+#line 4073 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Rest + post, no pre */
                       (yyval.nd) = new_pat_array(p, 0, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10710 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10717 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 474: /* p_array_body: p_rest ',' p_array_elems ',' p_rest  */
-#line 4071 "mrbgems/mruby-compiler/core/parse.y"
+#line 4078 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Find pattern: [*pre, elems, *post] */
                       (yyval.nd) = new_pat_find(p, (yyvsp[-4].nd), (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10719 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10726 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 475: /* p_array_elems: p_as  */
-#line 4079 "mrbgems/mruby-compiler/core/parse.y"
+#line 4086 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10727 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10734 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 476: /* p_array_elems: p_array_elems ',' p_as  */
-#line 4083 "mrbgems/mruby-compiler/core/parse.y"
+#line 4090 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10735 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10742 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 477: /* p_rest: "*" "local variable or method"  */
-#line 4090 "mrbgems/mruby-compiler/core/parse.y"
+#line 4097 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_var(p, (yyvsp[0].id));
                     }
-#line 10743 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10750 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 478: /* p_rest: "*"  */
-#line 4094 "mrbgems/mruby-compiler/core/parse.y"
+#line 4101 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* Anonymous rest pattern */
                       (yyval.nd) = (node*)-1;
                     }
-#line 10752 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10759 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 479: /* p_const: "constant"  */
-#line 4102 "mrbgems/mruby-compiler/core/parse.y"
+#line 4109 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_const(p, (yyvsp[0].id));
                     }
-#line 10760 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10767 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 480: /* p_const: p_const "::" "constant"  */
-#line 4106 "mrbgems/mruby-compiler/core/parse.y"
+#line 4113 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_colon2(p, (yyvsp[-2].nd), (yyvsp[0].id));
                     }
-#line 10768 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10775 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 481: /* p_const: tCOLON3 "constant"  */
-#line 4110 "mrbgems/mruby-compiler/core/parse.y"
+#line 4117 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_colon3(p, (yyvsp[0].id));
                     }
-#line 10776 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10783 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 482: /* p_hash: tLBRACE p_hash_body '}'  */
-#line 4117 "mrbgems/mruby-compiler/core/parse.y"
+#line 4124 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 10784 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10791 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 483: /* p_hash: tLBRACE '}'  */
-#line 4121 "mrbgems/mruby-compiler/core/parse.y"
+#line 4128 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_hash(p, 0, 0);
                     }
-#line 10792 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10799 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 484: /* p_hash_body: p_hash_elems  */
-#line 4128 "mrbgems/mruby-compiler/core/parse.y"
+#line 4135 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_hash(p, (yyvsp[0].nd), 0);
                     }
-#line 10800 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10807 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 485: /* p_hash_body: p_hash_elems ',' p_kwrest  */
-#line 4132 "mrbgems/mruby-compiler/core/parse.y"
+#line 4139 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_hash(p, (yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10808 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10815 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 486: /* p_hash_body: p_kwrest  */
-#line 4136 "mrbgems/mruby-compiler/core/parse.y"
+#line 4143 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_hash(p, 0, (yyvsp[0].nd));
                     }
-#line 10816 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10823 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 487: /* p_hash_elems: p_hash_elem  */
-#line 4143 "mrbgems/mruby-compiler/core/parse.y"
+#line 4150 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10824 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10831 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 488: /* p_hash_elems: p_hash_elems ',' p_hash_elem  */
-#line 4147 "mrbgems/mruby-compiler/core/parse.y"
+#line 4154 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 10832 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10839 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 489: /* p_hash_elem: "local variable or method" "label" p_as  */
-#line 4156 "mrbgems/mruby-compiler/core/parse.y"
+#line 4163 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* {key: pattern} */
                       (yyval.nd) = cons(new_sym(p, (yyvsp[-2].id)), (yyvsp[0].nd));
                     }
-#line 10841 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10848 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 490: /* p_hash_elem: "local variable or method" "label"  */
-#line 4161 "mrbgems/mruby-compiler/core/parse.y"
+#line 4168 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* {key:} shorthand - binds to variable with same name */
                       (yyval.nd) = cons(new_sym(p, (yyvsp[-1].id)), new_pat_var(p, (yyvsp[-1].id)));
                     }
-#line 10850 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10857 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 491: /* p_kwrest: "**" "local variable or method"  */
-#line 4169 "mrbgems/mruby-compiler/core/parse.y"
+#line 4176 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_var(p, (yyvsp[0].id));
                     }
-#line 10858 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10865 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 492: /* p_kwrest: "**" "'nil'"  */
-#line 4173 "mrbgems/mruby-compiler/core/parse.y"
+#line 4180 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* **nil - exact match, no extra keys allowed */
                       (yyval.nd) = (node*)-1;
                     }
-#line 10867 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10874 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 493: /* p_kwrest: "**"  */
-#line 4178 "mrbgems/mruby-compiler/core/parse.y"
+#line 4185 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* ** - anonymous rest, discards extra keys */
                       (yyval.nd) = (node*)-2;
                     }
-#line 10876 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10883 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 494: /* p_var: "local variable or method"  */
-#line 4185 "mrbgems/mruby-compiler/core/parse.y"
+#line 4192 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_pat_var(p, (yyvsp[0].id));
                     }
-#line 10884 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10891 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 495: /* opt_rescue: "'rescue'" exc_list exc_var then compstmt opt_rescue  */
-#line 4193 "mrbgems/mruby-compiler/core/parse.y"
+#line 4200 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(list3((yyvsp[-4].nd), (yyvsp[-3].nd), (yyvsp[-1].nd)));
                       if ((yyvsp[0].nd)) (yyval.nd) = append((yyval.nd), (yyvsp[0].nd));
                     }
-#line 10893 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10900 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 497: /* exc_list: arg  */
-#line 4201 "mrbgems/mruby-compiler/core/parse.y"
+#line 4208 "mrbgems/mruby-compiler/core/parse.y"
                     {
                         (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10901 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10908 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 500: /* exc_var: "=>" lhs  */
-#line 4209 "mrbgems/mruby-compiler/core/parse.y"
-                    {
-                      (yyval.nd) = (yyvsp[0].nd);
-                    }
-#line 10909 "mrbgems/mruby-compiler/core/y.tab.c"
-    break;
-
-  case 502: /* opt_ensure: "'ensure'" compstmt  */
 #line 4216 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 10917 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10916 "mrbgems/mruby-compiler/core/y.tab.c"
+    break;
+
+  case 502: /* opt_ensure: "'ensure'" compstmt  */
+#line 4223 "mrbgems/mruby-compiler/core/parse.y"
+                    {
+                      (yyval.nd) = (yyvsp[0].nd);
+                    }
+#line 10924 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 509: /* string: string string_fragment  */
-#line 4230 "mrbgems/mruby-compiler/core/parse.y"
+#line 4237 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = append((yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10925 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10932 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 510: /* string_fragment: "character literal"  */
-#line 4236 "mrbgems/mruby-compiler/core/parse.y"
+#line 4243 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* tCHAR is (len . str), wrap as cons list */
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10934 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10941 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 511: /* string_fragment: tSTRING  */
-#line 4241 "mrbgems/mruby-compiler/core/parse.y"
+#line 4248 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* tSTRING is (len . str), wrap as cons list */
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10943 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10950 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 512: /* string_fragment: "string literal" tSTRING  */
-#line 4246 "mrbgems/mruby-compiler/core/parse.y"
+#line 4253 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* $2 is (len . str), wrap as cons list */
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10952 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10959 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 513: /* string_fragment: "string literal" string_rep tSTRING  */
-#line 4251 "mrbgems/mruby-compiler/core/parse.y"
+#line 4258 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10960 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10967 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 515: /* string_rep: string_rep string_interp  */
-#line 4258 "mrbgems/mruby-compiler/core/parse.y"
+#line 4265 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = append((yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 10968 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10975 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 516: /* string_interp: tSTRING_MID  */
-#line 4264 "mrbgems/mruby-compiler/core/parse.y"
+#line 4271 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       /* $1 is already in (len . str) format */
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 10977 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10984 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 517: /* @34: %empty  */
-#line 4269 "mrbgems/mruby-compiler/core/parse.y"
+#line 4276 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push_strterm(p);
                     }
-#line 10985 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 10992 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 518: /* string_interp: tSTRING_PART @34 compstmt '}'  */
-#line 4274 "mrbgems/mruby-compiler/core/parse.y"
+#line 4281 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       pop_strterm(p,(yyvsp[-2].nd));
                       /* $1 is already in (len . str) format, create (-1 . node) for expression */
                       node *expr_elem = cons(int_to_node(-1), (yyvsp[-1].nd));
                       (yyval.nd) = list2((yyvsp[-3].nd), expr_elem);
                     }
-#line 10996 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11003 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 519: /* string_interp: tLITERAL_DELIM  */
-#line 4281 "mrbgems/mruby-compiler/core/parse.y"
+#line 4288 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(new_literal_delim(p));
                     }
-#line 11004 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11011 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 520: /* string_interp: tHD_LITERAL_DELIM heredoc_bodies  */
-#line 4285 "mrbgems/mruby-compiler/core/parse.y"
+#line 4292 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1(new_literal_delim(p));
                     }
-#line 11012 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11019 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 521: /* xstring: tXSTRING_BEG tXSTRING  */
-#line 4291 "mrbgems/mruby-compiler/core/parse.y"
+#line 4298 "mrbgems/mruby-compiler/core/parse.y"
                     {
                         (yyval.nd) = cons((yyvsp[0].nd), (node*)NULL);
                     }
-#line 11020 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11027 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 522: /* xstring: tXSTRING_BEG string_rep tXSTRING  */
-#line 4295 "mrbgems/mruby-compiler/core/parse.y"
+#line 4302 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11028 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11035 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 523: /* regexp: tREGEXP_BEG tREGEXP  */
-#line 4301 "mrbgems/mruby-compiler/core/parse.y"
+#line 4308 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *data = (yyvsp[0].nd);  /* ((len . pattern) . (flags . encoding)) */
                       const char *flags = (const char*)data->cdr->car;
@@ -11037,11 +11044,11 @@ yyreduce:
                       node *pattern_list = cons(data->car, (node*)NULL);
                       (yyval.nd) = new_regx(p, pattern_list, flags, encoding);
                     }
-#line 11041 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11048 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 524: /* regexp: tREGEXP_BEG string_rep tREGEXP  */
-#line 4310 "mrbgems/mruby-compiler/core/parse.y"
+#line 4317 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *data = (yyvsp[0].nd);  /* ((len . pattern) . (flags . encoding)) */
                       const char *flags = (const char*)data->cdr->car;
@@ -11050,47 +11057,47 @@ yyreduce:
                       node *complete_list = push((yyvsp[-1].nd), data->car);
                       (yyval.nd) = new_regx(p, complete_list, flags, encoding);
                     }
-#line 11054 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11061 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 528: /* heredoc_body: tHEREDOC_END  */
-#line 4328 "mrbgems/mruby-compiler/core/parse.y"
+#line 4335 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       parser_heredoc_info *info = parsing_heredoc_info(p);
                       info->doc = push(info->doc, new_str_empty(p));
                       heredoc_end(p);
                     }
-#line 11064 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11071 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 529: /* heredoc_body: heredoc_string_rep tHEREDOC_END  */
-#line 4334 "mrbgems/mruby-compiler/core/parse.y"
+#line 4341 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       heredoc_end(p);
                     }
-#line 11072 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11079 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 532: /* heredoc_string_interp: tHD_STRING_MID  */
-#line 4344 "mrbgems/mruby-compiler/core/parse.y"
+#line 4351 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       parser_heredoc_info *info = parsing_heredoc_info(p);
                       info->doc = push(info->doc, (yyvsp[0].nd));
                       heredoc_treat_nextline(p);
                     }
-#line 11082 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11089 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 533: /* @35: %empty  */
-#line 4350 "mrbgems/mruby-compiler/core/parse.y"
+#line 4357 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push_strterm(p);
                     }
-#line 11090 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11097 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 534: /* heredoc_string_interp: tHD_STRING_PART @35 compstmt '}'  */
-#line 4355 "mrbgems/mruby-compiler/core/parse.y"
+#line 4362 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       pop_strterm(p, (yyvsp[-2].nd));
                       parser_heredoc_info *info = parsing_heredoc_info(p);
@@ -11098,37 +11105,37 @@ yyreduce:
                       node *expr_elem = cons(int_to_node(-1), (yyvsp[-1].nd));
                       info->doc = push(push(info->doc, (yyvsp[-3].nd)), expr_elem);
                     }
-#line 11102 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11109 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 535: /* words: tWORDS_BEG tSTRING  */
-#line 4365 "mrbgems/mruby-compiler/core/parse.y"
+#line 4372 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_words(p, list1((yyvsp[0].nd)));
                     }
-#line 11110 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11117 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 536: /* words: tWORDS_BEG string_rep tSTRING  */
-#line 4369 "mrbgems/mruby-compiler/core/parse.y"
+#line 4376 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *n = (yyvsp[-1].nd);
                       n = push(n, (yyvsp[0].nd));
                       (yyval.nd) = new_words(p, n);
                     }
-#line 11120 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11127 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 537: /* symbol: basic_symbol  */
-#line 4377 "mrbgems/mruby-compiler/core/parse.y"
+#line 4384 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_sym(p, (yyvsp[0].id));
                     }
-#line 11128 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11135 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 538: /* symbol: "symbol" "string literal" string_rep tSTRING  */
-#line 4381 "mrbgems/mruby-compiler/core/parse.y"
+#line 4388 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *n = (yyvsp[-1].nd);
                       p->lstate = EXPR_ENDARG;
@@ -11140,183 +11147,183 @@ yyreduce:
                       }
                       (yyval.nd) = new_dsym(p, n);
                     }
-#line 11144 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11151 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 539: /* symbol: "symbol" "numbered parameter"  */
-#line 4393 "mrbgems/mruby-compiler/core/parse.y"
+#line 4400 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       mrb_sym sym = intern_numparam((yyvsp[0].num));
                       (yyval.nd) = new_sym(p, sym);
                     }
-#line 11153 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11160 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 540: /* basic_symbol: "symbol" sym  */
-#line 4400 "mrbgems/mruby-compiler/core/parse.y"
+#line 4407 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lstate = EXPR_END;
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 11162 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11169 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 545: /* sym: tSTRING  */
-#line 4411 "mrbgems/mruby-compiler/core/parse.y"
+#line 4418 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = new_strsym(p, (yyvsp[0].nd));
                     }
-#line 11170 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11177 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 546: /* sym: "string literal" tSTRING  */
-#line 4415 "mrbgems/mruby-compiler/core/parse.y"
+#line 4422 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = new_strsym(p, (yyvsp[0].nd));
                     }
-#line 11178 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11185 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 547: /* symbols: tSYMBOLS_BEG tSTRING  */
-#line 4421 "mrbgems/mruby-compiler/core/parse.y"
+#line 4428 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_symbols(p, list1((yyvsp[0].nd)));
                     }
-#line 11186 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11193 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 548: /* symbols: tSYMBOLS_BEG string_rep tSTRING  */
-#line 4425 "mrbgems/mruby-compiler/core/parse.y"
+#line 4432 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       node *n = (yyvsp[-1].nd);
                       n = push(n, (yyvsp[0].nd));
                       (yyval.nd) = new_symbols(p, n);
                     }
-#line 11196 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11203 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 551: /* numeric: tUMINUS_NUM "integer literal"  */
-#line 4435 "mrbgems/mruby-compiler/core/parse.y"
+#line 4442 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_negate(p, (yyvsp[0].nd));
                     }
-#line 11204 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11211 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 552: /* numeric: tUMINUS_NUM "float literal"  */
-#line 4439 "mrbgems/mruby-compiler/core/parse.y"
+#line 4446 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_negate(p, (yyvsp[0].nd));
                     }
-#line 11212 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11219 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 553: /* variable: "local variable or method"  */
-#line 4445 "mrbgems/mruby-compiler/core/parse.y"
+#line 4452 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_lvar(p, (yyvsp[0].id));
                     }
-#line 11220 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11227 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 554: /* variable: "instance variable"  */
-#line 4449 "mrbgems/mruby-compiler/core/parse.y"
+#line 4456 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_ivar(p, (yyvsp[0].id));
                     }
-#line 11228 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11235 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 555: /* variable: "global variable"  */
-#line 4453 "mrbgems/mruby-compiler/core/parse.y"
+#line 4460 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_gvar(p, (yyvsp[0].id));
                     }
-#line 11236 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11243 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 556: /* variable: "class variable"  */
-#line 4457 "mrbgems/mruby-compiler/core/parse.y"
+#line 4464 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_cvar(p, (yyvsp[0].id));
                     }
-#line 11244 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11251 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 557: /* variable: "constant"  */
-#line 4461 "mrbgems/mruby-compiler/core/parse.y"
+#line 4468 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_const(p, (yyvsp[0].id));
                     }
-#line 11252 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11259 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 558: /* var_lhs: variable  */
-#line 4467 "mrbgems/mruby-compiler/core/parse.y"
+#line 4474 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       assignable(p, (yyvsp[0].nd));
                     }
-#line 11260 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11267 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 559: /* var_lhs: "numbered parameter"  */
-#line 4471 "mrbgems/mruby-compiler/core/parse.y"
+#line 4478 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "can't assign to numbered parameter");
                     }
-#line 11268 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11275 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 560: /* var_ref: variable  */
-#line 4477 "mrbgems/mruby-compiler/core/parse.y"
+#line 4484 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = var_reference(p, (yyvsp[0].nd));
                     }
-#line 11276 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11283 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 561: /* var_ref: "numbered parameter"  */
-#line 4481 "mrbgems/mruby-compiler/core/parse.y"
+#line 4488 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_nvar(p, (yyvsp[0].num));
                     }
-#line 11284 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11291 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 562: /* var_ref: "'nil'"  */
-#line 4485 "mrbgems/mruby-compiler/core/parse.y"
+#line 4492 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_nil(p);
                     }
-#line 11292 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11299 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 563: /* var_ref: "'self'"  */
-#line 4489 "mrbgems/mruby-compiler/core/parse.y"
+#line 4496 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_self(p);
                     }
-#line 11300 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11307 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 564: /* var_ref: "'true'"  */
-#line 4493 "mrbgems/mruby-compiler/core/parse.y"
+#line 4500 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_true(p);
                     }
-#line 11308 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11315 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 565: /* var_ref: "'false'"  */
-#line 4497 "mrbgems/mruby-compiler/core/parse.y"
+#line 4504 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_false(p);
                     }
-#line 11316 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11323 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 566: /* var_ref: "'__FILE__'"  */
-#line 4501 "mrbgems/mruby-compiler/core/parse.y"
+#line 4508 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       const char *fn = mrb_sym_name_len(p->mrb, p->filename_sym, NULL);
                       if (!fn) {
@@ -11324,714 +11331,714 @@ yyreduce:
                       }
                       (yyval.nd) = new_str(p, cons(cons(int_to_node(strlen(fn)), (node*)fn), (node*)NULL));
                     }
-#line 11328 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11335 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 567: /* var_ref: "'__LINE__'"  */
-#line 4509 "mrbgems/mruby-compiler/core/parse.y"
+#line 4516 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       char buf[16];
 
                       dump_int(p->lineno, buf);
                       (yyval.nd) = new_int(p, buf, 10, 0);
                     }
-#line 11339 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11346 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 568: /* var_ref: "'__ENCODING__'"  */
-#line 4516 "mrbgems/mruby-compiler/core/parse.y"
+#line 4523 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_fcall(p, MRB_SYM(__ENCODING__), 0);
                     }
-#line 11347 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11354 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 571: /* superclass: %empty  */
-#line 4526 "mrbgems/mruby-compiler/core/parse.y"
+#line 4533 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = 0;
                     }
-#line 11355 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11362 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 572: /* $@36: %empty  */
-#line 4530 "mrbgems/mruby-compiler/core/parse.y"
+#line 4537 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lstate = EXPR_BEG;
                       p->cmd_start = TRUE;
                     }
-#line 11364 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11371 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 573: /* superclass: '<' $@36 expr_value term  */
-#line 4535 "mrbgems/mruby-compiler/core/parse.y"
+#line 4542 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 11372 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11379 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 576: /* f_arglist_paren: '(' f_args rparen  */
-#line 4551 "mrbgems/mruby-compiler/core/parse.y"
+#line 4558 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                       p->lstate = EXPR_BEG;
                       p->cmd_start = TRUE;
                     }
-#line 11382 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11389 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 577: /* f_arglist_paren: '(' f_arg ',' tBDOT3 rparen  */
-#line 4557 "mrbgems/mruby-compiler/core/parse.y"
+#line 4564 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_dots(p, (yyvsp[-3].nd));
                     }
-#line 11390 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11397 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 578: /* f_arglist_paren: '(' tBDOT3 rparen  */
-#line 4561 "mrbgems/mruby-compiler/core/parse.y"
+#line 4568 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_dots(p, 0);
                     }
-#line 11398 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11405 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 580: /* f_arglist: f_args term  */
-#line 4568 "mrbgems/mruby-compiler/core/parse.y"
+#line 4575 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 11406 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11413 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 581: /* f_arglist: f_arg ',' tBDOT3 term  */
-#line 4572 "mrbgems/mruby-compiler/core/parse.y"
+#line 4579 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_dots(p, (yyvsp[-3].nd));
                     }
-#line 11414 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11421 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 582: /* f_arglist: "..." term  */
-#line 4576 "mrbgems/mruby-compiler/core/parse.y"
+#line 4583 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_dots(p, 0);
                     }
-#line 11422 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11429 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 583: /* f_label: "local variable or method" "label"  */
-#line 4582 "mrbgems/mruby-compiler/core/parse.y"
+#line 4589 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = (yyvsp[-1].id);
                       local_nest(p);
                       p->lstate = EXPR_MID;  /* make newlines significant after label */
                     }
-#line 11432 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11439 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 584: /* f_label: "numbered parameter" "label"  */
-#line 4588 "mrbgems/mruby-compiler/core/parse.y"
+#line 4595 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = intern_numparam((yyvsp[-1].num));
                       local_nest(p);
                       p->lstate = EXPR_MID;  /* make newlines significant after label */
                     }
-#line 11442 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11449 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 585: /* f_kw: f_label arg  */
-#line 4596 "mrbgems/mruby-compiler/core/parse.y"
+#line 4603 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = new_kw_arg(p, (yyvsp[-1].id), cons((yyvsp[0].nd), locals_node(p)));
                       local_unnest(p);
                     }
-#line 11452 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11459 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 586: /* f_kw: f_label  */
-#line 4602 "mrbgems/mruby-compiler/core/parse.y"
+#line 4609 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_kw_arg(p, (yyvsp[0].id), 0);
                       local_unnest(p);
                     }
-#line 11461 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11468 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 587: /* f_block_kw: f_label primary_value  */
-#line 4609 "mrbgems/mruby-compiler/core/parse.y"
+#line 4616 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = new_kw_arg(p, (yyvsp[-1].id), cons((yyvsp[0].nd), locals_node(p)));
                       local_unnest(p);
                     }
-#line 11471 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11478 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 588: /* f_block_kw: f_label  */
-#line 4615 "mrbgems/mruby-compiler/core/parse.y"
+#line 4622 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_kw_arg(p, (yyvsp[0].id), 0);
                       local_unnest(p);
                     }
-#line 11480 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11487 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 589: /* f_block_kwarg: f_block_kw  */
-#line 4622 "mrbgems/mruby-compiler/core/parse.y"
+#line 4629 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 11488 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11495 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 590: /* f_block_kwarg: f_block_kwarg ',' f_block_kw  */
-#line 4626 "mrbgems/mruby-compiler/core/parse.y"
+#line 4633 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11496 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11503 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 591: /* f_kwarg: f_kw  */
-#line 4632 "mrbgems/mruby-compiler/core/parse.y"
+#line 4639 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 11504 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11511 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 592: /* f_kwarg: f_kwarg ',' f_kw  */
-#line 4636 "mrbgems/mruby-compiler/core/parse.y"
+#line 4643 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11512 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11519 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 595: /* f_kwrest: kwrest_mark "local variable or method"  */
-#line 4646 "mrbgems/mruby-compiler/core/parse.y"
+#line 4653 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 11520 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11527 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 596: /* f_kwrest: kwrest_mark  */
-#line 4650 "mrbgems/mruby-compiler/core/parse.y"
+#line 4657 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = intern_op(pow);
                     }
-#line 11528 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11535 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 597: /* args_tail: f_kwarg ',' f_kwrest opt_f_block_arg  */
-#line 4656 "mrbgems/mruby-compiler/core/parse.y"
+#line 4663 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, (yyvsp[-3].nd), (yyvsp[-1].id), (yyvsp[0].id));
                     }
-#line 11536 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11543 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 598: /* args_tail: f_kwarg opt_f_block_arg  */
-#line 4660 "mrbgems/mruby-compiler/core/parse.y"
+#line 4667 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, (yyvsp[-1].nd), 0, (yyvsp[0].id));
                     }
-#line 11544 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11551 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 599: /* args_tail: f_kwrest opt_f_block_arg  */
-#line 4664 "mrbgems/mruby-compiler/core/parse.y"
+#line 4671 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, (yyvsp[-1].id), (yyvsp[0].id));
                     }
-#line 11552 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11559 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 600: /* args_tail: f_block_arg  */
-#line 4668 "mrbgems/mruby-compiler/core/parse.y"
+#line 4675 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, 0, (yyvsp[0].id));
                     }
-#line 11560 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11567 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 601: /* opt_args_tail: ',' args_tail  */
-#line 4674 "mrbgems/mruby-compiler/core/parse.y"
+#line 4681 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[0].nd);
                     }
-#line 11568 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11575 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 602: /* opt_args_tail: ','  */
-#line 4678 "mrbgems/mruby-compiler/core/parse.y"
+#line 4685 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, 0, 0);
                     }
-#line 11576 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11583 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 603: /* opt_args_tail: %empty  */
-#line 4682 "mrbgems/mruby-compiler/core/parse.y"
+#line 4689 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args_tail(p, 0, 0, 0);
                     }
-#line 11584 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11591 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 604: /* f_args: f_arg ',' f_optarg ',' f_rest_arg opt_args_tail  */
-#line 4688 "mrbgems/mruby-compiler/core/parse.y"
+#line 4695 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-5].nd), (yyvsp[-3].nd), (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 11592 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11599 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 605: /* f_args: f_arg ',' f_optarg ',' f_rest_arg ',' f_arg opt_args_tail  */
-#line 4692 "mrbgems/mruby-compiler/core/parse.y"
+#line 4699 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-7].nd), (yyvsp[-5].nd), (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11600 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11607 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 606: /* f_args: f_arg ',' f_optarg opt_args_tail  */
-#line 4696 "mrbgems/mruby-compiler/core/parse.y"
+#line 4703 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-3].nd), (yyvsp[-1].nd), 0, 0, (yyvsp[0].nd));
                     }
-#line 11608 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11615 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 607: /* f_args: f_arg ',' f_optarg ',' f_arg opt_args_tail  */
-#line 4700 "mrbgems/mruby-compiler/core/parse.y"
+#line 4707 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-5].nd), (yyvsp[-3].nd), 0, (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11616 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11623 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 608: /* f_args: f_arg ',' f_rest_arg opt_args_tail  */
-#line 4704 "mrbgems/mruby-compiler/core/parse.y"
+#line 4711 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-3].nd), 0, (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 11624 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11631 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 609: /* f_args: f_arg ',' f_rest_arg ',' f_arg opt_args_tail  */
-#line 4708 "mrbgems/mruby-compiler/core/parse.y"
+#line 4715 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-5].nd), 0, (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11632 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11639 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 610: /* f_args: f_arg opt_args_tail  */
-#line 4712 "mrbgems/mruby-compiler/core/parse.y"
+#line 4719 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, (yyvsp[-1].nd), 0, 0, 0, (yyvsp[0].nd));
                     }
-#line 11640 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11647 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 611: /* f_args: f_optarg ',' f_rest_arg opt_args_tail  */
-#line 4716 "mrbgems/mruby-compiler/core/parse.y"
+#line 4723 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-3].nd), (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 11648 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11655 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 612: /* f_args: f_optarg ',' f_rest_arg ',' f_arg opt_args_tail  */
-#line 4720 "mrbgems/mruby-compiler/core/parse.y"
+#line 4727 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-5].nd), (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11656 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11663 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 613: /* f_args: f_optarg opt_args_tail  */
-#line 4724 "mrbgems/mruby-compiler/core/parse.y"
+#line 4731 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-1].nd), 0, 0, (yyvsp[0].nd));
                     }
-#line 11664 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11671 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 614: /* f_args: f_optarg ',' f_arg opt_args_tail  */
-#line 4728 "mrbgems/mruby-compiler/core/parse.y"
+#line 4735 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, (yyvsp[-3].nd), 0, (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11672 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11679 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 615: /* f_args: f_rest_arg opt_args_tail  */
-#line 4732 "mrbgems/mruby-compiler/core/parse.y"
+#line 4739 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, 0, (yyvsp[-1].id), 0, (yyvsp[0].nd));
                     }
-#line 11680 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11687 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 616: /* f_args: f_rest_arg ',' f_arg opt_args_tail  */
-#line 4736 "mrbgems/mruby-compiler/core/parse.y"
+#line 4743 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, 0, (yyvsp[-3].id), (yyvsp[-1].nd), (yyvsp[0].nd));
                     }
-#line 11688 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11695 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 617: /* f_args: args_tail  */
-#line 4740 "mrbgems/mruby-compiler/core/parse.y"
+#line 4747 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_args(p, 0, 0, 0, 0, (yyvsp[0].nd));
                     }
-#line 11696 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11703 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 618: /* f_args: %empty  */
-#line 4744 "mrbgems/mruby-compiler/core/parse.y"
+#line 4751 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, 0);
                       (yyval.nd) = new_args(p, 0, 0, 0, 0, 0);
                     }
-#line 11705 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11712 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 619: /* f_bad_arg: "constant"  */
-#line 4751 "mrbgems/mruby-compiler/core/parse.y"
+#line 4758 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "formal argument cannot be a constant");
                       (yyval.nd) = 0;
                     }
-#line 11714 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11721 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 620: /* f_bad_arg: "instance variable"  */
-#line 4756 "mrbgems/mruby-compiler/core/parse.y"
+#line 4763 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "formal argument cannot be an instance variable");
                       (yyval.nd) = 0;
                     }
-#line 11723 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11730 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 621: /* f_bad_arg: "global variable"  */
-#line 4761 "mrbgems/mruby-compiler/core/parse.y"
+#line 4768 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "formal argument cannot be a global variable");
                       (yyval.nd) = 0;
                     }
-#line 11732 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11739 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 622: /* f_bad_arg: "class variable"  */
-#line 4766 "mrbgems/mruby-compiler/core/parse.y"
+#line 4773 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "formal argument cannot be a class variable");
                       (yyval.nd) = 0;
                     }
-#line 11741 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11748 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 623: /* f_bad_arg: "numbered parameter"  */
-#line 4771 "mrbgems/mruby-compiler/core/parse.y"
+#line 4778 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       yyerror(&(yylsp[0]), p, "formal argument cannot be a numbered parameter");
                       (yyval.nd) = 0;
                     }
-#line 11750 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11757 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 624: /* f_norm_arg: f_bad_arg  */
-#line 4778 "mrbgems/mruby-compiler/core/parse.y"
+#line 4785 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = 0;
                     }
-#line 11758 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11765 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 625: /* f_norm_arg: "local variable or method"  */
-#line 4782 "mrbgems/mruby-compiler/core/parse.y"
+#line 4789 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, (yyvsp[0].id));
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 11767 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11774 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 626: /* f_arg_item: f_norm_arg  */
-#line 4789 "mrbgems/mruby-compiler/core/parse.y"
+#line 4796 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_lvar(p, (yyvsp[0].id));
                     }
-#line 11775 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11782 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 627: /* @37: %empty  */
-#line 4793 "mrbgems/mruby-compiler/core/parse.y"
+#line 4800 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = local_switch(p);
                     }
-#line 11783 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11790 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 628: /* f_arg_item: tLPAREN @37 f_margs rparen  */
-#line 4797 "mrbgems/mruby-compiler/core/parse.y"
+#line 4804 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = new_marg(p, (yyvsp[-1].nd));
                       local_resume(p, (yyvsp[-2].nd));
                       local_add_f(p, 0);
                     }
-#line 11793 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11800 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 629: /* f_arg: f_arg_item  */
-#line 4805 "mrbgems/mruby-compiler/core/parse.y"
+#line 4812 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 11801 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11808 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 630: /* f_arg: f_arg ',' f_arg_item  */
-#line 4809 "mrbgems/mruby-compiler/core/parse.y"
+#line 4816 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11809 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11816 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 631: /* f_opt_asgn: "local variable or method" '='  */
-#line 4815 "mrbgems/mruby-compiler/core/parse.y"
+#line 4822 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, (yyvsp[-1].id));
                       local_nest(p);
                       (yyval.id) = (yyvsp[-1].id);
                     }
-#line 11819 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11826 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 632: /* f_opt: f_opt_asgn arg  */
-#line 4823 "mrbgems/mruby-compiler/core/parse.y"
+#line 4830 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = cons(sym_to_node((yyvsp[-1].id)), cons((yyvsp[0].nd), locals_node(p)));
                       local_unnest(p);
                     }
-#line 11829 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11836 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 633: /* f_block_opt: f_opt_asgn primary_value  */
-#line 4831 "mrbgems/mruby-compiler/core/parse.y"
+#line 4838 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = cons(sym_to_node((yyvsp[-1].id)), cons((yyvsp[0].nd), locals_node(p)));
                       local_unnest(p);
                     }
-#line 11839 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11846 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 634: /* f_block_optarg: f_block_opt  */
-#line 4839 "mrbgems/mruby-compiler/core/parse.y"
+#line 4846 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 11847 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11854 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 635: /* f_block_optarg: f_block_optarg ',' f_block_opt  */
-#line 4843 "mrbgems/mruby-compiler/core/parse.y"
+#line 4850 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11855 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11862 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 636: /* f_optarg: f_opt  */
-#line 4849 "mrbgems/mruby-compiler/core/parse.y"
+#line 4856 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 11863 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11870 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 637: /* f_optarg: f_optarg ',' f_opt  */
-#line 4853 "mrbgems/mruby-compiler/core/parse.y"
+#line 4860 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11871 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11878 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 640: /* f_rest_arg: restarg_mark "local variable or method"  */
-#line 4863 "mrbgems/mruby-compiler/core/parse.y"
+#line 4870 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       local_add_f(p, (yyvsp[0].id));
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 11880 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11887 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 641: /* f_rest_arg: restarg_mark  */
-#line 4868 "mrbgems/mruby-compiler/core/parse.y"
+#line 4875 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = intern_op(mul);
                       local_add_f(p, (yyval.id));
                     }
-#line 11889 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11896 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 644: /* f_block_arg: blkarg_mark "local variable or method"  */
-#line 4879 "mrbgems/mruby-compiler/core/parse.y"
+#line 4886 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 11897 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11904 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 645: /* f_block_arg: blkarg_mark "'nil'"  */
-#line 4883 "mrbgems/mruby-compiler/core/parse.y"
+#line 4890 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = MRB_SYM(nil);
                     }
-#line 11905 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11912 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 646: /* f_block_arg: blkarg_mark  */
-#line 4887 "mrbgems/mruby-compiler/core/parse.y"
+#line 4894 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = intern_op(and);
                     }
-#line 11913 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11920 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 647: /* opt_f_block_arg: ',' f_block_arg  */
-#line 4893 "mrbgems/mruby-compiler/core/parse.y"
+#line 4900 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = (yyvsp[0].id);
                     }
-#line 11921 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11928 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 648: /* opt_f_block_arg: ','  */
-#line 4897 "mrbgems/mruby-compiler/core/parse.y"
+#line 4904 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = 0;
                     }
-#line 11929 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11936 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 649: /* opt_f_block_arg: none  */
-#line 4901 "mrbgems/mruby-compiler/core/parse.y"
+#line 4908 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.id) = 0;
                     }
-#line 11937 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11944 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 650: /* singleton: var_ref  */
-#line 4907 "mrbgems/mruby-compiler/core/parse.y"
+#line 4914 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       prohibit_literals(p, (yyvsp[0].nd));
                       (yyval.nd) = (yyvsp[0].nd);
                       if (!(yyval.nd)) (yyval.nd) = new_nil(p);
                     }
-#line 11947 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11954 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 651: /* $@38: %empty  */
-#line 4912 "mrbgems/mruby-compiler/core/parse.y"
+#line 4919 "mrbgems/mruby-compiler/core/parse.y"
                       {p->lstate = EXPR_BEG;}
-#line 11953 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11960 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 652: /* singleton: '(' $@38 expr rparen  */
-#line 4913 "mrbgems/mruby-compiler/core/parse.y"
+#line 4920 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       prohibit_literals(p, (yyvsp[-1].nd));
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 11962 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11969 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 654: /* assoc_list: assocs trailer  */
-#line 4921 "mrbgems/mruby-compiler/core/parse.y"
+#line 4928 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = (yyvsp[-1].nd);
                     }
-#line 11970 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11977 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 655: /* assocs: assoc  */
-#line 4927 "mrbgems/mruby-compiler/core/parse.y"
+#line 4934 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = list1((yyvsp[0].nd));
                     }
-#line 11978 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11985 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 656: /* assocs: assocs comma assoc  */
-#line 4931 "mrbgems/mruby-compiler/core/parse.y"
+#line 4938 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = push((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11986 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 11993 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 657: /* assoc: arg "=>" arg  */
-#line 4937 "mrbgems/mruby-compiler/core/parse.y"
+#line 4944 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[-2].nd));
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = cons((yyvsp[-2].nd), (yyvsp[0].nd));
                     }
-#line 11996 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12003 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 658: /* assoc: "local variable or method" "label" arg  */
-#line 4943 "mrbgems/mruby-compiler/core/parse.y"
+#line 4950 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = cons(new_sym(p, (yyvsp[-2].id)), (yyvsp[0].nd));
                     }
-#line 12005 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12012 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 659: /* assoc: "local variable or method" "label"  */
-#line 4948 "mrbgems/mruby-compiler/core/parse.y"
+#line 4955 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(new_sym(p, (yyvsp[-1].id)), label_reference(p, (yyvsp[-1].id)));
                     }
-#line 12013 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12020 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 660: /* assoc: "numbered parameter" "label"  */
-#line 4952 "mrbgems/mruby-compiler/core/parse.y"
+#line 4959 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       mrb_sym sym = intern_numparam((yyvsp[-1].num));
                       (yyval.nd) = cons(new_sym(p, sym), label_reference(p, sym));
                     }
-#line 12022 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12029 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 661: /* assoc: "numbered parameter" "label" arg  */
-#line 4957 "mrbgems/mruby-compiler/core/parse.y"
+#line 4964 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = cons(new_sym(p, intern_numparam((yyvsp[-2].num))), (yyvsp[0].nd));
                     }
-#line 12031 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12038 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 662: /* assoc: string_fragment "label" arg  */
-#line 4962 "mrbgems/mruby-compiler/core/parse.y"
+#line 4969 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       if ((yyvsp[-2].nd)->cdr) {
@@ -12047,75 +12054,75 @@ yyreduce:
                         (yyval.nd) = cons(new_sym(p, new_strsym(p, (yyvsp[-2].nd)->car)), (yyvsp[0].nd));
                       }
                     }
-#line 12051 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12058 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 663: /* assoc: "**" arg  */
-#line 4978 "mrbgems/mruby-compiler/core/parse.y"
+#line 4985 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       void_expr_error(p, (yyvsp[0].nd));
                       (yyval.nd) = cons(new_kw_rest_args(p, 0), (yyvsp[0].nd));
                     }
-#line 12060 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12067 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 664: /* assoc: "**"  */
-#line 4983 "mrbgems/mruby-compiler/core/parse.y"
+#line 4990 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = cons(new_kw_rest_args(p, 0), new_lvar(p, intern_op(pow)));
                     }
-#line 12068 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12075 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 677: /* call_op: '.'  */
-#line 5009 "mrbgems/mruby-compiler/core/parse.y"
+#line 5016 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.num) = '.';
                     }
-#line 12076 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12083 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 678: /* call_op: "&."  */
-#line 5013 "mrbgems/mruby-compiler/core/parse.y"
+#line 5020 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.num) = 0;
                     }
-#line 12084 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12091 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 680: /* call_op2: "::"  */
-#line 5020 "mrbgems/mruby-compiler/core/parse.y"
+#line 5027 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.num) = tCOLON2;
                     }
-#line 12092 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12099 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 689: /* term: ';'  */
-#line 5041 "mrbgems/mruby-compiler/core/parse.y"
+#line 5048 "mrbgems/mruby-compiler/core/parse.y"
                       {yyerrok;}
-#line 12098 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12105 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 691: /* nl: '\n'  */
-#line 5046 "mrbgems/mruby-compiler/core/parse.y"
+#line 5053 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       p->lineno += (yyvsp[0].num);
                       p->column = 0;
                     }
-#line 12107 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12114 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
   case 695: /* none: %empty  */
-#line 5058 "mrbgems/mruby-compiler/core/parse.y"
+#line 5065 "mrbgems/mruby-compiler/core/parse.y"
                     {
                       (yyval.nd) = 0;
                     }
-#line 12115 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12122 "mrbgems/mruby-compiler/core/y.tab.c"
     break;
 
 
-#line 12119 "mrbgems/mruby-compiler/core/y.tab.c"
+#line 12126 "mrbgems/mruby-compiler/core/y.tab.c"
 
       default: break;
     }
@@ -12348,7 +12355,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 5062 "mrbgems/mruby-compiler/core/parse.y"
+#line 5069 "mrbgems/mruby-compiler/core/parse.y"
 
 #define pylval  (*((YYSTYPE*)(p->ylval)))
 

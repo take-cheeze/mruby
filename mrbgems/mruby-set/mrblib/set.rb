@@ -23,6 +23,17 @@ class Set
     self
   end
 
+  # Marshal: a Set dumps as its elements (the Marshal user-class hook), and loads into a freshly allocated set.
+  def marshal_dump
+    to_a
+  end
+
+  def marshal_load(elements)
+    __init
+    merge(elements)
+    self
+  end
+
   # internal method
   def __do_with_enum(enum, &block)
     if enum.respond_to?(:each)
