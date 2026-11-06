@@ -105,6 +105,7 @@ struct mrb_parser_state {
   int paren_nest;
   int lpar_beg;
   int in_def, in_single, in_kwarg;
+  int in_class;  /* nesting depth of class/module/class << bodies (a body does not see enclosing locals) */
   mrb_bool cmd_start:1;
   mrb_ast_node *locals;
 

@@ -293,7 +293,8 @@ local_var_p(parser_state *p, mrb_sym sym)
     l = l->cdr;
   }
 
-  u = p->upper;
+  /* A method body (def/def self.x) does not see the locals of the code it is compiled in (an eval's caller). */
+  u = (p->in_def || p->in_single || p->in_class) ? NULL : p->upper;
   while (u && !MRB_PROC_CFUNC_P(u)) {
     const struct mrb_irep *ir = u->body.irep;
     const mrb_sym *v = ir->lv;
@@ -3438,6 +3439,7 @@ primary         : literal
                       if (p->in_def || p->in_single)
                         yyerror(&@1, p, "class definition in method body");
                       $<nd>$ = local_switch(p);
+                      p->in_class++;
                       nvars_block(p);
                     }
                   bodystmt
@@ -3445,6 +3447,7 @@ primary         : literal
                     {
                       $$ = new_class(p, $2, $3, $5);
                       SET_LINENO($$, $1);
+                      p->in_class--;
                       local_resume(p, $<nd>4);
                       nvars_unnest(p);
                     }
@@ -3457,6 +3460,7 @@ primary         : literal
                   term
                     {
                       $<nd>$ = cons(local_switch(p), int_to_node(p->in_single));
+                      p->in_class++;
                       nvars_block(p);
                       p->in_single = 0;
                     }
@@ -3465,6 +3469,7 @@ primary         : literal
                     {
                       $$ = new_sclass(p, $3, $7);
                       SET_LINENO($$, $1);
+                      p->in_class--;
                       local_resume(p, $<nd>6->car);
                       nvars_unnest(p);
                       p->in_def = $<num>4;
@@ -3476,6 +3481,7 @@ primary         : literal
                       if (p->in_def || p->in_single)
                         yyerror(&@1, p, "module definition in method body");
                       $<nd>$ = local_switch(p);
+                      p->in_class++;
                       nvars_block(p);
                     }
                   bodystmt
@@ -3483,6 +3489,7 @@ primary         : literal
                     {
                       $$ = new_module(p, $2, $4);
                       SET_LINENO($$, $1);
+                      p->in_class--;
                       local_resume(p, $<nd>3);
                       nvars_unnest(p);
                     }
