@@ -316,7 +316,9 @@ assert("Set#intersect?") do
   set = Set[3,4,5]
 
   assert_raise(ArgumentError) { set.intersect?(3) }
-  assert_raise(ArgumentError) { set.intersect?([2,4,6]) }
+  # any enumerable, as CRuby 3.3
+  assert_true set.intersect?([2,4,6])
+  assert_false set.intersect?([0,2,6])
 
   assert_true set.intersect?(set)
   assert_true set.intersect?(Set[2,4])
@@ -336,7 +338,8 @@ assert("Set#disjoint?") do
   set = Set[3,4,5]
 
   assert_raise(ArgumentError) { set.disjoint?(3) }
-  assert_raise(ArgumentError) { set.disjoint?([2,4,6]) }
+  assert_false set.disjoint?([2,4,6])
+  assert_true set.disjoint?([0,2,6])
 
   assert_true(set.disjoint?(Set[]))
   assert_true(set.disjoint?(Set[0,2]))
