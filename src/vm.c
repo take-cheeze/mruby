@@ -669,7 +669,8 @@ static mrb_int
 ci_kidx_entered(const mrb_callinfo *ci, const mrb_irep *irep)
 {
   if (ci->nk == 0) return -1;
-  const mrb_code *pc = irep->iseq;
+  /* A native irep has no instructions to read (its iseq is not a code pointer). */
+  const mrb_code *pc = irep->native ? NULL : irep->iseq;
   if (pc && *pc == OP_ENTER) {
     uint32_t a = ((uint32_t)pc[1] << 16) | ((uint32_t)pc[2] << 8) | pc[3];
     mrb_int len = MRB_ASPEC_REQ(a) + MRB_ASPEC_OPT(a) + MRB_ASPEC_REST(a) + MRB_ASPEC_POST(a);
