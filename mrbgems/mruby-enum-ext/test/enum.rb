@@ -222,8 +222,18 @@ assert("Enumerable#each_entry") do
   assert_equal nil, a[2]
 end
 
+class ToHYieldsTwo
+  include Enumerable
+
+  def each
+    yield :a, 0
+    yield :b, 1
+    self
+  end
+end
+
 assert('Enumerable#to_h with a block gets every yielded value') do
-  assert_equal({a: 2, b: 3}, [:a, :b].each_with_index.to_h { |x, i| [x, i + 2] })
+  assert_equal({a: 2, b: 3}, ToHYieldsTwo.new.to_h { |x, i| [x, i + 2] })
   assert_equal({1 => 2}, [[1, 2]].to_h { |k, v| [k, v] })
   assert_equal({a: 1}, {a: 1}.to_h { |k, v| [k, v] })
 end
