@@ -270,6 +270,43 @@ class Set
 
   #
   # call-seq:
+  #   set.intersect?(enum) -> true or false
+  #   set.disjoint?(enum) -> true or false
+  #
+  # The argument may be any enumerable (CRuby 3.3), not only a Set.
+  #
+  alias_method :__intersect_set_p, :intersect?
+
+  def intersect?(other)
+    other = Set.new(other) if !other.is_a?(Set) && other.respond_to?(:each)
+    __intersect_set_p(other)
+  end
+
+  def disjoint?(other)
+    !intersect?(other)
+  end
+
+  #
+  # call-seq:
+  #   set.select { |obj| block } -> new_set
+  #   set.filter { |obj| block } -> new_set
+  #   set.reject { |obj| block } -> new_set
+  #
+  # Like Array's, but the result is a Set, as in CRuby. Returns an enumerator if no block is given.
+  #
+  def select(&block)
+    return to_enum(:select) unless block_given?
+    self.class.new(to_a.select(&block))
+  end
+  alias filter select
+
+  def reject(&block)
+    return to_enum(:reject) unless block_given?
+    self.class.new(to_a.reject(&block))
+  end
+
+  #
+  # call-seq:
   #   set.select! { |obj| block } -> set or nil
   #   set.filter! { |obj| block } -> set or nil
   #   set.select! -> enumerator

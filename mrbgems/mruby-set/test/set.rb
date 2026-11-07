@@ -316,7 +316,9 @@ assert("Set#intersect?") do
   set = Set[3,4,5]
 
   assert_raise(ArgumentError) { set.intersect?(3) }
-  assert_raise(ArgumentError) { set.intersect?([2,4,6]) }
+  # any enumerable, as CRuby 3.3
+  assert_true set.intersect?([2,4,6])
+  assert_false set.intersect?([0,2,6])
 
   assert_true set.intersect?(set)
   assert_true set.intersect?(Set[2,4])
@@ -336,7 +338,8 @@ assert("Set#disjoint?") do
   set = Set[3,4,5]
 
   assert_raise(ArgumentError) { set.disjoint?(3) }
-  assert_raise(ArgumentError) { set.disjoint?([2,4,6]) }
+  assert_false set.disjoint?([2,4,6])
+  assert_true set.disjoint?([0,2,6])
 
   assert_true(set.disjoint?(Set[]))
   assert_true(set.disjoint?(Set[0,2]))
@@ -761,4 +764,21 @@ assert("Set#hash") do
   assert_equal(hash, Set[3, 1, 2].hash)
   assert_not_equal(hash, Set[1, 2, 4].hash)
   assert_not_equal(hash, Set[].hash)
+end
+
+assert('Set#select, #filter and #reject return a Set') do
+  s = Set[1, 2, 3, 4]
+  assert_equal Set[2, 4], s.select { |x| x % 2 == 0 }
+  assert_equal Set[3, 4], s.filter { |x| x > 2 }
+  assert_equal Set[1, 3], s.reject { |x| x % 2 == 0 }
+  assert_kind_of Set, s.select { true }
+end
+
+assert('Set#intersect? and #disjoint? take any enumerable') do
+  s = Set[1, 2, 3]
+  assert_true s.intersect?([3, 4])
+  assert_false s.intersect?([4, 5])
+  assert_true s.disjoint?([4, 5])
+  assert_false s.disjoint?(Set[2])
+  assert_raise(ArgumentError) { s.intersect?(1) }
 end
