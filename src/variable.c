@@ -1537,6 +1537,9 @@ mrb_vm_const_get(mrb_state *mrb, mrb_sym sym)
   mrb_value v;
 
   if (!c) c = mrb->object_class;
+  /* A method of a class with a prepended module has the class's origin as its target: look up from the class itself, so
+     the prepended modules' constants are on the path, as in the ancestors of the class. */
+  if (c->tt == MRB_TT_ICLASS && MRB_FLAG_TEST(c, MRB_FL_CLASS_IS_ORIGIN)) c = c->c;
   if (iv_get(mrb, class_iv_ptr(c), sym, &v)) {
     return v;
   }

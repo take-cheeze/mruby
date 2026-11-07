@@ -932,3 +932,19 @@ assert('constant lookup #6506') do
     end
   end
 end
+
+module PrependedConstMod
+  PREPENDED_CONST = 7
+end
+
+class PrependedConstClass
+  prepend PrependedConstMod
+
+  def get
+    PREPENDED_CONST
+  end
+end
+
+assert('constant lookup in a method of a class with a prepended module') do
+  assert_equal 7, PrependedConstClass.new.get
+end
