@@ -762,3 +762,11 @@ assert("Set#hash") do
   assert_not_equal(hash, Set[1, 2, 4].hash)
   assert_not_equal(hash, Set[].hash)
 end
+
+assert('Set#select, #filter and #reject return a Set') do
+  s = Set[1, 2, 3, 4]
+  assert_equal Set[2, 4], s.select(&:even?)
+  assert_equal Set[3, 4], s.filter { |x| x > 2 }
+  assert_equal Set[1, 3], s.reject(&:even?)
+  assert_kind_of Set, s.select { true }
+end
