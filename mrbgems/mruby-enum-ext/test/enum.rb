@@ -221,3 +221,9 @@ assert("Enumerable#each_entry") do
   assert_equal [1,2], a[1]
   assert_equal nil, a[2]
 end
+
+assert('Enumerable#to_h with a block gets every yielded value') do
+  assert_equal({a: 2, b: 3}, [:a, :b].each_with_index.to_h { |x, i| [x, i + 2] })
+  assert_equal({1 => 2}, [[1, 2]].to_h { |k, v| [k, v] })
+  assert_equal({a: 1}, {a: 1}.to_h { |k, v| [k, v] })
+end
