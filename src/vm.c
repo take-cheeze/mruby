@@ -1150,8 +1150,23 @@ send_method(mrb_state *mrb, mrb_value self, mrb_bool pub)
 
   struct RClass *c = mrb_class(mrb, self);
   m = mrb_vm_find_method(mrb, c, &c, name);
-  if (MRB_METHOD_UNDEF_P(m)) {            /* call method_missing */
-    goto funcall;
+  if (MRB_METHOD_UNDEF_P(m)) {
+    /* call `method_missing` in this frame: the arguments are laid out as
+       it takes them, the name first, and keep their keyword hash, which a
+       funcall would pass as a positional hash. */
+    c = mrb_class(mrb, self);
+    m = mrb_vm_find_method(mrb, c, &c, MRB_SYM(method_missing));
+    if (MRB_METHOD_UNDEF_P(m)) goto funcall;    /* just in case */
+    if (n == 15) {      /* a copy: the array may be the caller's own */
+      regs[0] = mrb_ary_new_from_values(mrb, RARRAY_LEN(regs[0]), RARRAY_PTR(regs[0]));
+      mrb_ary_set(mrb, regs[0], 0, mrb_symbol_value(name));
+    }
+    else {
+      regs[0] = mrb_symbol_value(name);
+    }
+    ci->mid = MRB_SYM(method_missing);
+    ci->u.target_class = c;
+    goto call;
   }
 
   if (pub) {
@@ -1188,6 +1203,7 @@ send_method(mrb_state *mrb, mrb_value self, mrb_bool pub)
     ci->n--;
   }
 
+  call:
   if (MRB_METHOD_FUNC_P(m)) {
     check_argument_count(mrb, ci, MRB_MT_ASPEC(m.flags));
     return MRB_METHOD_FUNC(m)(mrb, self);
