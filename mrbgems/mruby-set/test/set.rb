@@ -770,3 +770,12 @@ assert('Set#select, #filter and #reject return a Set') do
   assert_equal Set[1, 3], s.reject { |x| x % 2 == 0 }
   assert_kind_of Set, s.select { true }
 end
+
+assert('Set#intersect? and #disjoint? take any enumerable') do
+  s = Set[1, 2, 3]
+  assert_true s.intersect?([3, 4])
+  assert_false s.intersect?([4, 5])
+  assert_true s.disjoint?([4, 5])
+  assert_false s.disjoint?(Set[2])
+  assert_raise(ArgumentError) { s.intersect?(1) }
+end
