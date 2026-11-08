@@ -3889,6 +3889,15 @@ mrb_method_added(mrb_state *mrb, struct RClass *c, mrb_sym mid)
   }
 }
 
+void
+mrb_const_added(mrb_state *mrb, mrb_value mod, mrb_sym sym)
+{
+  if (!mrb_func_basic_p(mrb, mod, MRB_SYM(const_added), mrb_do_nothing)) {
+    mrb_value name = mrb_symbol_value(sym);
+    mrb_funcall_argv(mrb, mod, MRB_SYM(const_added), 1, &name);
+  }
+}
+
 mrb_value
 define_method_m(mrb_state *mrb, struct RClass *c, int vis)
 {
