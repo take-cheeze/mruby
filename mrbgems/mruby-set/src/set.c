@@ -62,6 +62,12 @@ kset_hash_value(mrb_state *mrb, mrb_value key)
 static inline mrb_bool
 kset_equal_value(mrb_state *mrb, mrb_value a, mrb_value b)
 {
+  /* Most keys are Symbols, Integers or Strings: decide those without a protected region and a method call. The same
+     object is eql? to itself; an immediate (Symbol, Integer, nil, true, false) is eql? only to itself; two Strings are
+     eql? when equal. */
+  if (mrb_obj_eq(mrb, a, b)) return TRUE;
+  if (mrb_immediate_p(a) || mrb_immediate_p(b)) return FALSE;
+  if (mrb_string_p(a) && mrb_string_p(b)) return mrb_str_equal(mrb, a, b);
   struct kset_eql_data data = { a, b };
   mrb_bool error;
   mrb_value result = mrb_protect_error(mrb, kset_eql_body, &data, &error);
