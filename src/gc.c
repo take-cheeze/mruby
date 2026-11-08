@@ -1077,6 +1077,8 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
 {
   int i, e;
 
+  gc->sweeps = NULL;            /* marking starts: no gray-rescan cursor yet (the sweep freed pages it may name) */
+
   if (!is_minor_gc(gc)) {
     gc->gray_stack_top = 0;
     gc->gray_overflow = FALSE;
@@ -1137,13 +1139,9 @@ gc_gray_rescan(mrb_state *mrb, mrb_gc *gc)
      gc->sweeps (unused until the sweep phase, which resets it) remembers the page, and the next rescan goes on from
      there around the heap. Restarting at the first page every time cost a pass over the whole heap per stack-full of
      gray objects, which for a heap of gigabytes with large arrays made marking quadratic. */
-  mrb_heap_page *start = gc->sweeps;
+  mrb_heap_page *start = gc->sweeps;  /* set by this function during this marking, reset by root_scan_phase */
   mrb_heap_page *page;
 
-  if (start) {                  /* a page a sweep freed since is no cursor */
-    for (page = gc->heaps; page && page != start; page = page->next) {}
-    if (!page) start = NULL;
-  }
   if (!start) start = gc->heaps;
   if (!start) {
     gc->gray_overflow = FALSE;
