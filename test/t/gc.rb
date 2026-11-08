@@ -43,3 +43,18 @@ assert('GC.generational_mode=') do
     GC.generational_mode = origin
   end
 end
+
+assert('GC marks a heap whose gray objects overflow the gray stack') do
+  # Wide arrays and hashes hold far more gray children than the gray stack has room for, so marking depends on the
+  # heap rescan; every element must survive repeated collections.
+  live = Array.new(20) { |c| Array.new(3000) { |i| [c, i, "v#{c}:#{i}"] } }
+  hs = Array.new(6) { |c| h = {}; 2000.times { |i| h[i] = "x#{c}-#{i}" }; h }
+  6.times do |r|
+    GC.start
+    5000.times { |i| [i, r.to_s] }
+  end
+  bad = 0
+  live.each_with_index { |a, c| a.each_with_index { |e, i| bad += 1 unless e[0] == c && e[1] == i && e[2] == "v#{c}:#{i}" } }
+  hs.each_with_index { |h, c| h.each { |i, v| bad += 1 unless v == "x#{c}-#{i}" } }
+  assert_equal 0, bad
+end

@@ -1109,23 +1109,41 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
 static void
 gc_gray_rescan(mrb_state *mrb, mrb_gc *gc)
 {
-  mrb_heap_page *page = gc->heaps;
+  /* Gray objects the stack had no room for are found by scanning the heap. The scan is resumable: when the stack fills,
+     gc->sweeps (unused until the sweep phase, which resets it) remembers the page, and the next rescan goes on from
+     there around the heap. Restarting at the first page every time cost a pass over the whole heap per stack-full of
+     gray objects, which for a heap of gigabytes with large arrays made marking quadratic. */
+  mrb_heap_page *start = gc->sweeps;
+  mrb_heap_page *page;
+
+  if (start) {                  /* a page a sweep freed since is no cursor */
+    for (page = gc->heaps; page && page != start; page = page->next) {}
+    if (!page) start = NULL;
+  }
+  if (!start) start = gc->heaps;
+  if (!start) {
+    gc->gray_overflow = FALSE;
+    return;
+  }
 
   gc->gray_overflow = FALSE;
-  while (page) {
+  page = start;
+  do {
     RVALUE *p = page->objects;
     RVALUE *e = p + MRB_HEAP_PAGE_SIZE;
     for (; p < e; p++) {
       if (is_gray(&p->as.basic) && p->as.basic.tt != MRB_TT_FREE) {
         if (gc->gray_stack_top >= MRB_GRAY_STACK_SIZE) {
           gc->gray_overflow = TRUE;
+          gc->sweeps = page;    /* resume here: this page is scanned again from its start */
           return;
         }
         gc->gray_stack[gc->gray_stack_top++] = &p->as.basic;
       }
     }
-    page = page->next;
-  }
+    page = page->next ? page->next : gc->heaps;
+  } while (page != start);
+  gc->sweeps = start;
 }
 
 static void
