@@ -425,6 +425,13 @@ assert 'Module#prepend + #remove_method' do
   assert_equal(:foo, removed)
 end
 
+assert 'Module#method_removed default is a public no-op' do
+  c = Class.new { def foo; end }
+  assert_nil c.method_removed(:foo)
+  assert_nothing_raised { c.class_eval { remove_method(:foo) } }
+  assert_false c.method_defined?(:foo)
+end
+
 assert 'Module#prepend + #included_modules' do
   bug8025 = '[ruby-core:53158] [Bug #8025]'
   mixin = labeled_module("mixin")

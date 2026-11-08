@@ -11,12 +11,6 @@
 #define MT_PROTECTED MRB_METHOD_PROTECTED_FL
 #define MT_NOPRIV (MRB_METHOD_PRIVATE_FL|MT_PROTECTED)
 
-static mrb_value
-mrb_f_nil(mrb_state *mrb, mrb_value cv)
-{
-  return mrb_nil_value();
-}
-
 /* 15.3.1.3.20 */
 /*
  *  call-seq:
@@ -719,7 +713,7 @@ static const mrb_mt_entry metaprog_mod_rom_entries[] = {
   MRB_MT_ENTRY(mrb_mod_protected_instance_methods, MRB_SYM(protected_instance_methods), MRB_ARGS_OPT(1))
   MRB_MT_ENTRY(mrb_mod_undefined_methods,        MRB_SYM(undefined_instance_methods), MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_mod_remove_method,            MRB_SYM(remove_method),  MRB_ARGS_ANY())   /* 15.2.2.4.41 */
-  MRB_MT_ENTRY(mrb_f_nil,                        MRB_SYM(method_removed), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_do_nothing,                   MRB_SYM(method_removed), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_mod_constants,                MRB_SYM(constants),     MRB_ARGS_OPT(1))   /* 15.2.2.4.24 */
 };
 #undef MRB_MT_CLASS

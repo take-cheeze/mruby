@@ -609,7 +609,6 @@ mrb_define_class(mrb_state *mrb, const char *name, struct RClass *super)
   return mrb_define_class_id(mrb, mrb_intern_cstr(mrb, name), super);
 }
 
-static mrb_value mrb_do_nothing(mrb_state *mrb, mrb_value);
 #ifndef MRB_NO_METHOD_CACHE
 static void mc_clear_by_id(mrb_state *mrb, mrb_sym mid);
 #else
@@ -3036,7 +3035,7 @@ mrb_class_superclass(mrb_state *mrb, mrb_value klass)
   return mrb_obj_value(c);
 }
 
-static mrb_value
+mrb_value
 mrb_do_nothing(mrb_state *mrb, mrb_value cv)
 {
   return mrb_nil_value();
