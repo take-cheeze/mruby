@@ -51,6 +51,29 @@ mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid)
   return MRB_PROC_CFUNC_P(p) ? MRB_PROC_CFUNC(p) : NULL;
 }
 
+/*
+ * mrb_method_cfunc, remembered per slot for the class last asked about. The
+ * answer holds until a method table changes (mt_epoch); a dead class's address
+ * can be reused only after the sweep has bumped it. A lookup hook may answer
+ * differently each time, so it bypasses the memo.
+ */
+mrb_func_t
+mrb_method_cfunc_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot)
+{
+  struct mrb_cfunc_memo *memo = &mrb->cfunc_memo[slot];
+  struct RClass *c = mrb_class(mrb, obj);
+
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+  if (mrb->method_lookup_hook) return mrb_method_cfunc(mrb, obj, mid);
+#endif
+  if (memo->c == c && memo->epoch == mrb->mt_epoch) return memo->f;
+  mrb_func_t f = mrb_method_cfunc(mrb, obj, mid);
+  memo->c = c;
+  memo->epoch = mrb->mt_epoch;
+  memo->f = f;
+  return f;
+}
+
 static mrb_bool
 mrb_obj_basic_to_s_p(mrb_state *mrb, mrb_value obj)
 {

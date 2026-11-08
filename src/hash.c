@@ -396,7 +396,7 @@ mrb_obj_hash_code(mrb_state *mrb, mrb_value key)
 #endif
   default:
     /* Kernel#hash takes no argument and raises nothing: run it without a frame */
-    if (mrb_method_cfunc(mrb, key, MRB_SYM(hash)) == mrb_obj_hash) {
+    if (mrb_method_cfunc_memo(mrb, key, MRB_SYM(hash), MRB_MEMO_HASH) == mrb_obj_hash) {
       hash_code_obj = mrb_obj_hash(mrb, key);
     }
     else {

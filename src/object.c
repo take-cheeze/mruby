@@ -79,7 +79,7 @@ mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
 mrb_bool
 mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
 {
-  mrb_func_t f = mrb_method_cfunc(mrb, a, MRB_OPSYM(eq));
+  mrb_func_t f = mrb_method_cfunc_memo(mrb, a, MRB_OPSYM(eq), MRB_MEMO_EQ);
 
   if (f == mrb_obj_equal_m) return mrb_obj_eq(mrb, a, b);
   if (f == mrb_str_equal_m) return mrb_str_equal(mrb, a, b);

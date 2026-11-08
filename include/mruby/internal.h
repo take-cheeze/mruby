@@ -47,6 +47,7 @@ mrb_value mrb_flo_equal_m(mrb_state *mrb, mrb_value);
 mrb_bool mrb_int_equal(mrb_state *mrb, mrb_value x, mrb_value y);
 mrb_bool mrb_flo_equal(mrb_state *mrb, mrb_value x, mrb_value y);
 mrb_func_t mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid);
+mrb_func_t mrb_method_cfunc_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot);
 mrb_bool mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b);
 
 /* debug */

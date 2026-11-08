@@ -248,6 +248,15 @@ struct mrb_cache_entry {
 };
 #endif
 
+/* The builtin C function a hot by-name caller found for a class, valid while
+ * mt_epoch is unchanged (see mrb_method_cfunc_memo). */
+struct mrb_cfunc_memo {
+  struct RClass *c;
+  uint32_t epoch;
+  mrb_func_t f;
+};
+enum { MRB_MEMO_EQ, MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_COUNT };
+
 struct mrb_jmpbuf;
 
 typedef void (*mrb_atexit_func)(struct mrb_state*);
@@ -333,6 +342,7 @@ typedef struct mrb_state {
    * points), so a table of resolved methods stays valid while one integer
    * compare against this holds. Wraps; compare for equality only. */
   uint32_t mt_epoch;
+  struct mrb_cfunc_memo cfunc_memo[MRB_MEMO_COUNT];
 
 #ifndef MRB_NO_METHOD_CACHE
   struct mrb_cache_entry cache[MRB_METHOD_CACHE_SIZE];

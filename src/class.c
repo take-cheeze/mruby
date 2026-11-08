@@ -193,6 +193,7 @@ mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
   node->tbl = rom;
   node->next = mrb->rom_mt;
   mrb->rom_mt = node;
+  mrb->mt_epoch++;
 
   /* push ROM layer */
   mrb_mt_tbl *t = c->mt;
@@ -3892,7 +3893,7 @@ mrb_method_added(mrb_state *mrb, struct RClass *c, mrb_sym mid)
 void
 mrb_const_added(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 {
-  if (!mrb_func_basic_p(mrb, mod, MRB_SYM(const_added), mrb_do_nothing)) {
+  if (mrb_method_cfunc_memo(mrb, mod, MRB_SYM(const_added), MRB_MEMO_CONST_ADDED) != mrb_do_nothing) {
     mrb_value name = mrb_symbol_value(sym);
     mrb_funcall_argv(mrb, mod, MRB_SYM(const_added), 1, &name);
   }
@@ -4142,7 +4143,7 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
     default:
       break;
   }
-  mrb_func_t f = mrb_method_cfunc(mrb, dest, MRB_SYM(initialize_copy));
+  mrb_func_t f = mrb_method_cfunc_memo(mrb, dest, MRB_SYM(initialize_copy), MRB_MEMO_INIT_COPY);
   if (f == mrb_obj_init_copy) return;
   /* the builtin copiers of a same-type pair need neither a frame nor a
      funcall; a redefined initialize_copy resolves to another function */
