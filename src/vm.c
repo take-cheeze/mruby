@@ -665,6 +665,22 @@ mrb_ci_kidx(const mrb_callinfo *ci)
   return (ci->n == CALL_MAXARGS) ? 2 : ci->n + 1;
 }
 
+/* The keyword Hash register of the running callee. After OP_ENTER, ci->n holds only 4 bits, so a callee with 15 or more
+   positional parameters cannot be located from it: read the layout from the aspec of the irep's leading OP_ENTER. */
+static mrb_int
+ci_kidx_entered(const mrb_callinfo *ci, const mrb_irep *irep)
+{
+  if (ci->nk == 0) return -1;
+  /* A native irep has no instructions to read (its iseq is not a code pointer). */
+  const mrb_code *pc = irep->native ? NULL : irep->iseq;
+  if (pc && *pc == OP_ENTER) {
+    uint32_t a = ((uint32_t)pc[1] << 16) | ((uint32_t)pc[2] << 8) | pc[3];
+    mrb_int len = MRB_ASPEC_REQ(a) + MRB_ASPEC_OPT(a) + MRB_ASPEC_REST(a) + MRB_ASPEC_POST(a);
+    if (len >= 15) return len + 1;
+  }
+  return mrb_ci_kidx(ci);
+}
+
 static inline mrb_int
 mrb_bidx(uint8_t n, uint8_t k)
 {
@@ -2875,7 +2891,7 @@ RETRY_TRY_BLOCK:
 
     CASE(OP_KARG, BB) {
       mrb_value k = mrb_symbol_value(irep->syms[b]);
-      mrb_int kidx = mrb_ci_kidx(ci);
+      mrb_int kidx = ci_kidx_entered(ci, irep);
       mrb_value kdict, v;
 
       if (kidx < 0 || !mrb_hash_p(kdict=regs[kidx]) || !mrb_hash_key_p(mrb, kdict, k)) {
@@ -2890,7 +2906,7 @@ RETRY_TRY_BLOCK:
 
     CASE(OP_KEY_P, BB) {
       mrb_value k = mrb_symbol_value(irep->syms[b]);
-      mrb_int kidx = mrb_ci_kidx(ci);
+      mrb_int kidx = ci_kidx_entered(ci, irep);
       mrb_value kdict;
       mrb_bool key_p = FALSE;
 
@@ -2903,7 +2919,7 @@ RETRY_TRY_BLOCK:
     }
 
     CASE(OP_KEYEND, Z) {
-      mrb_int kidx = mrb_ci_kidx(ci);
+      mrb_int kidx = ci_kidx_entered(ci, irep);
       mrb_value kdict;
 
       if (kidx >= 0 && mrb_hash_p(kdict=regs[kidx]) && !mrb_hash_empty_p(mrb, kdict)) {

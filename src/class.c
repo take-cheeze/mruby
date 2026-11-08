@@ -1369,6 +1369,7 @@ get_args_v(mrb_state *mrb, mrb_args_format format, void** ptr, va_list *ap)
     mrb_assert(ci->nk == 15);
     kdict = ci->stack[mrb_ci_bidx(ci)-1];
     if (mrb_hash_p(kdict) && mrb_hash_size(mrb, kdict) > 0) {
+      mrb_value blk = ci->stack[mrb_ci_bidx(ci)]; /* before ci->n changes, which moves the block slot */
       if (argc < 14) {
         ci->n++;
         argc++;    /* include kdict in normal arguments */
@@ -1384,7 +1385,7 @@ get_args_v(mrb_state *mrb, mrb_args_format format, void** ptr, va_list *ap)
           /* push kdict to packed arguments */
           mrb_ary_push(mrb, ci->stack[1], kdict);
         }
-        ci->stack[2] = ci->stack[mrb_ci_bidx(ci)];
+        ci->stack[2] = blk;
       }
       ci->nk = 0;
     }

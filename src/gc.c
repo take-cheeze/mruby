@@ -170,6 +170,8 @@ typedef struct mrb_heap_page {
   RVALUE *freelist;
   struct mrb_heap_page *next;
   struct mrb_heap_page *free_next;
+  struct mrb_heap_page *free_prev;
+  mrb_bool in_free:1;            /* linked in gc->free_heaps */
   mrb_bool old:1;
   mrb_bool region:1;             /* from contiguous region, not malloc */
   RVALUE objects[MRB_HEAP_PAGE_SIZE];
@@ -349,13 +351,35 @@ mrb_obj_set_persistent(mrb_state *mrb, mrb_value obj)
   b->flags |= MRB_FL_OBJ_PERSISTENT;
 }
 
+/* gc->free_heaps: the pages that have free slots, a doubly linked list so a page can leave it in O(1) */
+static void
+free_list_push(mrb_gc *gc, mrb_heap_page *page)
+{
+  if (page->in_free) return;
+  page->free_prev = NULL;
+  page->free_next = gc->free_heaps;
+  if (gc->free_heaps) gc->free_heaps->free_prev = page;
+  gc->free_heaps = page;
+  page->in_free = TRUE;
+}
+
+static void
+free_list_unlink(mrb_gc *gc, mrb_heap_page *page)
+{
+  if (!page->in_free) return;
+  if (page->free_prev) page->free_prev->free_next = page->free_next;
+  else gc->free_heaps = page->free_next;
+  if (page->free_next) page->free_next->free_prev = page->free_prev;
+  page->free_next = page->free_prev = NULL;
+  page->in_free = FALSE;
+}
+
 static void
 link_heap_page(mrb_gc *gc, mrb_heap_page *page)
 {
   page->next = gc->heaps;
   gc->heaps = page;
-  page->free_next = gc->free_heaps;
-  gc->free_heaps = page;
+  free_list_push(gc, page);
 }
 
 static void
@@ -618,7 +642,7 @@ mrb_obj_alloc(mrb_state *mrb, enum mrb_vtype ttype, struct RClass *cls)
   RVALUE *p = gc->free_heaps->freelist;
   gc->free_heaps->freelist = p->as.free.next;
   if (gc->free_heaps->freelist == NULL) {
-    gc->free_heaps = gc->free_heaps->free_next;
+    free_list_unlink(gc, gc->free_heaps);
   }
 
   gc->live++;
@@ -1053,6 +1077,8 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
 {
   int i, e;
 
+  gc->sweeps = NULL;            /* marking starts: no gray-rescan cursor yet (the sweep freed pages it may name) */
+
   if (!is_minor_gc(gc)) {
     gc->gray_stack_top = 0;
     gc->gray_overflow = FALSE;
@@ -1109,23 +1135,37 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
 static void
 gc_gray_rescan(mrb_state *mrb, mrb_gc *gc)
 {
-  mrb_heap_page *page = gc->heaps;
+  /* Gray objects the stack had no room for are found by scanning the heap. The scan is resumable: when the stack fills,
+     gc->sweeps (unused until the sweep phase, which resets it) remembers the page, and the next rescan goes on from
+     there around the heap. Restarting at the first page every time cost a pass over the whole heap per stack-full of
+     gray objects, which for a heap of gigabytes with large arrays made marking quadratic. */
+  mrb_heap_page *start = gc->sweeps;  /* set by this function during this marking, reset by root_scan_phase */
+  mrb_heap_page *page;
+
+  if (!start) start = gc->heaps;
+  if (!start) {
+    gc->gray_overflow = FALSE;
+    return;
+  }
 
   gc->gray_overflow = FALSE;
-  while (page) {
+  page = start;
+  do {
     RVALUE *p = page->objects;
     RVALUE *e = p + MRB_HEAP_PAGE_SIZE;
     for (; p < e; p++) {
       if (is_gray(&p->as.basic) && p->as.basic.tt != MRB_TT_FREE) {
         if (gc->gray_stack_top >= MRB_GRAY_STACK_SIZE) {
           gc->gray_overflow = TRUE;
+          gc->sweeps = page;    /* resume here: this page is scanned again from its start */
           return;
         }
         gc->gray_stack[gc->gray_stack_top++] = &p->as.basic;
       }
     }
-    page = page->next;
-  }
+    page = page->next ? page->next : gc->heaps;
+  } while (page != start);
+  gc->sweeps = start;
 }
 
 static void
@@ -1260,6 +1300,7 @@ incremental_sweep_phase(mrb_state *mrb, mrb_gc *gc, size_t limit)
       if (gc->heaps == page)
         gc->heaps = page->next;
 
+      free_list_unlink(gc, page);
       mrb_free(mrb, page);
       page = next;
     }
@@ -1268,6 +1309,8 @@ incremental_sweep_phase(mrb_state *mrb, mrb_gc *gc, size_t limit)
         page->old = TRUE;
       else
         page->old = FALSE;
+      if (page->freelist) free_list_push(gc, page);
+      else free_list_unlink(gc, page);
       prev = page;
       page = page->next;
     }
@@ -1276,15 +1319,6 @@ incremental_sweep_phase(mrb_state *mrb, mrb_gc *gc, size_t limit)
     gc->live_after_mark -= freed;
   }
   gc->sweeps = prev;
-
-  /* rebuild free_heaps link */
-  gc->free_heaps = NULL;
-  for (mrb_heap_page *p = gc->heaps; p; p=p->next) {
-    if (p->freelist) {
-      p->free_next = gc->free_heaps;
-      gc->free_heaps = p;
-    }
-  }
 
   return tried_sweep;
 }

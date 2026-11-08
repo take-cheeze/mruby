@@ -301,3 +301,11 @@ assert "Struct initialize when :keyword_init is non-boolean value (treat as true
     c.new(1, 2)
   end
 end
+
+assert('Struct.new with 14 members and keyword_init keeps the block slot') do
+  # 14 positional arguments plus the keyword hash are packed into one Array by mrb_get_args; the block moved with them.
+  s = Struct.new(:a, :b, :c, :d, :e, :f, :g, :h, :i, :j, :k, :l, :m, :n, keyword_init: true)
+  assert_equal 1, s.new(a: 1).a
+  t = Struct.new(:a, :b, :c, :d, :e, :f, :g, :h, :i, :j, :k, :l, :m, :n, keyword_init: true) { def sum = a + n }
+  assert_equal 3, t.new(a: 1, n: 2).sum
+end
