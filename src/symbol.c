@@ -130,8 +130,9 @@ sym_pool_alloc(mrb_state *mrb, size_t size)
 
 /* Hash table for symbols (allocated on demand when symbols exceed threshold) */
 struct mrb_sym_hash_table {
-  uint8_t *symlink;         /* collision resolution chains */
-  mrb_sym buckets[256];     /* hash buckets */
+  mrb_sym *symlink;         /* symlink[i]: the previous symbol in i's bucket, 0 at the end of the chain */
+  mrb_sym *buckets;         /* the newest symbol of each bucket */
+  uint32_t mask;            /* number of buckets - 1 (a power of two); grown with the number of symbols */
 };
 
 #ifdef MRB_USE_ALL_SYMBOLS
@@ -224,40 +225,25 @@ find_symbol_linear(mrb_state *mrb, const char *name, size_t len)
 }
 
 static mrb_sym
-find_symbol_hash(mrb_state *mrb, const char *name, size_t len, uint8_t *hashp)
+find_symbol_hash(mrb_state *mrb, const char *name, size_t len, uint32_t *hashp)
 {
   mrb_sym i;
-  uint8_t hash;
+  uint32_t hash;
   struct mrb_sym_hash_table *ht = mrb->symhash;
 
   hash = mrb_byte_hash((const uint8_t*)name, len);
   if (hashp) *hashp = hash;
 
-  i = ht->buckets[hash];
-  if (i == 0) return 0;
-  for (;;) {
+  for (i = ht->buckets[hash & ht->mask]; i != 0; i = ht->symlink[i]) {
     if (sym_check(mrb, name, len, i)) {
       return (i+MRB_PRESYM_MAX);
     }
-    uint8_t diff = ht->symlink[i];
-    if (diff == 0xff) {
-      i -= 0xff;
-      while (i > 0) {
-        if (sym_check(mrb, name, len, i)) {
-          return (i+MRB_PRESYM_MAX);
-        }
-        i--;
-      }
-      return 0;
-    }
-    if (diff == 0) return 0;
-    i -= diff;
   }
   return 0;
 }
 
 static mrb_sym
-find_symbol(mrb_state *mrb, const char *name, size_t len, uint8_t *hashp)
+find_symbol(mrb_state *mrb, const char *name, size_t len, uint32_t *hashp)
 {
   mrb_sym i;
 
@@ -280,49 +266,53 @@ find_symbol(mrb_state *mrb, const char *name, size_t len, uint8_t *hashp)
   }
 }
 
+/* Hash value of the name of symbol i (1-origin index into symtbl) */
+static uint32_t
+sym_name_hash(mrb_state *mrb, mrb_sym i)
+{
+  const char *tagged_ptr = mrb->symtbl[i];
+  const char *name = symtbl_get_ptr(tagged_ptr);
+  size_t len;
+
+  if (symtbl_is_literal(tagged_ptr)) {
+    len = strlen(name);
+  }
+  else {
+    len = mrb_packed_int_decode((const uint8_t*)name, (const uint8_t**)&name);
+  }
+  return mrb_byte_hash((const uint8_t*)name, len);
+}
+
+/* (Re)build the buckets of ht with nbuckets (a power of two) from every symbol interned so far */
+static void
+sym_hash_rebuild(mrb_state *mrb, struct mrb_sym_hash_table *ht, uint32_t nbuckets)
+{
+  mrb_sym i;
+
+  mrb_free(mrb, ht->buckets);
+  ht->buckets = (mrb_sym*)mrb_calloc(mrb, nbuckets, sizeof(mrb_sym));
+  ht->mask = nbuckets - 1;
+  for (i = 1; i <= mrb->symidx; i++) {
+    uint32_t b = sym_name_hash(mrb, i) & ht->mask;
+    ht->symlink[i] = ht->buckets[b];
+    ht->buckets[b] = i;
+  }
+}
+
 static void
 migrate_to_hash_table(mrb_state *mrb)
 {
   struct mrb_sym_hash_table *ht;
-  mrb_sym i;
 
   mrb_assert(mrb->symhash == NULL);
   mrb_assert(mrb->symidx >= MRB_SYMBOL_LINEAR_THRESHOLD);
 
   /* Allocate hash table structure */
   ht = (struct mrb_sym_hash_table*)mrb_calloc(mrb, 1, sizeof(struct mrb_sym_hash_table));
-  ht->symlink = (uint8_t*)mrb_calloc(mrb, mrb->symcapa, sizeof(uint8_t));
-
-  /* Rebuild hash table from existing linear data */
-  for (i = 1; i <= mrb->symidx; i++) {
-    const char *tagged_ptr = mrb->symtbl[i];
-    const char *name = symtbl_get_ptr(tagged_ptr);
-    size_t len;
-    uint8_t hash;
-
-    /* Get name and length from tagged pointer */
-    if (symtbl_is_literal(tagged_ptr)) {
-      len = strlen(name);
-    }
-    else {
-      /* This is a packed length string */
-      len = mrb_packed_int_decode((const uint8_t*)name, (const uint8_t**)&name);
-    }
-
-    hash = mrb_byte_hash((const uint8_t*)name, len);
-
-    /* Build collision chain */
-    if (ht->buckets[hash] != 0) {
-      mrb_sym diff = i - ht->buckets[hash];
-      ht->symlink[i] = (diff > 0xff) ? 0xff : (uint8_t)diff;
-    }
-    else {
-      ht->symlink[i] = 0;
-    }
-    ht->buckets[hash] = i;
-  }
-
+  ht->symlink = (mrb_sym*)mrb_calloc(mrb, mrb->symcapa, sizeof(mrb_sym));
+  ht->buckets = NULL;
   mrb->symhash = ht;
+  sym_hash_rebuild(mrb, ht, 256);
 }
 
 static mrb_sym
@@ -338,7 +328,7 @@ sym_intern_common(mrb_state *mrb, const char *name, size_t len, mrb_bool lit)
     mrb->symtbl = (const char**)mrb_realloc(mrb, (void*)mrb->symtbl, sizeof(char*)*symcapa);
     if (using_hash_table(mrb)) {
       struct mrb_sym_hash_table *ht = mrb->symhash;
-      ht->symlink = (uint8_t*)mrb_realloc(mrb, ht->symlink, symcapa);
+      ht->symlink = (mrb_sym*)mrb_realloc(mrb, ht->symlink, sizeof(mrb_sym)*symcapa);
     }
     mrb->symcapa = symcapa;
   }
@@ -379,19 +369,16 @@ sym_intern_hash_mode(mrb_state *mrb, const char *name, size_t len, mrb_bool lit)
 {
   mrb_sym sym = sym_intern_common(mrb, name, len, lit);
   struct mrb_sym_hash_table *ht = mrb->symhash;
-  uint8_t hash = mrb_byte_hash((const uint8_t*)name, len);
 
-  if (ht->buckets[hash]) {
-    mrb_sym i = sym - ht->buckets[hash];
-    if (i > 0xff)
-      ht->symlink[sym] = 0xff;
-    else
-      ht->symlink[sym] = i;
+  /* Keep chains short: about two symbols per bucket at most. The rebuild links sym too (it is in symtbl already). */
+  if (mrb->symidx > 2 * (size_t)(ht->mask + 1) && ht->mask < (UINT32_MAX >> 2)) {
+    sym_hash_rebuild(mrb, ht, (ht->mask + 1) * 4);
   }
   else {
-    ht->symlink[sym] = 0;
+    uint32_t b = mrb_byte_hash((const uint8_t*)name, len) & ht->mask;
+    ht->symlink[sym] = ht->buckets[b];
+    ht->buckets[b] = sym;
   }
-  ht->buckets[hash] = sym;
 
   return (sym+MRB_PRESYM_MAX);
 }
@@ -656,6 +643,7 @@ mrb_free_symtbl(mrb_state *mrb)
   /* Free hash table if allocated */
   if (mrb->symhash) {
     mrb_free(mrb, mrb->symhash->symlink);
+    mrb_free(mrb, mrb->symhash->buckets);
     mrb_free(mrb, mrb->symhash);
     mrb->symhash = NULL;
   }

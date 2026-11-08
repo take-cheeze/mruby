@@ -56,3 +56,16 @@ assert('Symbol#to_proc sending :call to a cfunc proc') do
   assert_equal "A", :call.to_proc.call(:upcase.to_proc, "a")
   assert_equal [1, 2], [lambda { 1 }, lambda { 2 }].map(&:call)
 end
+
+assert('Symbol table with many symbols') do
+  # Past the linear-search threshold the table is hashed; a bucket count fixed at 256 made every lookup walk a chain
+  # proportional to the number of symbols.
+  syms = []
+  5000.times { |i| syms << "many_symbols_test_#{i}".to_sym }
+  assert_equal 5000, syms.uniq.size
+  5000.times do |i|
+    name = "many_symbols_test_#{i}"
+    assert_same syms[i], name.to_sym if i % 97 == 0
+    assert_equal name, syms[i].to_s if i % 89 == 0
+  end
+end
