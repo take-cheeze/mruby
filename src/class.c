@@ -613,7 +613,7 @@ static mrb_value mrb_do_nothing(mrb_state *mrb, mrb_value);
 static void mc_clear_by_id(mrb_state *mrb, mrb_sym mid);
 #else
 #define mc_clear(mrb)
-#define mc_clear_by_id(mrb,mid)
+#define mc_clear_by_id(mrb,mid) ((void)(mrb)->mt_epoch++)
 #endif
 
 static void
@@ -1103,6 +1103,7 @@ mrb_define_method_raw(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_method_
   }
   mt_put(mrb, h, mid, flags, ptr);
   if (!mrb->bootstrapping) mc_clear_by_id(mrb, mid);
+  else mrb->mt_epoch++;
 }
 
 static void
@@ -2653,6 +2654,7 @@ mrb_method_cache_clear(mrb_state *mrb)
 {
   static const struct mrb_cache_entry ce_zero ={0};
 
+  mrb->mt_epoch++;
   for (int i=0; i<MRB_METHOD_CACHE_SIZE; i++) {
     mrb->cache[i] = ce_zero;
   }
@@ -2664,6 +2666,7 @@ mrb_mc_clear_by_class(mrb_state *mrb, struct RClass *c)
 {
   struct mrb_cache_entry *mc = mrb->cache;
 
+  mrb->mt_epoch++;
   for (int i=0; i<MRB_METHOD_CACHE_SIZE; mc++,i++) {
     if (mc->c == c || mc->c0 == c) mc->c = NULL;
   }
@@ -2674,6 +2677,7 @@ mc_clear_by_id(mrb_state *mrb, mrb_sym id)
 {
   struct mrb_cache_entry *mc = mrb->cache;
 
+  mrb->mt_epoch++;
   for (int i=0; i<MRB_METHOD_CACHE_SIZE; mc++,i++) {
     if (mc->mid == id) mc->c = NULL;
   }

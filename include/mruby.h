@@ -329,6 +329,11 @@ typedef struct mrb_state {
 
   mrb_bool bootstrapping;
 
+  /* Bumped on every method-table write (it rides the method-cache invalidation
+   * points), so a table of resolved methods stays valid while one integer
+   * compare against this holds. Wraps; compare for equality only. */
+  uint32_t mt_epoch;
+
 #ifndef MRB_NO_METHOD_CACHE
   struct mrb_cache_entry cache[MRB_METHOD_CACHE_SIZE];
 #endif
@@ -1328,7 +1333,7 @@ MRB_API void mrb_close(mrb_state *mrb);
 #ifndef MRB_NO_METHOD_CACHE
 MRB_API void mrb_method_cache_clear(mrb_state *mrb);
 #else
-#define mrb_method_cache_clear(mrb) ((void)0)
+#define mrb_method_cache_clear(mrb) ((void)(mrb)->mt_epoch++)
 #endif
 
 /**

@@ -93,7 +93,7 @@ MRB_API struct RClass* mrb_class_outer(mrb_state *mrb, struct RClass *c);
 #ifndef MRB_NO_METHOD_CACHE
 void mrb_mc_clear_by_class(mrb_state *mrb, struct RClass* c);
 #else
-#define mrb_mc_clear_by_class(mrb,c)
+#define mrb_mc_clear_by_class(mrb,c) ((void)(mrb)->mt_epoch++)
 #endif
 
 /* return non zero to break the loop */
