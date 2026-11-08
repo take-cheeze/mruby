@@ -2034,8 +2034,7 @@ mrb_ary_eq(mrb_state *mrb, mrb_value ary1)
 
   int ai = mrb_gc_arena_save(mrb);
   for (mrb_int i=0; i<RARRAY_LEN(ary1); i++) {
-    mrb_value eq = mrb_funcall_id(mrb, mrb_ary_entry(ary1, i), MRB_OPSYM(eq), 1, mrb_ary_entry(ary2, i));
-    if (!mrb_test(eq)) return mrb_false_value();
+    if (!mrb_eq_send(mrb, mrb_ary_entry(ary1, i), mrb_ary_entry(ary2, i))) return mrb_false_value();
     mrb_gc_arena_restore(mrb, ai);
   }
   return mrb_true_value();

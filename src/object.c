@@ -71,6 +71,26 @@ mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
 }
 
 /*
+ * `a == b` truthiness, as sending `==` to `a` would answer it. The builtin
+ * bodies that need no frame run in place (a redefinition is found by the
+ * method lookup and sent normally); Array/Hash/Struct stay sends since their
+ * recursion guard reads the call frames.
+ */
+mrb_bool
+mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
+{
+  mrb_func_t f = mrb_method_cfunc(mrb, a, MRB_OPSYM(eq));
+
+  if (f == mrb_obj_equal_m) return mrb_obj_eq(mrb, a, b);
+  if (f == mrb_str_equal_m) return mrb_str_equal(mrb, a, b);
+  if (f == mrb_int_equal_m) return mrb_int_equal(mrb, a, b);
+#ifndef MRB_NO_FLOAT
+  if (f == mrb_flo_equal_m) return mrb_flo_equal(mrb, a, b);
+#endif
+  return mrb_test(mrb_funcall_argv(mrb, a, MRB_OPSYM(eq), 1, &b));
+}
+
+/*
  * Checks for equality between `obj1` and `obj2`.
  *
  * It first uses `mrb_obj_eq` for an identity check. If that fails,
@@ -103,9 +123,8 @@ mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
       return TRUE;
   }
 #endif
-  else if (!mrb_func_basic_p(mrb, obj1, MRB_OPSYM(eq), mrb_obj_equal_m)) {
-    mrb_value result = mrb_funcall_argv(mrb, obj1, MRB_OPSYM(eq), 1, &obj2);
-    if (mrb_test(result)) return TRUE;
+  else {
+    return mrb_eq_send(mrb, obj1, obj2);
   }
   return FALSE;
 }

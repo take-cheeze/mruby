@@ -35,6 +35,22 @@ mrb_func_basic_p(mrb_state *mrb, mrb_value obj, mrb_sym mid, mrb_func_t func)
   return FALSE;
 }
 
+/*
+ * The C function behind `obj.mid`, or NULL when the method is missing or
+ * written in Ruby.
+ */
+mrb_func_t
+mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid)
+{
+  struct RClass *c = mrb_class(mrb, obj);
+  mrb_method_t m = mrb_method_search_vm(mrb, &c, mid);
+
+  if (MRB_METHOD_UNDEF_P(m)) return NULL;
+  if (MRB_METHOD_FUNC_P(m)) return MRB_METHOD_FUNC(m);
+  const struct RProc *p = MRB_METHOD_PROC(m);
+  return MRB_PROC_CFUNC_P(p) ? MRB_PROC_CFUNC(p) : NULL;
+}
+
 static mrb_bool
 mrb_obj_basic_to_s_p(mrb_state *mrb, mrb_value obj)
 {
@@ -382,7 +398,7 @@ mrb_obj_frozen(mrb_state *mrb, mrb_value self)
  *  `Hash`. Any hash value that exceeds the capacity of a
  *  `Integer` will be truncated before being used.
  */
-static mrb_value
+mrb_value
 mrb_obj_hash(mrb_state *mrb, mrb_value self)
 {
 #ifdef MRB_USE_BIGINT

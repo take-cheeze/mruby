@@ -34,6 +34,13 @@ mrb_value mrb_obj_extend(mrb_state*, mrb_value obj);
 #endif
 
 mrb_value mrb_obj_equal_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_str_equal_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_int_equal_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_flo_equal_m(mrb_state *mrb, mrb_value);
+mrb_bool mrb_int_equal(mrb_state *mrb, mrb_value x, mrb_value y);
+mrb_bool mrb_flo_equal(mrb_state *mrb, mrb_value x, mrb_value y);
+mrb_func_t mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid);
+mrb_bool mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b);
 
 /* debug */
 size_t mrb_packed_int_len(uint32_t num);

@@ -701,31 +701,35 @@ mrb_num_eql_m(mrb_state *mrb, mrb_value x)
  *
  */
 
-static mrb_value
-flo_eq(mrb_state *mrb, mrb_value x)
+mrb_bool
+mrb_flo_equal(mrb_state *mrb, mrb_value x, mrb_value y)
 {
-  mrb_value y = mrb_get_arg1(mrb);
-
   switch (mrb_type(y)) {
   case MRB_TT_INTEGER:
-    return mrb_bool_value(mrb_float(x) == (mrb_float)mrb_integer(y));
+    return mrb_float(x) == (mrb_float)mrb_integer(y);
   case MRB_TT_FLOAT:
-    return mrb_bool_value(mrb_float(x) == mrb_float(y));
+    return mrb_float(x) == mrb_float(y);
 #ifdef MRB_USE_BIGINT
   case MRB_TT_BIGINT:
-    return mrb_bool_value(mrb_bint_cmp(mrb, y, x) == 0);
+    return mrb_bint_cmp(mrb, y, x) == 0;
 #endif
 #ifdef MRB_USE_RATIONAL
   case MRB_TT_RATIONAL:
-    return mrb_bool_value(mrb_float(x) == mrb_as_float(mrb, y));
+    return mrb_float(x) == mrb_as_float(mrb, y);
 #endif
 #ifdef MRB_USE_COMPLEX
   case MRB_TT_COMPLEX:
-    return mrb_bool_value(mrb_equal(mrb, y, x));
+    return mrb_equal(mrb, y, x);
 #endif
   default:
-    return mrb_false_value();
+    return FALSE;
   }
+}
+
+mrb_value
+mrb_flo_equal_m(mrb_state *mrb, mrb_value x)
+{
+  return mrb_bool_value(mrb_flo_equal(mrb, x, mrb_get_arg1(mrb)));
 }
 
 /* 15.2.9.3.13 */
@@ -1383,11 +1387,9 @@ flo_divmod(mrb_state *mrb, mrb_value x)
  *   1 == 1.0    #=> true
  */
 
-static mrb_value
-int_equal(mrb_state *mrb, mrb_value x)
+mrb_bool
+mrb_int_equal(mrb_state *mrb, mrb_value x, mrb_value y)
 {
-  mrb_value y = mrb_get_arg1(mrb);
-
 #ifdef MRB_USE_BIGINT
   /* Integer#== is also a bigint's ==; mrb_integer() on a bigint reads garbage */
   if (mrb_bigint_p(x)) {
@@ -1397,7 +1399,7 @@ int_equal(mrb_state *mrb, mrb_value x)
 #ifndef MRB_NO_FLOAT
     case MRB_TT_FLOAT:
 #endif
-      return mrb_bool_value(mrb_bint_cmp(mrb, x, y) == 0);
+      return mrb_bint_cmp(mrb, x, y) == 0;
     default:
       break;
     }
@@ -1405,26 +1407,32 @@ int_equal(mrb_state *mrb, mrb_value x)
 #endif
   switch (mrb_type(y)) {
   case MRB_TT_INTEGER:
-    return mrb_bool_value(mrb_integer(x) == mrb_integer(y));
+    return mrb_integer(x) == mrb_integer(y);
 #ifndef MRB_NO_FLOAT
   case MRB_TT_FLOAT:
-    return mrb_bool_value((mrb_float)mrb_integer(x) == mrb_float(y));
+    return (mrb_float)mrb_integer(x) == mrb_float(y);
 #endif
 #ifdef MRB_USE_BIGINT
   case MRB_TT_BIGINT:
-    return mrb_bool_value(mrb_bint_cmp(mrb, y, x) == 0);
+    return mrb_bint_cmp(mrb, y, x) == 0;
 #endif
 #ifdef MRB_USE_RATIONAL
   case MRB_TT_RATIONAL:
-    return mrb_bool_value(mrb_equal(mrb, y, x));
+    return mrb_equal(mrb, y, x);
 #endif
 #ifdef MRB_USE_COMPLEX
   case MRB_TT_COMPLEX:
-    return mrb_bool_value(mrb_equal(mrb, y, x));
+    return mrb_equal(mrb, y, x);
 #endif
   default:
-    return mrb_false_value();
+    return FALSE;
   }
+}
+
+mrb_value
+mrb_int_equal_m(mrb_state *mrb, mrb_value x)
+{
+  return mrb_bool_value(mrb_int_equal(mrb, x, mrb_get_arg1(mrb)));
 }
 
 /* 15.2.8.3.8 */
@@ -2460,7 +2468,7 @@ static const mrb_mt_entry integer_rom_entries[] = {
   MRB_MT_ENTRY(int_div,              MRB_OPSYM(div),    MRB_ARGS_REQ(1))   /* 15.2.8.3.6 */
   MRB_MT_ENTRY(int_quo,              MRB_SYM(quo),      MRB_ARGS_REQ(1))   /* 15.2.7.4.5(x) */
   MRB_MT_ENTRY(int_idiv,             MRB_SYM(div),      MRB_ARGS_REQ(1))
-  MRB_MT_ENTRY(int_equal,            MRB_OPSYM(eq),     MRB_ARGS_REQ(1))   /* 15.2.8.3.7 */
+  MRB_MT_ENTRY(mrb_int_equal_m,            MRB_OPSYM(eq),     MRB_ARGS_REQ(1))   /* 15.2.8.3.7 */
   MRB_MT_ENTRY(int_rev,              MRB_OPSYM(neg),               MRB_ARGS_NONE())   /* 15.2.8.3.8 */
   MRB_MT_ENTRY(int_and,              MRB_OPSYM(and),    MRB_ARGS_REQ(1))   /* 15.2.8.3.9 */
   MRB_MT_ENTRY(int_or,               MRB_OPSYM(or),     MRB_ARGS_REQ(1))   /* 15.2.8.3.10 */
@@ -2500,7 +2508,7 @@ static const mrb_mt_entry float_rom_entries[] = {
   MRB_MT_ENTRY(num_le,         MRB_OPSYM(le), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(num_gt,         MRB_OPSYM(gt), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(num_ge,         MRB_OPSYM(ge), MRB_ARGS_REQ(1))
-  MRB_MT_ENTRY(flo_eq,         MRB_OPSYM(eq), MRB_ARGS_REQ(1))   /* 15.2.9.3.2  */
+  MRB_MT_ENTRY(mrb_flo_equal_m,         MRB_OPSYM(eq), MRB_ARGS_REQ(1))   /* 15.2.9.3.2  */
   MRB_MT_ENTRY(flo_ceil,       MRB_SYM(ceil), MRB_ARGS_OPT(1))   /* 15.2.9.3.8  */
   MRB_MT_ENTRY(flo_finite_p,   MRB_SYM_Q(finite), MRB_ARGS_NONE())   /* 15.2.9.3.9  */
   MRB_MT_ENTRY(flo_floor,      MRB_SYM(floor), MRB_ARGS_OPT(1))   /* 15.2.9.3.10 */
