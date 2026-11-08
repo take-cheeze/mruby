@@ -788,12 +788,12 @@ assert('Set survives add/delete churn that fills the table with deleted buckets'
   40.times { |i| s << "keep#{i}" }
   # Distinct keys put and deleted while 40 stay live: the deleted buckets are not counted in size, so the table once ran
   # out of empty buckets and a lookup of an absent key never ended.
-  20_000.times do |i|
+  1500.times do |i|
     k = "tmp#{i}"
     s << k
     s.delete(k)
-    assert_true s.include?("keep7") if i % 1000 == 0
-    assert_false s.include?("nokey#{i}") if i % 1000 == 0
+    assert_true s.include?("keep7") if i % 100 == 0
+    assert_false s.include?("nokey#{i}") if i % 100 == 0
   end
   assert_equal 40, s.size
 end

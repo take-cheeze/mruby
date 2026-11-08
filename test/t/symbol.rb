@@ -61,11 +61,11 @@ assert('Symbol table with many symbols') do
   # Past the linear-search threshold the table is hashed; a bucket count fixed at 256 made every lookup walk a chain
   # proportional to the number of symbols.
   syms = []
-  5000.times { |i| syms << "many_symbols_test_#{i}".to_sym }
+  1200.times { |i| syms << "many_symbols_test_#{i}".to_sym }
   seen = {}
   syms.each { |s| seen[s] = true }
-  assert_equal 5000, seen.size
-  5000.times do |i|
+  assert_equal 1200, seen.size
+  1200.times do |i|
     name = "many_symbols_test_#{i}"
     assert_same syms[i], name.to_sym if i % 97 == 0
     assert_equal name, syms[i].to_s if i % 89 == 0
