@@ -239,10 +239,13 @@ static const uint8_t __m_either[] = {0x03, 0x0c, 0x30, 0xc0};
     uint8_t *ed_flags = kh_flags_##name(h);                             \
     khint_t k = kh__key_idx_##name(mrb, key, h), step = 0;              \
     (void)mrb;                                                          \
+    /* A probe sequence visits every bucket in n_buckets steps. Deleted buckets are not counted in size, so a table  \
+       churned by put/del can have no empty bucket left; stop after one full cycle instead of looping forever. */    \
     while (!__ac_isempty(ed_flags, k)) {                                \
       if (!__ac_isdel(ed_flags, k)) {                                   \
         if (__hash_equal(mrb, keys[k], key)) return k;                  \
       }                                                                 \
+      if (step >= h->n_buckets) break;                                  \
       k = kh__next_probe_##name(k, &step, h);                           \
     }                                                                   \
     return kh_end(h);                                                   \
@@ -277,6 +280,11 @@ static const uint8_t __m_either[] = {0x03, 0x0c, 0x30, 0xc0};
       }                                                                 \
       else if (del_k == kh_end(h)) {                                    \
         del_k = k;                                                      \
+      }                                                                 \
+      if (step >= h->n_buckets) {                                       \
+        /* No empty bucket in a full cycle: deleted buckets fill the table. Rehash in place to drop them, then put again. */ \
+        kh__rebuild_##name(mrb, h, h->n_buckets);                       \
+        return kh_put_##name(mrb, h, key, ret);                         \
       }                                                                 \
       k = kh__next_probe_##name(k, &step, h);                           \
     }                                                                   \
