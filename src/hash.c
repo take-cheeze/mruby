@@ -395,7 +395,13 @@ mrb_obj_hash_code(mrb_state *mrb, mrb_value key)
     break;
 #endif
   default:
-    hash_code_obj = mrb_funcall_argv(mrb, key, MRB_SYM(hash), 0, NULL);
+    /* Kernel#hash takes no argument and raises nothing: run it without a frame */
+    if (mrb_method_cfunc(mrb, key, MRB_SYM(hash)) == mrb_obj_hash) {
+      hash_code_obj = mrb_obj_hash(mrb, key);
+    }
+    else {
+      hash_code_obj = mrb_funcall_argv(mrb, key, MRB_SYM(hash), 0, NULL);
+    }
     hash_code = U32(tt) ^ U32(mrb_integer(hash_code_obj));
     break;
   }

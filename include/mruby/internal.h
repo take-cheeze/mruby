@@ -34,6 +34,7 @@ mrb_value mrb_obj_extend(mrb_state*, mrb_value obj);
 #endif
 
 mrb_value mrb_obj_equal_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_obj_hash(mrb_state *mrb, mrb_value);
 mrb_value mrb_str_equal_m(mrb_state *mrb, mrb_value);
 mrb_value mrb_int_equal_m(mrb_state *mrb, mrb_value);
 mrb_value mrb_flo_equal_m(mrb_state *mrb, mrb_value);
