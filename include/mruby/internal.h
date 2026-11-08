@@ -34,6 +34,11 @@ mrb_value mrb_obj_extend(mrb_state*, mrb_value obj);
 #endif
 
 mrb_value mrb_obj_equal_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_str_replace(mrb_state *mrb, mrb_value);
+mrb_value mrb_ary_replace_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_hash_init_copy(mrb_state *mrb, mrb_value);
+void mrb_str_init_copy_in_place(mrb_state *mrb, mrb_value dest, mrb_value src);
+void mrb_hash_init_copy_in_place(mrb_state *mrb, mrb_value dest, mrb_value src);
 mrb_value mrb_obj_hash(mrb_state *mrb, mrb_value);
 mrb_value mrb_str_equal_m(mrb_state *mrb, mrb_value);
 mrb_value mrb_int_equal_m(mrb_state *mrb, mrb_value);

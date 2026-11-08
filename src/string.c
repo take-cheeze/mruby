@@ -1356,7 +1356,7 @@ mrb_str_equal(mrb_state *mrb, mrb_value str1, mrb_value str2)
  *
  *   caution:if `str` `<=>` `obj` returns zero.
  */
-static mrb_value
+mrb_value
 mrb_str_equal_m(mrb_state *mrb, mrb_value str1)
 {
   mrb_value str2 = mrb_get_arg1(mrb);
@@ -2193,7 +2193,13 @@ mrb_str_index_m(mrb_state *mrb, mrb_value str)
  *     s = "hello"         #=> "hello"
  *     s.replace "world"   #=> "world"
  */
-static mrb_value
+void
+mrb_str_init_copy_in_place(mrb_state *mrb, mrb_value dest, mrb_value src)
+{
+  str_replace(mrb, mrb_str_ptr(dest), mrb_str_ptr(src));
+}
+
+mrb_value
 mrb_str_replace(mrb_state *mrb, mrb_value str)
 {
   mrb_value str2;

@@ -686,7 +686,7 @@ mrb_ary_replace(mrb_state *mrb, mrb_value self, mrb_value other)
  *     a.replace(['foo', 'bar']) # => ["foo", "bar"]
  *     a # => ["foo", "bar"]
  */
-static mrb_value
+mrb_value
 mrb_ary_replace_m(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;

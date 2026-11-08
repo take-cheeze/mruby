@@ -1527,13 +1527,19 @@ hash_replace(mrb_state *mrb, mrb_value self, mrb_value orig)
   h->flags |= orig_h->flags & mask;
 }
 
-static mrb_value
+void
+mrb_hash_init_copy_in_place(mrb_state *mrb, mrb_value self, mrb_value orig)
+{
+  hash_modify(mrb, self);
+  if (mrb_hash_ptr(self) != mrb_hash_ptr(orig)) hash_replace(mrb, self, orig);
+}
+
+mrb_value
 mrb_hash_init_copy(mrb_state *mrb, mrb_value self)
 {
   mrb_value orig;
   mrb_get_args(mrb, "H", &orig);
-  hash_modify(mrb, self);
-  if (mrb_hash_ptr(self) != mrb_hash_ptr(orig)) hash_replace(mrb, self, orig);
+  mrb_hash_init_copy_in_place(mrb, self, orig);
   return self;
 }
 

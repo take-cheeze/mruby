@@ -4133,7 +4133,20 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
     default:
       break;
   }
-  if (!mrb_func_basic_p(mrb, dest, MRB_SYM(initialize_copy), mrb_obj_init_copy)) {
+  mrb_func_t f = mrb_method_cfunc(mrb, dest, MRB_SYM(initialize_copy));
+  if (f == mrb_obj_init_copy) return;
+  /* the builtin copiers of a same-type pair need neither a frame nor a
+     funcall; a redefined initialize_copy resolves to another function */
+  if (f == mrb_str_replace && mrb_string_p(dest) && mrb_string_p(obj)) {
+    mrb_str_init_copy_in_place(mrb, dest, obj);
+  }
+  else if (f == mrb_ary_replace_m && mrb_array_p(dest) && mrb_array_p(obj)) {
+    mrb_ary_replace(mrb, dest, obj);
+  }
+  else if (f == mrb_hash_init_copy && mrb_hash_p(dest) && mrb_hash_p(obj)) {
+    mrb_hash_init_copy_in_place(mrb, dest, obj);
+  }
+  else {
     mrb_funcall_argv(mrb, dest, MRB_SYM(initialize_copy), 1, &obj);
   }
 }
