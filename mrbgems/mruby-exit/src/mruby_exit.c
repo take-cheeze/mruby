@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <mruby.h>
+#include <mruby/class.h>
 #include <mruby/error.h>
 #include <mruby/variable.h>
 
@@ -74,12 +75,18 @@ f_exit_bang(mrb_state *mrb, mrb_value self)
   return mrb_nil_value();
 }
 
+#define MRB_MT_CLASS Kernel
+static const mrb_mt_entry exit_kernel_rom_entries[] = {
+  MRB_MT_ENTRY(f_exit,      MRB_SYM(exit),   MRB_ARGS_OPT(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(f_exit_bang, MRB_SYM_B(exit), MRB_ARGS_OPT(1) | MRB_MT_PRIVATE)
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_mruby_exit_gem_init(mrb_state* mrb)
 {
   mrb_define_class_id(mrb, MRB_SYM(SystemExit), E_EXCEPTION);
-  mrb_define_private_method_id(mrb, mrb->kernel_module, MRB_SYM(exit), f_exit, MRB_ARGS_OPT(1));
-  mrb_define_private_method_id(mrb, mrb->kernel_module, MRB_SYM_B(exit), f_exit_bang, MRB_ARGS_OPT(1));
+  MRB_MT_INIT_ROM(mrb, mrb->kernel_module, exit_kernel_rom_entries);
 }
 
 void
