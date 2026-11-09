@@ -248,14 +248,17 @@ struct mrb_cache_entry {
 };
 #endif
 
-/* The builtin C function a hot by-name caller found for a class, valid while
- * mt_epoch is unchanged (see mrb_method_cfunc_memo). */
+/* The method a hot by-name caller found for a class (m, found in owner; f its C
+ * function or NULL), valid while mt_epoch is unchanged (see mrb_method_memo). */
 struct mrb_cfunc_memo {
   struct RClass *c;
   uint32_t epoch;
   mrb_func_t f;
+  mrb_method_t m;
+  struct RClass *owner;
 };
-enum { MRB_MEMO_EQ, MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_COUNT };
+enum { MRB_MEMO_EQ, MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_EQL, MRB_MEMO_CMP,
+       MRB_MEMO_COUNT };
 
 struct mrb_jmpbuf;
 

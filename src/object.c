@@ -9,7 +9,13 @@
 #include <mruby/numeric.h>
 #include <mruby/string.h>
 #include <mruby/class.h>
+#include <mruby/proc.h>
 #include <mruby/internal.h>
+
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+MRB_END_DECL
 #include <string.h>
 
 /*
@@ -79,7 +85,8 @@ mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
 mrb_bool
 mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
 {
-  mrb_func_t f = mrb_method_cfunc_memo(mrb, a, MRB_OPSYM(eq), MRB_MEMO_EQ);
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, a, MRB_OPSYM(eq), MRB_MEMO_EQ);
+  mrb_func_t f = memo->f;
 
   if (f == mrb_obj_equal_m) return mrb_obj_eq(mrb, a, b);
   if (f == mrb_str_equal_m) return mrb_str_equal(mrb, a, b);
@@ -87,7 +94,10 @@ mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
 #ifndef MRB_NO_FLOAT
   if (f == mrb_flo_equal_m) return mrb_flo_equal(mrb, a, b);
 #endif
-  return mrb_test(mrb_funcall_argv(mrb, a, MRB_OPSYM(eq), 1, &b));
+  if (MRB_METHOD_UNDEF_P(memo->m)) return mrb_test(mrb_funcall_argv(mrb, a, MRB_OPSYM(eq), 1, &b));
+  /* any other method found runs in the frame the send would push (a recursion guard still sees it) */
+  mrb_method_t m = memo->m;
+  return mrb_test(mrb_funcall_with_method(mrb, a, MRB_OPSYM(eq), &m, memo->owner, 1, &b, mrb_nil_value()));
 }
 
 /*
@@ -895,7 +905,10 @@ MRB_API mrb_bool
 mrb_eql(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
 {
   if (mrb_obj_eq(mrb, obj1, obj2)) return TRUE;
-  return mrb_test(mrb_funcall_argv(mrb, obj1, MRB_SYM_Q(eql), 1, &obj2));
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, obj1, MRB_SYM_Q(eql), MRB_MEMO_EQL);
+  if (MRB_METHOD_UNDEF_P(memo->m)) return mrb_test(mrb_funcall_argv(mrb, obj1, MRB_SYM_Q(eql), 1, &obj2));
+  mrb_method_t m = memo->m;
+  return mrb_test(mrb_funcall_with_method(mrb, obj1, MRB_SYM_Q(eql), &m, memo->owner, 1, &obj2, mrb_nil_value()));
 }
 
 /*

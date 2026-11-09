@@ -9,8 +9,14 @@
 #include <mruby/numeric.h>
 #include <mruby/string.h>
 #include <mruby/class.h>
+#include <mruby/proc.h>
 #include <mruby/internal.h>
 #include <string.h>
+
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+MRB_END_DECL
 
 #ifndef MRB_NO_FLOAT
 #ifdef MRB_USE_FLOAT32
@@ -2408,11 +2414,18 @@ mrb_cmp(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
     if (!mrb_string_p(obj2))
       return -2;
     return mrb_str_cmp(mrb, obj1, obj2);
-  default:
-    v = mrb_funcall_argv(mrb, obj1, MRB_OPSYM(cmp), 1, &obj2);
+  default: {
+    /* the method found runs in the frame the send would push */
+    const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, obj1, MRB_OPSYM(cmp), MRB_MEMO_CMP);
+    mrb_method_t m = memo->m;
+    if (MRB_METHOD_UNDEF_P(m))
+      v = mrb_funcall_argv(mrb, obj1, MRB_OPSYM(cmp), 1, &obj2);
+    else
+      v = mrb_funcall_with_method(mrb, obj1, MRB_OPSYM(cmp), &m, memo->owner, 1, &obj2, mrb_nil_value());
     if (mrb_nil_p(v) || !mrb_integer_p(v))
       return -2;
     return mrb_integer(v);
+  }
   }
 }
 

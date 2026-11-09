@@ -196,3 +196,48 @@ assert('redefinition after the builtin was used is seen') do
   c.const_set(:K1, 1)
   assert_true seen.include?(:K1)
 end
+
+# ==, eql? and <=> run the method they find, in the frame the send would
+# push: overrides, privacy and recursion guards as before.
+assert('== found once still runs Hash/Array/user ==, recursion guards intact') do
+  assert_true [{a: [1]}] == [{a: [1.0]}]
+  assert_false [{a: [1]}] == [{a: [2]}]
+  h1 = {}; h1[:a] = h1
+  h2 = {}; h2[:a] = h2
+  assert_nothing_raised { [h1] == [h2] }
+  a1 = [1]; a1 << a1
+  a2 = [1]; a2 << a2
+  assert_nothing_raised { [a1] == [a2] }
+  k = Class.new { def ==(o); :yes; end }
+  assert_true [k.new] == [1]
+  k.class_eval { def ==(o); false; end }
+  assert_false [k.new] == [1]
+  k.class_eval { private def ==(o); true; end }
+  assert_true [k.new] == [1]                 # a C-level == ignores visibility, as the send did
+end
+
+assert('eql? found once still runs a user eql?') do
+  seen = []
+  k = Class.new do
+    define_method(:eql?) { |o| seen << :eql; true }
+    def hash; 1; end
+  end
+  a = k.new
+  b = k.new
+  assert_equal :v, {a => :v}[b]
+  assert_true seen.include?(:eql)
+  k.class_eval { def eql?(o); false; end }
+  assert_nil({a => :v}[b])
+end
+
+assert('<=> found once still runs a user <=>') do
+  k = Class.new do
+    attr_reader :v
+    def initialize(v); @v = v; end
+    def <=>(o); o.v <=> @v; end              # descending
+  end
+  assert_equal [3, 2, 1], [k.new(1), k.new(3), k.new(2)].sort.map(&:v)
+  k.class_eval { def <=>(o); @v <=> o.v; end }
+  assert_equal [1, 2, 3], [k.new(1), k.new(3), k.new(2)].sort.map(&:v)
+  assert_equal [[1, 2], [1, 3], [2]], [[2], [1, 3], [1, 2]].sort
+end

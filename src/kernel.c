@@ -52,26 +52,44 @@ mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid)
 }
 
 /*
- * mrb_method_cfunc, remembered per slot for the class last asked about. The
- * answer holds until a method table changes (mt_epoch); a dead class's address
- * can be reused only after the sweep has bumped it. A lookup hook may answer
- * differently each time, so it bypasses the memo.
+ * The method `obj.mid` finds (m, undefined when missing; owner, the class it is
+ * in; f, its C function or NULL), remembered per slot for the class last asked
+ * about. The answer holds until a method table changes (mt_epoch); a dead
+ * class's address can be reused only after the sweep has bumped it. A lookup
+ * hook may answer differently each time, so it bypasses the memo. The entry
+ * is overwritten by the next call for the slot: copy what is needed first.
  */
-mrb_func_t
-mrb_method_cfunc_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot)
+const struct mrb_cfunc_memo*
+mrb_method_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot)
 {
   struct mrb_cfunc_memo *memo = &mrb->cfunc_memo[slot];
   struct RClass *c = mrb_class(mrb, obj);
+  mrb_bool keep = TRUE;
 
 #ifdef MRB_USE_METHOD_LOOKUP_HOOK
-  if (mrb->method_lookup_hook) return mrb_method_cfunc(mrb, obj, mid);
+  keep = !mrb->method_lookup_hook;
 #endif
-  if (memo->c == c && memo->epoch == mrb->mt_epoch) return memo->f;
-  mrb_func_t f = mrb_method_cfunc(mrb, obj, mid);
-  memo->c = c;
+  if (keep && memo->c == c && memo->epoch == mrb->mt_epoch) return memo;
+  struct RClass *owner = c;
+  mrb_method_t m = mrb_method_search_vm(mrb, &owner, mid);
+  mrb_func_t f = NULL;
+  if (!MRB_METHOD_UNDEF_P(m)) {
+    if (MRB_METHOD_FUNC_P(m)) f = MRB_METHOD_FUNC(m);
+    else if (MRB_PROC_CFUNC_P(MRB_METHOD_PROC(m))) f = MRB_PROC_CFUNC(MRB_METHOD_PROC(m));
+  }
+  memo->c = keep ? c : NULL;
   memo->epoch = mrb->mt_epoch;
   memo->f = f;
-  return f;
+  memo->m = m;
+  memo->owner = owner;
+  return memo;
+}
+
+/* mrb_method_memo's C function: NULL when the method is missing or written in Ruby. */
+mrb_func_t
+mrb_method_cfunc_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot)
+{
+  return mrb_method_memo(mrb, obj, mid, slot)->f;
 }
 
 static mrb_bool
