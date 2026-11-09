@@ -901,6 +901,8 @@ static const mrb_mt_entry exception_rom_entries[] = {
   MRB_MT_ENTRY(mrb_exc_backtrace, MRB_SYM(backtrace),   MRB_ARGS_NONE())
   MRB_MT_ENTRY(exc_set_backtrace, MRB_SYM(set_backtrace), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Exception_singleton
 static const mrb_mt_entry exception_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_instance_new,  MRB_SYM(exception),   MRB_ARGS_OPT(1))
 };

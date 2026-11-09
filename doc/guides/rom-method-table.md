@@ -393,9 +393,11 @@ A class method is an instance method of the class's singleton class, so
 its table is installed there. Singleton methods are public:
 
 ```c
+#define MRB_MT_CLASS Time_singleton
 static const mrb_mt_entry time_s_rom_entries[] = {
   MRB_MT_ENTRY(time_now, MRB_SYM(now), MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
 
 MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(tc)), time_s_rom_entries);
 ```
@@ -403,7 +405,11 @@ MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(tc)), time_s_rom
 A module function (`mrb_define_module_function_id()`) is a public
 singleton method plus a private instance method: one table on the
 module's singleton class, and one with `MRB_MT_PRIVATE` entries on the
-module. Both tables declare the module's `MRB_MT_CLASS`.
+module.
+
+A singleton class's table declares `MRB_MT_CLASS` as `<Class>_singleton`
+(`Time_singleton`), so an exclusion macro names either the instance
+method or the class method, never both.
 
 ## Methods That Cannot Use ROM Tables
 

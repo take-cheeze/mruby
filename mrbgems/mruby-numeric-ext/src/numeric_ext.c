@@ -509,6 +509,8 @@ static const mrb_mt_entry integer_ext_rom_entries[] = {
   MRB_MT_ENTRY(int_gcd,        MRB_SYM(gcd), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(int_lcm,        MRB_SYM(lcm), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Integer_singleton
 static const mrb_mt_entry integer_ext_s_rom_entries[] = {
   MRB_MT_ENTRY(int_sqrt,       MRB_SYM(sqrt), MRB_ARGS_REQ(1))
 };

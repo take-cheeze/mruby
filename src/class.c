@@ -4425,6 +4425,8 @@ static const mrb_mt_entry cls_rom_entries[] = {
   MRB_MT_ENTRY(mrb_class_initialize, MRB_SYM(initialize), MRB_ARGS_OPT(1) | MRB_MT_PRIVATE)   /* 15.2.3.3.1 */
   MRB_MT_ENTRY(mrb_class_superclass, MRB_SYM(superclass), MRB_ARGS_NONE())                    /* 15.2.3.3.4 */
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Class_singleton
 static const mrb_mt_entry cls_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_class_new_class,      MRB_SYM(new),            MRB_ARGS_OPT(1)|MRB_ARGS_BLOCK())
 };

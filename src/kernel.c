@@ -749,6 +749,8 @@ static const mrb_mt_entry kernel_rom_entries[] = {
   MRB_MT_ENTRY(mrb_print_m, MRB_SYM(print), MRB_ARGS_ANY() | MRB_MT_PRIVATE)   /* 15.3.1.3.35 */
 #endif
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Kernel_singleton
 static const mrb_mt_entry kernel_s_rom_entries[] = {
 #if 0
   MRB_MT_ENTRY(mrb_f_block_given_p_m,           MRB_SYM_Q(block_given),        MRB_ARGS_NONE())    /* 15.3.1.2.2  */

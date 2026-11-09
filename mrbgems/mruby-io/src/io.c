@@ -2349,6 +2349,8 @@ static const mrb_mt_entry io_rom_entries[] = {
   MRB_MT_ENTRY(io_getbyte,           MRB_SYM(getbyte),       MRB_ARGS_NONE())
   MRB_MT_ENTRY(io_readbyte,          MRB_SYM(readbyte),      MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS IO_singleton
 static const mrb_mt_entry io_s_rom_entries[] = {
   MRB_MT_ENTRY(io_s_popen,    MRB_SYM(_popen),    MRB_ARGS_ARG(1,2))
   MRB_MT_ENTRY(io_s_sysclose, MRB_SYM(_sysclose), MRB_ARGS_REQ(1))

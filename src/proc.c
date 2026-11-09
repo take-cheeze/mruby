@@ -594,6 +594,8 @@ static const mrb_mt_entry proc_rom_entries[] = {
   MRB_MT_ENTRY(proc_call,          MRB_OPSYM(aref),       MRB_ARGS_ANY()|MRB_ARGS_BLOCK()) /* 15.2.17.4.1 */
   MRB_MT_ENTRY(proc_hash,          MRB_SYM(hash),         MRB_ARGS_NONE())   /* 15.2.17.4.2 */
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Proc_singleton
 static const mrb_mt_entry proc_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_proc_s_new,     MRB_SYM(new),          MRB_ARGS_NONE()|MRB_ARGS_BLOCK())
 };

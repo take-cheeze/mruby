@@ -369,7 +369,7 @@ mrb_filetest_s_size_p(mrb_state *mrb, mrb_value klass)
   return mrb_int64_value(mrb, st.st_size);
 }
 
-#define MRB_MT_CLASS FileTest
+#define MRB_MT_CLASS FileTest_singleton
 static const mrb_mt_entry filetest_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_filetest_s_directory_p, MRB_SYM_Q(directory), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_filetest_s_exist_p,     MRB_SYM_Q(exist),     MRB_ARGS_REQ(1))
@@ -385,7 +385,7 @@ static const mrb_mt_entry filetest_s_rom_entries[] = {
 #undef MRB_MT_CLASS
 
 /* the same methods on File */
-#define MRB_MT_CLASS File
+#define MRB_MT_CLASS File_singleton
 static const mrb_mt_entry file_test_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_filetest_s_directory_p, MRB_SYM_Q(directory), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_filetest_s_exist_p,     MRB_SYM_Q(exist),     MRB_ARGS_REQ(1))

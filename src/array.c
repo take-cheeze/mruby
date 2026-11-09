@@ -2400,7 +2400,7 @@ static const mrb_mt_entry array_rom_entries[] = {
 };
 #undef MRB_MT_CLASS
 
-#define MRB_MT_CLASS Array
+#define MRB_MT_CLASS Array_singleton
 static const mrb_mt_entry array_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_ary_s_create,     MRB_OPSYM(aref),          MRB_ARGS_ANY())                     /* 15.2.12.4.1 */
 };

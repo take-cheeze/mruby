@@ -1767,7 +1767,7 @@ mrb_objspace_page_slot_size(void)
   return sizeof(RVALUE);
 }
 
-#define MRB_MT_CLASS GC
+#define MRB_MT_CLASS GC_singleton
 static const mrb_mt_entry gc_s_rom_entries[] = {
   MRB_MT_ENTRY(gc_start,                 MRB_SYM(start),               MRB_ARGS_NONE())
   MRB_MT_ENTRY(gc_enable,                MRB_SYM(enable),              MRB_ARGS_NONE())
