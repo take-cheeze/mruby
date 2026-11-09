@@ -360,3 +360,11 @@ assert('2000 times 500us make a second') do
   end
   assert_equal(0, t.usec)
 end
+
+assert('Time class methods keep their argument specs') do
+  assert_true Time.respond_to?(:mktime)
+  assert_false Time.new.respond_to?(:now)
+  assert_raise(ArgumentError) { Time.now(1) }
+  assert_raise(ArgumentError) { Time.at }
+  assert_raise(ArgumentError) { Time.gm }
+end

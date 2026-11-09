@@ -1743,6 +1743,14 @@ static const mrb_mt_entry time_rom_entries[] = {
   MRB_MT_ENTRY(time_to_f,       MRB_SYM(to_f),            MRB_ARGS_NONE())                    /* 15.2.19.7.24 */
 #endif
 };
+static const mrb_mt_entry time_s_rom_entries[] = {
+  MRB_MT_ENTRY(time_at_m,  MRB_SYM(at),     MRB_ARGS_ARG(1, 1)) /* 15.2.19.6.1 */
+  MRB_MT_ENTRY(time_gm,    MRB_SYM(gm),     MRB_ARGS_ARG(1,6))  /* 15.2.19.6.2 */
+  MRB_MT_ENTRY(time_local, MRB_SYM(local),  MRB_ARGS_ARG(1,6))  /* 15.2.19.6.3 */
+  MRB_MT_ENTRY(time_local, MRB_SYM(mktime), MRB_ARGS_ARG(1,6))  /* 15.2.19.6.4 */
+  MRB_MT_ENTRY(time_now,   MRB_SYM(now),    MRB_ARGS_NONE())    /* 15.2.19.6.5 */
+  MRB_MT_ENTRY(time_gm,    MRB_SYM(utc),    MRB_ARGS_ARG(1,6))  /* 15.2.19.6.6 */
+};
 #undef MRB_MT_CLASS
 
 void
@@ -1752,12 +1760,7 @@ mrb_mruby_time_gem_init(mrb_state* mrb)
   struct RClass *tc = mrb_define_class_id(mrb, MRB_SYM(Time), mrb->object_class);
   MRB_SET_INSTANCE_TT(tc, MRB_TT_CDATA);
   mrb_include_module(mrb, tc, mrb_module_get_id(mrb, MRB_SYM(Comparable)));
-  mrb_define_class_method_id(mrb, tc, MRB_SYM(at), time_at_m, MRB_ARGS_ARG(1, 1));    /* 15.2.19.6.1 */
-  mrb_define_class_method_id(mrb, tc, MRB_SYM(gm), time_gm, MRB_ARGS_ARG(1,6));       /* 15.2.19.6.2 */
-  mrb_define_class_method_id(mrb, tc, MRB_SYM(local), time_local, MRB_ARGS_ARG(1,6));  /* 15.2.19.6.3 */
-  mrb_define_class_method_id(mrb, tc, MRB_SYM(mktime), time_local, MRB_ARGS_ARG(1,6)); /* 15.2.19.6.4 */
-  mrb_define_class_method_id(mrb, tc, MRB_SYM(now), time_now, MRB_ARGS_NONE());        /* 15.2.19.6.5 */
-  mrb_define_class_method_id(mrb, tc, MRB_SYM(utc), time_gm, MRB_ARGS_ARG(1,6));      /* 15.2.19.6.6 */
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(tc)), time_s_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, tc, time_rom_entries);
 }
