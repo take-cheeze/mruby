@@ -901,6 +901,9 @@ static const mrb_mt_entry exception_rom_entries[] = {
   MRB_MT_ENTRY(mrb_exc_backtrace, MRB_SYM(backtrace),   MRB_ARGS_NONE())
   MRB_MT_ENTRY(exc_set_backtrace, MRB_SYM(set_backtrace), MRB_ARGS_REQ(1))
 };
+static const mrb_mt_entry exception_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_instance_new,  MRB_SYM(exception),   MRB_ARGS_OPT(1))
+};
 #undef MRB_MT_CLASS
 
 void
@@ -908,7 +911,7 @@ mrb_init_exception(mrb_state *mrb)
 {
   struct RClass *exception = mrb->eException_class = mrb_define_class_id(mrb, MRB_SYM(Exception), mrb->object_class); /* 15.2.22 */
   MRB_SET_INSTANCE_TT(exception, MRB_TT_EXCEPTION);
-  mrb_define_class_method_id(mrb, exception, MRB_SYM(exception), mrb_instance_new,  MRB_ARGS_OPT(1));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(exception)), exception_s_rom_entries);
   MRB_MT_INIT_ROM(mrb, exception, exception_rom_entries);
 
   mrb->eStandardError_class = mrb_define_class_id(mrb, MRB_SYM(StandardError), mrb->eException_class); /* 15.2.23 */
