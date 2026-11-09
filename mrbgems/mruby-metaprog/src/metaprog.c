@@ -716,6 +716,10 @@ static const mrb_mt_entry metaprog_mod_rom_entries[] = {
   MRB_MT_ENTRY(mrb_do_nothing,                   MRB_SYM(method_removed), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_mod_constants,                MRB_SYM(constants),     MRB_ARGS_OPT(1))   /* 15.2.2.4.24 */
 };
+static const mrb_mt_entry metaprog_mod_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_mod_s_constants,              MRB_SYM(constants),     MRB_ARGS_ANY())    /* 15.2.2.3.1 */
+  MRB_MT_ENTRY(mrb_mod_s_nesting,                MRB_SYM(nesting),       MRB_ARGS_NONE())   /* 15.2.2.3.2 */
+};
 #undef MRB_MT_CLASS
 
 void
@@ -726,8 +730,7 @@ mrb_mruby_metaprog_gem_init(mrb_state* mrb)
 
   MRB_MT_INIT_ROM(mrb, krn, metaprog_krn_rom_entries);
   MRB_MT_INIT_ROM(mrb, mod, metaprog_mod_rom_entries);
-  mrb_define_class_method_id(mrb, mod, MRB_SYM(constants), mrb_mod_s_constants, MRB_ARGS_ANY()); /* 15.2.2.3.1 */
-  mrb_define_class_method_id(mrb, mod, MRB_SYM(nesting), mrb_mod_s_nesting, MRB_ARGS_NONE()); /* 15.2.2.3.2 */
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(mod)), metaprog_mod_s_rom_entries);
 }
 
 void
