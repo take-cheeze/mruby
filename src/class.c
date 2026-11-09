@@ -18,6 +18,11 @@
 #include <mruby/opcode.h>
 #include <mruby/internal.h>
 
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+MRB_END_DECL
+
 /* mrb_mt_tbl, union mrb_mt_ptr, mrb_mt_entry defined in internal.h */
 #define MT_PROTECTED MRB_METHOD_PROTECTED_FL
 #define MT_VDEFAULT MRB_METHOD_VDEFAULT_FL
@@ -2977,9 +2982,15 @@ mrb_obj_new(mrb_state *mrb, struct RClass *c, mrb_int argc, const mrb_value *arg
 {
   mrb_value obj = mrb_instance_alloc(mrb, mrb_obj_value(c));
   mrb_sym mid = MRB_SYM(initialize);
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, obj, mid, MRB_MEMO_INITIALIZE);
 
-  if (!mrb_func_basic_p(mrb, obj, mid, mrb_do_nothing)) {
+  if (MRB_METHOD_UNDEF_P(memo->m)) {
     mrb_funcall_argv(mrb, obj, mid, argc, argv);
+  }
+  else if (memo->f != mrb_do_nothing) {
+    /* the method found, in the frame mrb_funcall_argv would push */
+    mrb_method_t m = memo->m;
+    mrb_funcall_with_method(mrb, obj, mid, &m, memo->owner, argc, argv, mrb_nil_value());
   }
   return obj;
 }
@@ -4354,6 +4365,18 @@ inspect_main(mrb_state *mrb, mrb_value mod)
   return mrb_str_new_lit(mrb, "main");
 }
 
+/* mrb_funcall_send of `mid` on `self`, running the method the memo found without a second lookup; a missing method
+ * is the send itself (method_missing). */
+static mrb_value
+class_send(mrb_state *mrb, mrb_value self, mrb_sym mid, int slot, mrb_int argc, const mrb_value *argv, mrb_value kdict,
+           mrb_value blk)
+{
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, self, mid, slot);
+  if (MRB_METHOD_UNDEF_P(memo->m)) return mrb_funcall_send(mrb, self, mid, argc, argv, kdict, blk);
+  mrb_method_t m = memo->m;
+  return mrb_funcall_send_with_method(mrb, self, mid, &m, memo->owner, argc, argv, kdict, blk);
+}
+
 /*
  * Class#new: allocates, then sends `initialize` with the arguments, keywords and block as given.
  * Both are sends from the class itself (private methods are callable, `method_missing` applies, the callee's argument
@@ -4380,8 +4403,8 @@ class_new_instance(mrb_state *mrb, mrb_value cls)
     argv = ci->stack+1;
   }
   mrb_value blk = ci->stack[mrb_ci_bidx(ci)];
-  mrb_value obj = mrb_funcall_send(mrb, cls, MRB_SYM(allocate), 0, NULL, mrb_nil_value(), mrb_nil_value());
-  mrb_funcall_send(mrb, obj, MRB_SYM(initialize), argc, argv, kdict, blk);
+  mrb_value obj = class_send(mrb, cls, MRB_SYM(allocate), MRB_MEMO_ALLOCATE, 0, NULL, mrb_nil_value(), mrb_nil_value());
+  class_send(mrb, obj, MRB_SYM(initialize), MRB_MEMO_INITIALIZE, argc, argv, kdict, blk);
   return obj;
 }
 

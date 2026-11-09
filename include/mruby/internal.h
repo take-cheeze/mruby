@@ -240,6 +240,9 @@ void mrb_free_shape(mrb_state*);
 #define MRB_CI_SET_MODFUNC(ci) MRB_FLAG_ON((ci)->vis, 3)
 mrb_int mrb_ci_bidx(mrb_callinfo *ci);
 mrb_int mrb_ci_nregs(mrb_callinfo *ci);
+mrb_value mrb_funcall_send_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m,
+                                       struct RClass *owner, mrb_int argc, const mrb_value *argv, mrb_value kdict,
+                                       mrb_value blk);
 mrb_value mrb_exec_irep(mrb_state *mrb, mrb_value self, const struct RProc *p);
 mrb_value mrb_obj_instance_eval(mrb_state*, mrb_value);
 mrb_value mrb_object_exec(mrb_state *mrb, mrb_value self, struct RClass *target_class);

@@ -197,8 +197,39 @@ assert('redefinition after the builtin was used is seen') do
   assert_true seen.include?(:K1)
 end
 
-# ==, eql? and <=> run the method they find, in the frame the send would
-# push: overrides, privacy and recursion guards as before.
+# Class#new, ==, eql? and <=> run the method they find, in the frame the send
+# would push: overrides, privacy, arity, blocks and recursion guards as before.
+class DynNew
+  attr_reader :a, :k, :b
+  def initialize(a, k: 0, &b); @a = a; @k = k; @b = b; end
+end
+
+class DynMissingInit
+  undef_method :initialize
+  attr_reader :mm
+  def method_missing(n, *a); n == :initialize ? (@mm = a) : super; end
+end
+
+assert('Class#new runs the initialize and allocate it finds') do
+  x = DynNew.new(1, k: 2) { 3 }
+  assert_equal [1, 2, 3], [x.a, x.k, x.b.call]
+  e1 = (DynNew.new rescue $!)
+  e2 = (DynNew.allocate.__send__(:initialize) rescue $!)
+  assert_equal ArgumentError, e1.class
+  assert_equal e2.message, e1.message
+  c = Class.new(DynNew)
+  assert_equal 5, c.new(5).a
+  c.class_eval { def initialize(*a); @a = a; end }
+  assert_equal [7, 8], c.new(7, 8).a
+  $dyn_alloc = []
+  class << c
+    def allocate; $dyn_alloc << :alloc; super; end
+  end
+  assert_equal [9], c.new(9).a
+  assert_equal [:alloc], $dyn_alloc
+  assert_equal [4], DynMissingInit.new(4).mm
+end
+
 assert('== found once still runs Hash/Array/user ==, recursion guards intact') do
   assert_true [{a: [1]}] == [{a: [1.0]}]
   assert_false [{a: [1]}] == [{a: [2]}]

@@ -979,6 +979,15 @@ mrb_funcall_send(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_int argc, cons
   return funcall_with_block_m(mrb, self, mid, argc, argv, kdict_p, TRUE, blk, NULL, NULL);
 }
 
+/* mrb_funcall_send for a method already found: `m`, as found in class `owner`, is called as `mid` with no lookup. */
+mrb_value
+mrb_funcall_send_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                             mrb_int argc, const mrb_value *argv, mrb_value kdict, mrb_value blk)
+{
+  const mrb_value *kdict_p = mrb_hash_p(kdict) ? &kdict : NULL;
+  return funcall_with_block_m(mrb, self, mid, argc, argv, kdict_p, TRUE, blk, m, owner);
+}
+
 /*
  * mrb_funcall_with_block for a method already found: `m`, as found in class `owner`, is called as `mid` with no
  * lookup. Used by mrb_proc_aref_impl for bc2cpp-generated code (ADR 0365).

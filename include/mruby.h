@@ -257,8 +257,8 @@ struct mrb_cfunc_memo {
   mrb_method_t m;
   struct RClass *owner;
 };
-enum { MRB_MEMO_EQ, MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_EQL, MRB_MEMO_CMP,
-       MRB_MEMO_COUNT };
+enum { MRB_MEMO_EQ, MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_EQL, MRB_MEMO_CMP, MRB_MEMO_ALLOCATE,
+       MRB_MEMO_INITIALIZE, MRB_MEMO_COUNT };
 
 struct mrb_jmpbuf;
 
