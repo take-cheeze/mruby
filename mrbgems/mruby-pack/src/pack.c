@@ -2124,12 +2124,24 @@ mrb_pack_unpack1(mrb_state *mrb, mrb_value str)
   return pack_unpack(mrb, str, TRUE);
 }
 
+#define MRB_MT_CLASS Array
+static const mrb_mt_entry pack_array_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_pack_pack,    MRB_SYM(pack),    MRB_ARGS_REQ(1))
+};
+#undef MRB_MT_CLASS
+
+#define MRB_MT_CLASS String
+static const mrb_mt_entry pack_string_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_pack_unpack,  MRB_SYM(unpack),  MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_pack_unpack1, MRB_SYM(unpack1), MRB_ARGS_REQ(1))
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_mruby_pack_gem_init(mrb_state *mrb)
 {
-  mrb_define_method_id(mrb, mrb->array_class, MRB_SYM(pack), mrb_pack_pack, MRB_ARGS_REQ(1));
-  mrb_define_method_id(mrb, mrb->string_class, MRB_SYM(unpack), mrb_pack_unpack, MRB_ARGS_REQ(1));
-  mrb_define_method_id(mrb, mrb->string_class, MRB_SYM(unpack1), mrb_pack_unpack1, MRB_ARGS_REQ(1));
+  MRB_MT_INIT_ROM(mrb, mrb->array_class, pack_array_rom_entries);
+  MRB_MT_INIT_ROM(mrb, mrb->string_class, pack_string_rom_entries);
 }
 
 void
