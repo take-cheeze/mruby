@@ -2305,13 +2305,19 @@ static const mrb_mt_entry string_ext_rom_entries[] = {
 };
 #undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS Integer
+static const mrb_mt_entry string_ext_integer_rom_entries[] = {
+  MRB_MT_ENTRY(int_chr, MRB_SYM(chr), MRB_ARGS_NONE()|MRB_ARGS_OPT(1))
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_mruby_string_ext_gem_init(mrb_state* mrb)
 {
   struct RClass *s = mrb->string_class;
 
   MRB_MT_INIT_ROM(mrb, s, string_ext_rom_entries);
-  mrb_define_method_id(mrb, mrb->integer_class, MRB_SYM(chr), int_chr, MRB_ARGS_NONE()|MRB_ARGS_OPT(1));
+  MRB_MT_INIT_ROM(mrb, mrb->integer_class, string_ext_integer_rom_entries);
 }
 
 void
