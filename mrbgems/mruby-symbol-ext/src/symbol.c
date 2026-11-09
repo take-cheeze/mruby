@@ -62,6 +62,8 @@ static const mrb_mt_entry symbol_ext_rom_entries[] = {
   MRB_MT_ENTRY(mrb_sym_length, MRB_SYM(length), MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_sym_length, MRB_SYM(size), MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Symbol_singleton
 #ifdef MRB_USE_ALL_SYMBOLS
 static const mrb_mt_entry symbol_ext_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_sym_all_symbols, MRB_SYM(all_symbols), MRB_ARGS_NONE())

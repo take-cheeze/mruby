@@ -1252,11 +1252,13 @@ mrb_f_sprintf(mrb_state *mrb, mrb_value obj)
 }
 
 /* module_function: public singleton methods, private instance methods */
-#define MRB_MT_CLASS Kernel
+#define MRB_MT_CLASS Kernel_singleton
 static const mrb_mt_entry sprintf_kernel_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(sprintf), MRB_ARGS_ANY())
   MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(format),  MRB_ARGS_ANY())
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Kernel
 static const mrb_mt_entry sprintf_kernel_rom_entries[] = {
   MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(sprintf), MRB_ARGS_ANY() | MRB_MT_PRIVATE)
   MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(format),  MRB_ARGS_ANY() | MRB_MT_PRIVATE)

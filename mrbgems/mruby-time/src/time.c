@@ -1743,6 +1743,8 @@ static const mrb_mt_entry time_rom_entries[] = {
   MRB_MT_ENTRY(time_to_f,       MRB_SYM(to_f),            MRB_ARGS_NONE())                    /* 15.2.19.7.24 */
 #endif
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Time_singleton
 static const mrb_mt_entry time_s_rom_entries[] = {
   MRB_MT_ENTRY(time_at_m,  MRB_SYM(at),     MRB_ARGS_ARG(1, 1)) /* 15.2.19.6.1 */
   MRB_MT_ENTRY(time_gm,    MRB_SYM(gm),     MRB_ARGS_ARG(1,6))  /* 15.2.19.6.2 */

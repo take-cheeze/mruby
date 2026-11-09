@@ -23,10 +23,12 @@ enum_update_hash(mrb_state *mrb, mrb_value self)
 }
 
 /* module_function: a public singleton method and a private instance method */
-#define MRB_MT_CLASS Enumerable
+#define MRB_MT_CLASS Enumerable_singleton
 static const mrb_mt_entry enum_s_rom_entries[] = {
   MRB_MT_ENTRY(enum_update_hash, MRB_SYM(__update_hash), MRB_ARGS_REQ(3))
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Enumerable
 static const mrb_mt_entry enum_rom_entries[] = {
   MRB_MT_ENTRY(enum_update_hash, MRB_SYM(__update_hash), MRB_ARGS_REQ(3) | MRB_MT_PRIVATE)
 };

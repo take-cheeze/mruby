@@ -693,7 +693,7 @@ math_erfc(mrb_state *mrb, mrb_value obj)
 }
 
 /* module_function: public singleton methods, private instance methods */
-#define MRB_MT_CLASS Math
+#define MRB_MT_CLASS Math_singleton
 static const mrb_mt_entry math_s_rom_entries[] = {
   MRB_MT_ENTRY(math_sin,   MRB_SYM(sin),  MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(math_cos,   MRB_SYM(cos),  MRB_ARGS_REQ(1))
@@ -729,6 +729,8 @@ static const mrb_mt_entry math_s_rom_entries[] = {
   MRB_MT_ENTRY(math_erf,   MRB_SYM(erf),  MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(math_erfc,  MRB_SYM(erfc), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Math
 static const mrb_mt_entry math_rom_entries[] = {
   MRB_MT_ENTRY(math_sin,   MRB_SYM(sin),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
   MRB_MT_ENTRY(math_cos,   MRB_SYM(cos),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)

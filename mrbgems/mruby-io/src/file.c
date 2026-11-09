@@ -1175,6 +1175,8 @@ static const mrb_mt_entry file_rom_entries[] = {
   MRB_MT_ENTRY(mrb_file_size,     MRB_SYM(size),  MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_file_truncate, MRB_SYM(truncate), MRB_ARGS_REQ(1))
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS File_singleton
 static const mrb_mt_entry file_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_file_s_umask,         MRB_SYM(umask),           MRB_ARGS_OPT(1))
   MRB_MT_ENTRY(mrb_file_s_unlink,        MRB_SYM(delete),          MRB_ARGS_ANY())

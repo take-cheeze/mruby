@@ -716,6 +716,8 @@ static const mrb_mt_entry metaprog_mod_rom_entries[] = {
   MRB_MT_ENTRY(mrb_do_nothing,                   MRB_SYM(method_removed), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_mod_constants,                MRB_SYM(constants),     MRB_ARGS_OPT(1))   /* 15.2.2.4.24 */
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Module_singleton
 static const mrb_mt_entry metaprog_mod_s_rom_entries[] = {
   MRB_MT_ENTRY(mrb_mod_s_constants,              MRB_SYM(constants),     MRB_ARGS_ANY())    /* 15.2.2.3.1 */
   MRB_MT_ENTRY(mrb_mod_s_nesting,                MRB_SYM(nesting),       MRB_ARGS_NONE())   /* 15.2.2.3.2 */

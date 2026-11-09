@@ -440,6 +440,8 @@ static const mrb_mt_entry hash_ext_rom_entries[] = {
   MRB_MT_ENTRY(hash_merge,     MRB_SYM(__merge), MRB_ARGS_ANY())
   MRB_MT_ENTRY(hash_to_proc,   MRB_SYM(to_proc), MRB_ARGS_NONE())
 };
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Hash_singleton
 static const mrb_mt_entry hash_ext_s_rom_entries[] = {
   MRB_MT_ENTRY(hash_s_create, MRB_OPSYM(aref), MRB_ARGS_ANY())
 };
