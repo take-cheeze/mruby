@@ -440,6 +440,9 @@ static const mrb_mt_entry hash_ext_rom_entries[] = {
   MRB_MT_ENTRY(hash_merge,     MRB_SYM(__merge), MRB_ARGS_ANY())
   MRB_MT_ENTRY(hash_to_proc,   MRB_SYM(to_proc), MRB_ARGS_NONE())
 };
+static const mrb_mt_entry hash_ext_s_rom_entries[] = {
+  MRB_MT_ENTRY(hash_s_create, MRB_OPSYM(aref), MRB_ARGS_ANY())
+};
 #undef MRB_MT_CLASS
 
 void
@@ -449,7 +452,7 @@ mrb_mruby_hash_ext_gem_init(mrb_state *mrb)
 
   h = mrb->hash_class;
   MRB_MT_INIT_ROM(mrb, h, hash_ext_rom_entries);
-  mrb_define_class_method_id(mrb, h, MRB_OPSYM(aref), hash_s_create, MRB_ARGS_ANY());
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(h)), hash_ext_s_rom_entries);
 }
 
 void
