@@ -594,6 +594,15 @@ static const mrb_mt_entry proc_rom_entries[] = {
   MRB_MT_ENTRY(proc_call,          MRB_OPSYM(aref),       MRB_ARGS_ANY()|MRB_ARGS_BLOCK()) /* 15.2.17.4.1 */
   MRB_MT_ENTRY(proc_hash,          MRB_SYM(hash),         MRB_ARGS_NONE())   /* 15.2.17.4.2 */
 };
+static const mrb_mt_entry proc_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_proc_s_new,     MRB_SYM(new),          MRB_ARGS_NONE()|MRB_ARGS_BLOCK())
+};
+#undef MRB_MT_CLASS
+
+#define MRB_MT_CLASS Kernel
+static const mrb_mt_entry proc_kernel_rom_entries[] = {
+  MRB_MT_ENTRY(proc_lambda,        MRB_SYM(lambda),       MRB_ARGS_NONE()|MRB_ARGS_BLOCK() | MRB_MT_PRIVATE) /* 15.3.1.3.27 */
+};
 #undef MRB_MT_CLASS
 
 void
@@ -603,8 +612,8 @@ mrb_init_proc(mrb_state *mrb)
 
   MRB_SET_INSTANCE_TT(pc, MRB_TT_PROC);
   MRB_UNDEF_ALLOCATOR(pc);
-  mrb_define_class_method_id(mrb, pc, MRB_SYM(new), mrb_proc_s_new, MRB_ARGS_NONE()|MRB_ARGS_BLOCK());
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(pc)), proc_s_rom_entries);
   MRB_MT_INIT_ROM(mrb, pc, proc_rom_entries);
 
-  mrb_define_private_method_id(mrb, mrb->kernel_module, MRB_SYM(lambda), proc_lambda, MRB_ARGS_NONE()|MRB_ARGS_BLOCK()); /* 15.3.1.3.27 */
+  MRB_MT_INIT_ROM(mrb, mrb->kernel_module, proc_kernel_rom_entries);
 }
