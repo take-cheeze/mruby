@@ -5,6 +5,7 @@
 */
 
 #include <mruby.h>
+#include <mruby/class.h>
 #include <mruby/proc.h>
 
 /* internal method `__update_hash(oldhash, index, itemhash)` */
@@ -21,9 +22,20 @@ enum_update_hash(mrb_state *mrb, mrb_value self)
   return mrb_int_value(mrb, hash);
 }
 
+/* module_function: a public singleton method and a private instance method */
+#define MRB_MT_CLASS Enumerable
+static const mrb_mt_entry enum_s_rom_entries[] = {
+  MRB_MT_ENTRY(enum_update_hash, MRB_SYM(__update_hash), MRB_ARGS_REQ(3))
+};
+static const mrb_mt_entry enum_rom_entries[] = {
+  MRB_MT_ENTRY(enum_update_hash, MRB_SYM(__update_hash), MRB_ARGS_REQ(3) | MRB_MT_PRIVATE)
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_init_enumerable(mrb_state *mrb)
 {
   struct RClass *enumerable = mrb_define_module_id(mrb, MRB_SYM(Enumerable));  /* 15.3.2 */
-  mrb_define_module_function_id(mrb, enumerable, MRB_SYM(__update_hash), enum_update_hash, MRB_ARGS_REQ(3));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(enumerable)), enum_s_rom_entries);
+  MRB_MT_INIT_ROM(mrb, enumerable, enum_rom_entries);
 }
