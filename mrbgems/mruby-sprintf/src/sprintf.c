@@ -1251,12 +1251,24 @@ mrb_f_sprintf(mrb_state *mrb, mrb_value obj)
   }
 }
 
+/* module_function: public singleton methods, private instance methods */
+#define MRB_MT_CLASS Kernel
+static const mrb_mt_entry sprintf_kernel_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(sprintf), MRB_ARGS_ANY())
+  MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(format),  MRB_ARGS_ANY())
+};
+static const mrb_mt_entry sprintf_kernel_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(sprintf), MRB_ARGS_ANY() | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(mrb_f_sprintf, MRB_SYM(format),  MRB_ARGS_ANY() | MRB_MT_PRIVATE)
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_mruby_sprintf_gem_init(mrb_state *mrb)
 {
   struct RClass *krn = mrb->kernel_module;
-  mrb_define_module_function_id(mrb, krn, MRB_SYM(sprintf), mrb_f_sprintf, MRB_ARGS_ANY());
-  mrb_define_module_function_id(mrb, krn, MRB_SYM(format),  mrb_f_sprintf, MRB_ARGS_ANY());
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(krn)), sprintf_kernel_s_rom_entries);
+  MRB_MT_INIT_ROM(mrb, krn, sprintf_kernel_rom_entries);
   struct RClass *s = mrb->string_class;
   MRB_MT_INIT_ROM(mrb, s, sprintf_string_rom_entries);
 }
