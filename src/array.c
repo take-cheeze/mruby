@@ -2400,6 +2400,12 @@ static const mrb_mt_entry array_rom_entries[] = {
 };
 #undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS Array
+static const mrb_mt_entry array_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_ary_s_create,     MRB_OPSYM(aref),          MRB_ARGS_ANY())                     /* 15.2.12.4.1 */
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_init_array(mrb_state *mrb)
 {
@@ -2408,7 +2414,7 @@ mrb_init_array(mrb_state *mrb)
   mrb->array_class = a = mrb_define_class_id(mrb, MRB_SYM(Array), mrb->object_class);              /* 15.2.12 */
   MRB_SET_INSTANCE_TT(a, MRB_TT_ARRAY);
 
-  mrb_define_class_method_id(mrb, a, MRB_OPSYM(aref),    mrb_ary_s_create,     MRB_ARGS_ANY());    /* 15.2.12.4.1 */
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(a)), array_s_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, a, array_rom_entries);
 }
