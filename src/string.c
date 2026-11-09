@@ -3621,6 +3621,12 @@ static const mrb_mt_entry string_rom_entries[] = {
 };
 #undef MRB_MT_CLASS
 
+#define MRB_MT_CLASS Kernel
+static const mrb_mt_entry string_kernel_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_encoding, MRB_SYM(__ENCODING__), MRB_ARGS_NONE())
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_init_string(mrb_state *mrb)
 {
@@ -3634,5 +3640,5 @@ mrb_init_string(mrb_state *mrb)
 
   MRB_MT_INIT_ROM(mrb, s, string_rom_entries);
 
-  mrb_define_method_id(mrb, mrb->kernel_module, MRB_SYM(__ENCODING__), mrb_encoding, MRB_ARGS_NONE());
+  MRB_MT_INIT_ROM(mrb, mrb->kernel_module, string_kernel_rom_entries);
 }
