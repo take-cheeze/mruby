@@ -198,7 +198,10 @@ mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
   node->tbl = rom;
   node->next = mrb->rom_mt;
   mrb->rom_mt = node;
-  mrb->mt_epoch++;
+  /* like mrb_define_method_raw: a gem's table must not lose to a method
+     cache entry made before it was installed */
+  if (!mrb->bootstrapping) mrb_method_cache_clear(mrb);
+  else mrb->mt_epoch++;
 
   /* push ROM layer */
   mrb_mt_tbl *t = c->mt;
