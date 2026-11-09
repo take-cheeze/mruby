@@ -3675,9 +3675,12 @@ mrb_remove_method(mrb_state *mrb, struct RClass *c0, mrb_sym mid)
   MRB_CLASS_ORIGIN(c);
   mrb_mt_tbl *h = c->mt;
   if (h) {
-    found = mt_del(mrb, h, mid);
+    /* a ROM top layer (a singleton class with only ROM methods) is const:
+       its entry can only be hidden by the tombstone below */
+    mrb_bool rom_top = mt_readonly_p(h) != 0;
+    if (!rom_top) found = mt_del(mrb, h, mid);
     /* insert removed tombstone to block ROM chain lookup */
-    if (h->next && mt_chain_has(h->next, mid)) {
+    if (mt_chain_has(rom_top ? h : h->next, mid)) {
       union mrb_mt_ptr tombstone;
       tombstone.func = NULL;
       found = TRUE;
