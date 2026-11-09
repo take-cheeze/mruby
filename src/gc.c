@@ -1767,6 +1767,19 @@ mrb_objspace_page_slot_size(void)
   return sizeof(RVALUE);
 }
 
+#define MRB_MT_CLASS GC
+static const mrb_mt_entry gc_s_rom_entries[] = {
+  MRB_MT_ENTRY(gc_start,                 MRB_SYM(start),               MRB_ARGS_NONE())
+  MRB_MT_ENTRY(gc_enable,                MRB_SYM(enable),              MRB_ARGS_NONE())
+  MRB_MT_ENTRY(gc_disable,               MRB_SYM(disable),             MRB_ARGS_NONE())
+  MRB_MT_ENTRY(gc_interval_ratio_get,    MRB_SYM(interval_ratio),      MRB_ARGS_NONE())
+  MRB_MT_ENTRY(gc_interval_ratio_set,    MRB_SYM_E(interval_ratio),    MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(gc_step_ratio_get,        MRB_SYM(step_ratio),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(gc_step_ratio_set,        MRB_SYM_E(step_ratio),        MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(gc_generational_mode_set, MRB_SYM_E(generational_mode), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(gc_generational_mode_get, MRB_SYM(generational_mode),   MRB_ARGS_NONE())
+};
+#undef MRB_MT_CLASS
 
 void
 mrb_init_gc(mrb_state *mrb)
@@ -1783,13 +1796,5 @@ mrb_init_gc(mrb_state *mrb)
 
   gc = mrb_define_module_id(mrb, MRB_SYM(GC));
 
-  mrb_define_class_method_id(mrb, gc, MRB_SYM(start), gc_start, MRB_ARGS_NONE());
-  mrb_define_class_method_id(mrb, gc, MRB_SYM(enable), gc_enable, MRB_ARGS_NONE());
-  mrb_define_class_method_id(mrb, gc, MRB_SYM(disable), gc_disable, MRB_ARGS_NONE());
-  mrb_define_class_method_id(mrb, gc, MRB_SYM(interval_ratio), gc_interval_ratio_get, MRB_ARGS_NONE());
-  mrb_define_class_method_id(mrb, gc, MRB_SYM_E(interval_ratio), gc_interval_ratio_set, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, gc, MRB_SYM(step_ratio), gc_step_ratio_get, MRB_ARGS_NONE());
-  mrb_define_class_method_id(mrb, gc, MRB_SYM_E(step_ratio), gc_step_ratio_set, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, gc, MRB_SYM_E(generational_mode), gc_generational_mode_set, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, gc, MRB_SYM(generational_mode), gc_generational_mode_get, MRB_ARGS_NONE());
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(gc)), gc_s_rom_entries);
 }
