@@ -516,3 +516,14 @@ assert('Kernel#send and #public_send to method_missing pass keywords') do
   assert_equal [:nope, [{ k: 2 }], {}, nil], mm.send(:nope, { k: 2 })
 end
 
+
+assert('a visibility change on a ROM method leaves other mrb_states alone') do
+  String.__send__(:private, :upcase)
+  GC.singleton_class.__send__(:private, :step_ratio)
+  begin
+    assert_equal [:public, :public], MetaprogTest.fresh_state_visibility
+  ensure
+    String.__send__(:public, :upcase)
+    GC.singleton_class.__send__(:public, :step_ratio)
+  end
+end

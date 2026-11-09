@@ -1086,3 +1086,28 @@ end
 assert('constant lookup in a method of a class with a prepended module') do
   assert_equal 7, PrependedConstClass.new.get
 end
+
+assert('Module#private, #protected, #public on methods from a ROM table') do
+  # String's methods sit in a read-only table behind its mutable layer
+  s = "a"
+  String.__send__(:private, :upcase)
+  assert_raise(NoMethodError) { s.upcase }
+  assert_equal "A", s.__send__(:upcase)
+  String.__send__(:protected, :upcase)
+  assert_raise(NoMethodError) { s.upcase }
+  String.__send__(:public, :upcase)
+  assert_equal "A", s.upcase
+  assert_equal "B", "b".upcase
+end
+
+assert('visibility change on a singleton class holding only ROM methods') do
+  # GC's singleton class has one read-only table and nothing in front of it
+  sc = class << GC; self; end
+  sc.__send__(:private, :step_ratio)
+  assert_raise(NoMethodError) { GC.step_ratio }
+  assert_kind_of Integer, GC.__send__(:step_ratio)
+  sc.__send__(:protected, :step_ratio)
+  assert_raise(NoMethodError) { GC.step_ratio }
+  sc.__send__(:public, :step_ratio)
+  assert_kind_of Integer, GC.step_ratio
+end
