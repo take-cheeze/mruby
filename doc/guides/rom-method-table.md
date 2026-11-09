@@ -387,27 +387,42 @@ void mrb_mruby_mygem_gem_init(mrb_state *mrb)
 }
 ```
 
+## Class Methods and Module Functions
+
+A class method is an instance method of the class's singleton class, so
+its table is installed there. Singleton methods are public:
+
+```c
+static const mrb_mt_entry time_s_rom_entries[] = {
+  MRB_MT_ENTRY(time_now, MRB_SYM(now), MRB_ARGS_NONE())
+};
+
+MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(tc)), time_s_rom_entries);
+```
+
+A module function (`mrb_define_module_function_id()`) is a public
+singleton method plus a private instance method: one table on the
+module's singleton class, and one with `MRB_MT_PRIVATE` entries on the
+module. Both tables declare the module's `MRB_MT_CLASS`.
+
 ## Methods That Cannot Use ROM Tables
 
 Some methods must remain as `mrb_define_method_id()` calls:
 
-- **Class methods** (`mrb_define_class_method_id()`): ROM tables
-  register instance methods only.
-- **Module functions** (`mrb_define_module_function_id()`): Same
-  reason.
 - **Methods requiring `mrb_state*` at definition time**: For example,
   methods that create frozen RProc objects during init.
 - **Methods on dynamically created classes**: Classes created at
-  init time (not stored in `mrb->xxx_class`) that require
-  `mrb_define_class()` to obtain the class pointer.
-- **Cross-class methods** (methods on a class the gem does not own):
-  Each ROM table adds a 16-byte `mrb_mt_tbl` layer to the target
-  class's chain. For 1-2 methods, this overhead exceeds the savings.
-  Use `mrb_define_method_id()` instead -- cross-class methods share
-  the target class's existing mutable layer.
+  run time (`Struct.new`, `Data.define`) whose methods are defined then.
+- **Aliases** (`mrb_define_alias_id()`): an alias copies the method it
+  finds at the time it runs and records the alias.
 
 These methods are added after `MRB_MT_INIT_ROM()` and go into the
 mutable layer that sits in front of the ROM chain.
+
+A table pushed onto a class whose top layer is mutable goes behind that
+layer, so a method of the same name defined earlier (in C or in Ruby)
+still wins over the table. Convert a definition only when nothing defined
+the name on that class before it.
 
 ## Runtime Behavior
 
