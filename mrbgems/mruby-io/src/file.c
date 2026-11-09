@@ -1175,6 +1175,25 @@ static const mrb_mt_entry file_rom_entries[] = {
   MRB_MT_ENTRY(mrb_file_size,     MRB_SYM(size),  MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_file_truncate, MRB_SYM(truncate), MRB_ARGS_REQ(1))
 };
+static const mrb_mt_entry file_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_file_s_umask,         MRB_SYM(umask),           MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_file_s_unlink,        MRB_SYM(delete),          MRB_ARGS_ANY())
+  MRB_MT_ENTRY(mrb_file_s_unlink,        MRB_SYM(unlink),          MRB_ARGS_ANY())
+  MRB_MT_ENTRY(mrb_file_s_rename,        MRB_SYM(rename),          MRB_ARGS_REQ(2))
+  MRB_MT_ENTRY(mrb_file_s_symlink,       MRB_SYM(symlink),         MRB_ARGS_REQ(2))
+  MRB_MT_ENTRY(mrb_file_s_chmod,         MRB_SYM(chmod),           MRB_ARGS_REQ(1) | MRB_ARGS_REST())
+  MRB_MT_ENTRY(mrb_file_s_readlink,      MRB_SYM(readlink),        MRB_ARGS_REQ(1))
+
+  MRB_MT_ENTRY(mrb_file_dirname,         MRB_SYM(dirname),         MRB_ARGS_ARG(1,1))
+  MRB_MT_ENTRY(mrb_file_basename,        MRB_SYM(basename),        MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_file_extname,         MRB_SYM(extname),         MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_file_join,            MRB_SYM(join),            MRB_ARGS_ANY())
+  MRB_MT_ENTRY(mrb_file_path,            MRB_SYM(path),            MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_file_realpath,        MRB_SYM(realpath),        MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_file_absolute_path,   MRB_SYM(absolute_path),   MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_file_absolute_path_p, MRB_SYM_Q(absolute_path), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_file_expand_path,     MRB_SYM(expand_path),     MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+};
 #undef MRB_MT_CLASS
 
 void
@@ -1183,23 +1202,7 @@ mrb_init_file(mrb_state *mrb)
   struct RClass *io   = mrb_class_get_id(mrb, MRB_SYM(IO));
   struct RClass *file = mrb_define_class_id(mrb, MRB_SYM(File), io);
   MRB_SET_INSTANCE_TT(file, MRB_TT_CDATA);
-  mrb_define_class_method_id(mrb, file, MRB_SYM(umask),  mrb_file_s_umask, MRB_ARGS_OPT(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(delete), mrb_file_s_unlink, MRB_ARGS_ANY());
-  mrb_define_class_method_id(mrb, file, MRB_SYM(unlink), mrb_file_s_unlink, MRB_ARGS_ANY());
-  mrb_define_class_method_id(mrb, file, MRB_SYM(rename), mrb_file_s_rename, MRB_ARGS_REQ(2));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(symlink), mrb_file_s_symlink, MRB_ARGS_REQ(2));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(chmod), mrb_file_s_chmod, MRB_ARGS_REQ(1) | MRB_ARGS_REST());
-  mrb_define_class_method_id(mrb, file, MRB_SYM(readlink), mrb_file_s_readlink, MRB_ARGS_REQ(1));
-
-  mrb_define_class_method_id(mrb, file, MRB_SYM(dirname),   mrb_file_dirname,    MRB_ARGS_ARG(1,1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(basename),  mrb_file_basename,   MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(extname),   mrb_file_extname,    MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(join),      mrb_file_join,       MRB_ARGS_ANY());
-  mrb_define_class_method_id(mrb, file, MRB_SYM(path),      mrb_file_path,       MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(realpath),  mrb_file_realpath,   MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(absolute_path), mrb_file_absolute_path, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(absolute_path), mrb_file_absolute_path_p, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(expand_path),  mrb_file_expand_path, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(file)), file_s_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, file, file_rom_entries);
 
