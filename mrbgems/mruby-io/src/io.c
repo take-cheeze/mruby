@@ -2349,6 +2349,16 @@ static const mrb_mt_entry io_rom_entries[] = {
   MRB_MT_ENTRY(io_getbyte,           MRB_SYM(getbyte),       MRB_ARGS_NONE())
   MRB_MT_ENTRY(io_readbyte,          MRB_SYM(readbyte),      MRB_ARGS_NONE())
 };
+static const mrb_mt_entry io_s_rom_entries[] = {
+  MRB_MT_ENTRY(io_s_popen,    MRB_SYM(_popen),    MRB_ARGS_ARG(1,2))
+  MRB_MT_ENTRY(io_s_sysclose, MRB_SYM(_sysclose), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(io_s_for_fd,   MRB_SYM(for_fd),    MRB_ARGS_ARG(1,2))
+  MRB_MT_ENTRY(io_s_select,   MRB_SYM(select),    MRB_ARGS_ARG(1,3))
+  MRB_MT_ENTRY(io_s_sysopen,  MRB_SYM(sysopen),   MRB_ARGS_ARG(1,2))
+#if !defined(_WIN32) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+  MRB_MT_ENTRY(io_s_pipe,     MRB_SYM(_pipe),     MRB_ARGS_NONE())
+#endif
+};
 #undef MRB_MT_CLASS
 
 void
@@ -2358,14 +2368,7 @@ mrb_init_io(mrb_state *mrb)
   MRB_SET_INSTANCE_TT(io, MRB_TT_CDATA);
 
   mrb_include_module(mrb, io, mrb_module_get_id(mrb, MRB_SYM(Enumerable))); /* 15.2.20.3 */
-  mrb_define_class_method_id(mrb, io, MRB_SYM(_popen),  io_s_popen,   MRB_ARGS_ARG(1,2));
-  mrb_define_class_method_id(mrb, io, MRB_SYM(_sysclose),  io_s_sysclose, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, io, MRB_SYM(for_fd),  io_s_for_fd,   MRB_ARGS_ARG(1,2));
-  mrb_define_class_method_id(mrb, io, MRB_SYM(select),  io_s_select,  MRB_ARGS_ARG(1,3));
-  mrb_define_class_method_id(mrb, io, MRB_SYM(sysopen), io_s_sysopen, MRB_ARGS_ARG(1,2));
-#if !defined(_WIN32) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-  mrb_define_class_method_id(mrb, io, MRB_SYM(_pipe), io_s_pipe, MRB_ARGS_NONE());
-#endif
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(io)), io_s_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, io, io_rom_entries);
 

@@ -369,6 +369,37 @@ mrb_filetest_s_size_p(mrb_state *mrb, mrb_value klass)
   return mrb_int64_value(mrb, st.st_size);
 }
 
+#define MRB_MT_CLASS FileTest
+static const mrb_mt_entry filetest_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_filetest_s_directory_p, MRB_SYM_Q(directory), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_exist_p,     MRB_SYM_Q(exist),     MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_exist_p,     MRB_SYM_Q(exists),    MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_file_p,      MRB_SYM_Q(file),      MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_pipe_p,      MRB_SYM_Q(pipe),      MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_size,        MRB_SYM(size),        MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_size_p,      MRB_SYM_Q(size),      MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_socket_p,    MRB_SYM_Q(socket),    MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_symlink_p,   MRB_SYM_Q(symlink),   MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_zero_p,      MRB_SYM_Q(zero),      MRB_ARGS_REQ(1))
+};
+#undef MRB_MT_CLASS
+
+/* the same methods on File */
+#define MRB_MT_CLASS File
+static const mrb_mt_entry file_test_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_filetest_s_directory_p, MRB_SYM_Q(directory), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_exist_p,     MRB_SYM_Q(exist),     MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_exist_p,     MRB_SYM_Q(exists),    MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_file_p,      MRB_SYM_Q(file),      MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_pipe_p,      MRB_SYM_Q(pipe),      MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_size,        MRB_SYM(size),        MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_size_p,      MRB_SYM_Q(size),      MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_socket_p,    MRB_SYM_Q(socket),    MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_symlink_p,   MRB_SYM_Q(symlink),   MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_filetest_s_zero_p,      MRB_SYM_Q(zero),      MRB_ARGS_REQ(1))
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_init_file_test(mrb_state *mrb)
 {
@@ -376,27 +407,9 @@ mrb_init_file_test(mrb_state *mrb)
 
   f = mrb_define_module_id(mrb, MRB_SYM(FileTest));
 
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(directory), mrb_filetest_s_directory_p, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(exist),     mrb_filetest_s_exist_p,     MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(exists),    mrb_filetest_s_exist_p,     MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(file),      mrb_filetest_s_file_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(pipe),      mrb_filetest_s_pipe_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM(size),        mrb_filetest_s_size,        MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(size),      mrb_filetest_s_size_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(socket),    mrb_filetest_s_socket_p,    MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(symlink),   mrb_filetest_s_symlink_p,   MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, f, MRB_SYM_Q(zero),      mrb_filetest_s_zero_p,      MRB_ARGS_REQ(1));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(f)), filetest_s_rom_entries);
 
   // Also register the same methods on File class
   struct RClass *file = mrb_class_get_id(mrb, MRB_SYM(File));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(directory), mrb_filetest_s_directory_p, MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(exist),     mrb_filetest_s_exist_p,     MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(exists),    mrb_filetest_s_exist_p,     MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(file),      mrb_filetest_s_file_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(pipe),      mrb_filetest_s_pipe_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM(size),        mrb_filetest_s_size,        MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(size),      mrb_filetest_s_size_p,      MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(socket),    mrb_filetest_s_socket_p,    MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(symlink),   mrb_filetest_s_symlink_p,   MRB_ARGS_REQ(1));
-  mrb_define_class_method_id(mrb, file, MRB_SYM_Q(zero),      mrb_filetest_s_zero_p,      MRB_ARGS_REQ(1));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(file)), file_test_s_rom_entries);
 }
