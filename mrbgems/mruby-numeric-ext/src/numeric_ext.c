@@ -509,7 +509,18 @@ static const mrb_mt_entry integer_ext_rom_entries[] = {
   MRB_MT_ENTRY(int_gcd,        MRB_SYM(gcd), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(int_lcm,        MRB_SYM(lcm), MRB_ARGS_REQ(1))
 };
+static const mrb_mt_entry integer_ext_s_rom_entries[] = {
+  MRB_MT_ENTRY(int_sqrt,       MRB_SYM(sqrt), MRB_ARGS_REQ(1))
+};
 #undef MRB_MT_CLASS
+
+#ifndef MRB_NO_FLOAT
+#define MRB_MT_CLASS Float
+static const mrb_mt_entry float_ext_rom_entries[] = {
+  MRB_MT_ENTRY(flo_remainder,  MRB_SYM(remainder), MRB_ARGS_REQ(1))
+};
+#undef MRB_MT_CLASS
+#endif
 
 
 void
@@ -519,13 +530,13 @@ mrb_mruby_numeric_ext_gem_init(mrb_state* mrb)
 
   mrb_define_alias_id(mrb, ic, MRB_SYM(modulo), MRB_OPSYM(mod));
   MRB_MT_INIT_ROM(mrb, ic, integer_ext_rom_entries);
-  mrb_define_class_method_id(mrb, ic, MRB_SYM(sqrt), int_sqrt, MRB_ARGS_REQ(1));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(ic)), integer_ext_s_rom_entries);
 
 #ifndef MRB_NO_FLOAT
   struct RClass *fc = mrb->float_class;
 
   mrb_define_alias_id(mrb, fc, MRB_SYM(modulo), MRB_OPSYM(mod));
-  mrb_define_method_id(mrb, fc, MRB_SYM(remainder), flo_remainder, MRB_ARGS_REQ(1));
+  MRB_MT_INIT_ROM(mrb, fc, float_ext_rom_entries);
 
   mrb_define_const_id(mrb, fc, MRB_SYM(RADIX),        mrb_fixnum_value(MRB_FLT_RADIX));
   mrb_define_const_id(mrb, fc, MRB_SYM(MANT_DIG),     mrb_fixnum_value(MRB_FLT_MANT_DIG));
