@@ -199,3 +199,13 @@ assert('Math.frexp') do
   assert_float_and_int([0.5,  2], Math.frexp(2.0))
   assert_float_and_int([0.75, 2], Math.frexp(3.0))
 end
+
+assert('Math module functions: public on Math, private on an includer') do
+  assert_true Math.respond_to?(:sqrt)
+  o = Class.new { include Math }.new
+  assert_true o.respond_to?(:sqrt, true)
+  assert_equal 3.0, o.__send__(:sqrt, 9.0)
+  assert_raise(NoMethodError) { o.sqrt(9.0) }
+  assert_raise(ArgumentError) { Math.sqrt }
+  assert_raise(ArgumentError) { Math.log(1.0, 2.0, 3.0) }
+end
