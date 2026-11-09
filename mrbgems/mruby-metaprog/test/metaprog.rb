@@ -517,6 +517,25 @@ assert('Kernel#send and #public_send to method_missing pass keywords') do
 end
 
 
+assert('ROM singleton and module_function methods keep their visibility') do
+  assert_include GC.singleton_methods, :start
+  assert_include Kernel.singleton_methods, :raise
+  assert_include Kernel.private_instance_methods, :lambda
+  assert_include Enumerable.singleton_methods, :__update_hash
+  assert_include Enumerable.private_instance_methods, :__update_hash
+  assert_include Module.singleton_methods, :nesting
+  assert_raise(ArgumentError) { GC.start(1) }
+end
+
+assert('Module#remove_method on a singleton class holding only ROM methods') do
+  # GC's singleton class has one read-only table and nothing else
+  sc = GC.singleton_class
+  assert_true GC.respond_to?(:interval_ratio)
+  sc.__send__(:remove_method, :interval_ratio)
+  assert_false GC.respond_to?(:interval_ratio)
+  assert_true GC.respond_to?(:step_ratio)
+end
+
 assert('a visibility change on a ROM method leaves other mrb_states alone') do
   String.__send__(:private, :upcase)
   GC.singleton_class.__send__(:private, :step_ratio)
