@@ -4448,6 +4448,9 @@ static const mrb_mt_entry cls_rom_entries[] = {
   MRB_MT_ENTRY(mrb_class_initialize, MRB_SYM(initialize), MRB_ARGS_OPT(1) | MRB_MT_PRIVATE)   /* 15.2.3.3.1 */
   MRB_MT_ENTRY(mrb_class_superclass, MRB_SYM(superclass), MRB_ARGS_NONE())                    /* 15.2.3.3.4 */
 };
+static const mrb_mt_entry cls_s_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_class_new_class,      MRB_SYM(new),            MRB_ARGS_OPT(1)|MRB_ARGS_BLOCK())
+};
 #undef MRB_MT_CLASS
 
 #define MRB_MT_CLASS Module
@@ -4489,6 +4492,16 @@ static const mrb_mt_entry mod_rom_entries[] = {
 };
 #undef MRB_MT_CLASS
 
+/* the main object's singleton methods */
+static const mrb_mt_entry top_self_rom_entries[] = {
+  MRB_MT_ENTRY(inspect_main,       MRB_SYM(inspect),       MRB_ARGS_NONE())
+  MRB_MT_ENTRY(inspect_main,       MRB_SYM(to_s),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(top_define_method,  MRB_SYM(define_method), MRB_ARGS_ARG(1,1))
+  MRB_MT_ENTRY(top_public,         MRB_SYM(public),        MRB_ARGS_ANY())
+  MRB_MT_ENTRY(top_private,        MRB_SYM(private),       MRB_ARGS_ANY())
+  MRB_MT_ENTRY(top_protected,      MRB_SYM(protected),     MRB_ARGS_ANY())
+};
+
 void
 mrb_init_class(mrb_state *mrb)
 {
@@ -4524,7 +4537,7 @@ mrb_init_class(mrb_state *mrb)
 
   MRB_MT_INIT_ROM(mrb, bob, bob_rom_entries);
 
-  mrb_define_class_method_id(mrb, cls, MRB_SYM(new),                       mrb_class_new_class,      MRB_ARGS_OPT(1)|MRB_ARGS_BLOCK());
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(cls)), cls_s_rom_entries);
   MRB_MT_INIT_ROM(mrb, cls, cls_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, mod, mod_rom_entries);
@@ -4533,10 +4546,5 @@ mrb_init_class(mrb_state *mrb)
   mrb_undef_method_id(mrb, cls, MRB_SYM(module_function));
 
   mrb->top_self = MRB_OBJ_ALLOC(mrb, MRB_TT_OBJECT, mrb->object_class);
-  mrb_define_singleton_method_id(mrb, mrb->top_self, MRB_SYM(inspect), inspect_main, MRB_ARGS_NONE());
-  mrb_define_singleton_method_id(mrb, mrb->top_self, MRB_SYM(to_s), inspect_main, MRB_ARGS_NONE());
-  mrb_define_singleton_method_id(mrb, mrb->top_self, MRB_SYM(define_method), top_define_method, MRB_ARGS_ARG(1,1));
-  mrb_define_singleton_method_id(mrb, mrb->top_self, MRB_SYM(public), top_public, MRB_ARGS_ANY());
-  mrb_define_singleton_method_id(mrb, mrb->top_self, MRB_SYM(private), top_private, MRB_ARGS_ANY());
-  mrb_define_singleton_method_id(mrb, mrb->top_self, MRB_SYM(protected), top_protected, MRB_ARGS_ANY());
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(mrb->top_self)), top_self_rom_entries);
 }
