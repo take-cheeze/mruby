@@ -11,6 +11,7 @@
 #endif
 
 #include <mruby/array.h>
+#include <mruby/class.h>
 
 static void
 domain_error(mrb_state *mrb, const char *func)
@@ -691,6 +692,80 @@ math_erfc(mrb_state *mrb, mrb_value obj)
   return mrb_float_value(mrb, x);
 }
 
+/* module_function: public singleton methods, private instance methods */
+#define MRB_MT_CLASS Math
+static const mrb_mt_entry math_s_rom_entries[] = {
+  MRB_MT_ENTRY(math_sin,   MRB_SYM(sin),  MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_cos,   MRB_SYM(cos),  MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_tan,   MRB_SYM(tan),  MRB_ARGS_REQ(1))
+
+  MRB_MT_ENTRY(math_asin,  MRB_SYM(asin), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_acos,  MRB_SYM(acos), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_atan,  MRB_SYM(atan), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_atan2, MRB_SYM(atan2), MRB_ARGS_REQ(2))
+
+  MRB_MT_ENTRY(math_sinh,  MRB_SYM(sinh), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_cosh,  MRB_SYM(cosh), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_tanh,  MRB_SYM(tanh), MRB_ARGS_REQ(1))
+
+  MRB_MT_ENTRY(math_asinh, MRB_SYM(asinh), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_acosh, MRB_SYM(acosh), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_atanh, MRB_SYM(atanh), MRB_ARGS_REQ(1))
+
+  MRB_MT_ENTRY(math_exp,   MRB_SYM(exp),  MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_expm1, MRB_SYM(expm1), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_log1p, MRB_SYM(log1p), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_log,   MRB_SYM(log),  MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(math_log2,  MRB_SYM(log2), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_log10, MRB_SYM(log10), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_sqrt,  MRB_SYM(sqrt), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_cbrt,  MRB_SYM(cbrt), MRB_ARGS_REQ(1))
+
+  MRB_MT_ENTRY(math_frexp, MRB_SYM(frexp), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_ldexp, MRB_SYM(ldexp), MRB_ARGS_REQ(2))
+
+  MRB_MT_ENTRY(math_hypot, MRB_SYM(hypot), MRB_ARGS_REQ(2))
+
+  MRB_MT_ENTRY(math_erf,   MRB_SYM(erf),  MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(math_erfc,  MRB_SYM(erfc), MRB_ARGS_REQ(1))
+};
+static const mrb_mt_entry math_rom_entries[] = {
+  MRB_MT_ENTRY(math_sin,   MRB_SYM(sin),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_cos,   MRB_SYM(cos),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_tan,   MRB_SYM(tan),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_asin,  MRB_SYM(asin), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_acos,  MRB_SYM(acos), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_atan,  MRB_SYM(atan), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_atan2, MRB_SYM(atan2), MRB_ARGS_REQ(2) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_sinh,  MRB_SYM(sinh), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_cosh,  MRB_SYM(cosh), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_tanh,  MRB_SYM(tanh), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_asinh, MRB_SYM(asinh), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_acosh, MRB_SYM(acosh), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_atanh, MRB_SYM(atanh), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_exp,   MRB_SYM(exp),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_expm1, MRB_SYM(expm1), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_log1p, MRB_SYM(log1p), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_log,   MRB_SYM(log),  MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_log2,  MRB_SYM(log2), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_log10, MRB_SYM(log10), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_sqrt,  MRB_SYM(sqrt), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_cbrt,  MRB_SYM(cbrt), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_frexp, MRB_SYM(frexp), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_ldexp, MRB_SYM(ldexp), MRB_ARGS_REQ(2) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_hypot, MRB_SYM(hypot), MRB_ARGS_REQ(2) | MRB_MT_PRIVATE)
+
+  MRB_MT_ENTRY(math_erf,   MRB_SYM(erf),  MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(math_erfc,  MRB_SYM(erfc), MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
+};
+#undef MRB_MT_CLASS
+
 /* ------------------------------------------------------------------------*/
 void
 mrb_mruby_math_gem_init(mrb_state* mrb)
@@ -711,39 +786,8 @@ mrb_mruby_math_gem_init(mrb_state* mrb)
   mrb_define_const_id(mrb, math, MRB_SYM(E), mrb_float_value(mrb, exp(1.0)));
 #endif
 
-  mrb_define_module_function_id(mrb, math, MRB_SYM(sin), math_sin, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(cos), math_cos, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(tan), math_tan, MRB_ARGS_REQ(1));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(asin), math_asin, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(acos), math_acos, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(atan), math_atan, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(atan2), math_atan2, MRB_ARGS_REQ(2));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(sinh), math_sinh, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(cosh), math_cosh, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(tanh), math_tanh, MRB_ARGS_REQ(1));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(asinh), math_asinh, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(acosh), math_acosh, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(atanh), math_atanh, MRB_ARGS_REQ(1));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(exp), math_exp, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(expm1), math_expm1, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(log1p), math_log1p, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(log), math_log, MRB_ARGS_REQ(1)|MRB_ARGS_OPT(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(log2), math_log2, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(log10), math_log10, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(sqrt), math_sqrt, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(cbrt), math_cbrt, MRB_ARGS_REQ(1));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(frexp), math_frexp, MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(ldexp), math_ldexp, MRB_ARGS_REQ(2));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(hypot), math_hypot, MRB_ARGS_REQ(2));
-
-  mrb_define_module_function_id(mrb, math, MRB_SYM(erf),  math_erf,  MRB_ARGS_REQ(1));
-  mrb_define_module_function_id(mrb, math, MRB_SYM(erfc), math_erfc, MRB_ARGS_REQ(1));
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(math)), math_s_rom_entries);
+  MRB_MT_INIT_ROM(mrb, math, math_rom_entries);
 }
 
 void
