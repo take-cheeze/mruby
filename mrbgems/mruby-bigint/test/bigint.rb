@@ -671,4 +671,3 @@ assert('Bigint Float#round, #floor and #ceil with a negative ndigits') do
   assert_equal 11 * 10 ** 299, 1e300.ceil(-299)
   assert_equal 10 ** 300, 1e300.truncate(-299)
 end
-

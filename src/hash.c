@@ -14,6 +14,11 @@
 #include <mruby/proc.h>
 #include <mruby/internal.h>
 
+MRB_BEGIN_DECL
+mrb_value mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_method_t *m, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv, mrb_value blk);
+MRB_END_DECL
+
 
 /*
  * === Glossary
@@ -395,12 +400,20 @@ mrb_obj_hash_code(mrb_state *mrb, mrb_value key)
     break;
 #endif
   default:
-    /* Kernel#hash takes no argument and raises nothing: run it without a frame */
-    if (mrb_method_cfunc_memo(mrb, key, MRB_SYM(hash), MRB_MEMO_HASH) == mrb_obj_hash) {
-      hash_code_obj = mrb_obj_hash(mrb, key);
-    }
-    else {
-      hash_code_obj = mrb_funcall_argv(mrb, key, MRB_SYM(hash), 0, NULL);
+    {
+      /* Kernel#hash takes no argument and raises nothing: run it without a frame. Any other `hash` runs as the
+         memo found it, in the frame mrb_funcall_argv would push; none found is the send (method_missing). */
+      const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, key, MRB_SYM(hash), MRB_MEMO_HASH);
+      if (memo->f == mrb_obj_hash) {
+        hash_code_obj = mrb_obj_hash(mrb, key);
+      }
+      else if (MRB_METHOD_UNDEF_P(memo->m)) {
+        hash_code_obj = mrb_funcall_argv(mrb, key, MRB_SYM(hash), 0, NULL);
+      }
+      else {
+        mrb_method_t m = memo->m;
+        hash_code_obj = mrb_funcall_with_method(mrb, key, MRB_SYM(hash), &m, memo->owner, 0, NULL, mrb_nil_value());
+      }
     }
     hash_code = U32(tt) ^ U32(mrb_integer(hash_code_obj));
     break;
@@ -436,14 +449,7 @@ struct key_eql_pair {
 static mrb_func_t
 key_eql_cfunc(mrb_state *mrb, mrb_value v)
 {
-  struct RClass *c = mrb_class(mrb, v);
-  mrb_method_t m = mrb_method_search_vm(mrb, &c, MRB_SYM_Q(eql));
-
-  if (MRB_METHOD_UNDEF_P(m)) return NULL;
-  if (MRB_METHOD_FUNC_P(m)) return MRB_METHOD_FUNC(m);
-  const struct RProc *p = MRB_METHOD_PROC(m);
-  if (MRB_PROC_CFUNC_P(p)) return MRB_PROC_CFUNC(p);
-  return NULL;
+  return mrb_method_cfunc_memo(mrb, v, MRB_SYM_Q(eql), MRB_MEMO_BY_TYPE(MRB_MEMO_KEY_EQL, v));
 }
 
 static int ary_key_eql(mrb_state *mrb, mrb_value a, mrb_value b,
@@ -1594,11 +1600,14 @@ mrb_hash_get(mrb_state *mrb, mrb_value hash, mrb_value key)
   }
 
   mid = MRB_SYM(default);
-  if (mrb_func_basic_p(mrb, hash, mid, mrb_hash_default)) {
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, hash, mid, MRB_MEMO_DEFAULT);
+  if (memo->f == mrb_hash_default) {
     return hash_default(mrb, hash, key);
   }
   /* xxx mrb_funcall_tailcall(mrb, hash, "default", 1, key); */
-  return mrb_funcall_argv(mrb, hash, mid, 1, &key);
+  if (MRB_METHOD_UNDEF_P(memo->m)) return mrb_funcall_argv(mrb, hash, mid, 1, &key);
+  mrb_method_t m = memo->m;
+  return mrb_funcall_with_method(mrb, hash, mid, &m, memo->owner, 1, &key, mrb_nil_value());
 }
 
 /**
@@ -2485,23 +2494,21 @@ mrb_hash_rassoc(mrb_state *mrb, mrb_value hash)
 }
 
 /* 15.2.13.4.1 */
-static mrb_value
-mrb_hash_equal(mrb_state *mrb, mrb_value hash)
+static mrb_bool
+hash_equal_chain(mrb_state *mrb, mrb_value hash, mrb_value hash2, const struct mrb_eq_pair *up, mrb_bool frame_guard)
 {
-  mrb_value hash2 = mrb_get_arg1(mrb);
-
-  if (mrb_obj_equal(mrb, hash, hash2)) return mrb_true_value();
+  if (mrb_obj_equal(mrb, hash, hash2)) return TRUE;
   if (!mrb_hash_p(hash2)) {
-    return mrb_false_value();
+    return FALSE;
   }
   if (mrb_hash_size(mrb, hash) != mrb_hash_size(mrb, hash2)) {
-    return mrb_false_value();
+    return FALSE;
   }
 
   /* Check for recursion */
-  if (MRB_RECURSIVE_BINARY_FUNC_P(mrb, MRB_OPSYM(eq), hash, hash2)) {
-    return mrb_false_value();
-  }
+  if (mrb_eq_chain_p(mrb, up, hash, hash2)) return FALSE;
+  if (frame_guard && MRB_RECURSIVE_BINARY_FUNC_P(mrb, MRB_OPSYM(eq), hash, hash2)) return FALSE;
+  const struct mrb_eq_pair here = { hash, hash2, up };
 
   struct RHash *h1 = mrb_hash_ptr(hash);
   struct RHash *h2 = mrb_hash_ptr(hash2);
@@ -2515,18 +2522,30 @@ mrb_hash_equal(mrb_state *mrb, mrb_value hash)
       found = h_get(mrb, h2, stored, &val2);
     }
     if (!found) {
-      return mrb_false_value();
+      return FALSE;
     }
     /* the lookup's eql? can vacate this slot of h1 without moving its size */
     entry_check_vacated(mrb, entry, stored);
     H_CHECK_MODIFIED(mrb, h1) {
-      if (!mrb_equal(mrb, entry->val, val2)) {
-        return mrb_false_value();
+      if (!mrb_equal_chain(mrb, entry->val, val2, &here)) {
+        return FALSE;
       }
     }
   }
 
-  return mrb_true_value();
+  return TRUE;
+}
+
+mrb_bool
+mrb_hash_equal_chain(mrb_state *mrb, mrb_value hash, mrb_value hash2, const struct mrb_eq_pair *up)
+{
+  return hash_equal_chain(mrb, hash, hash2, up, FALSE);
+}
+
+mrb_value
+mrb_hash_equal_m(mrb_state *mrb, mrb_value hash)
+{
+  return mrb_bool_value(hash_equal_chain(mrb, hash, mrb_get_arg1(mrb), NULL, TRUE));
 }
 
 /*
@@ -2583,7 +2602,7 @@ mrb_hash_eql(mrb_state *mrb, mrb_value hash)
 /* ---------------------------*/
 #define MRB_MT_CLASS Hash
 static const mrb_mt_entry hash_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_hash_equal,            MRB_OPSYM(eq),            MRB_ARGS_REQ(1))                                     /* 15.2.13.4.1  */
+  MRB_MT_ENTRY(mrb_hash_equal_m,          MRB_OPSYM(eq),            MRB_ARGS_REQ(1))                                     /* 15.2.13.4.1  */
   MRB_MT_ENTRY(mrb_hash_aget,             MRB_OPSYM(aref),          MRB_ARGS_REQ(1))                                     /* 15.2.13.4.2  */
   MRB_MT_ENTRY(mrb_hash_aset,             MRB_OPSYM(aset),          MRB_ARGS_REQ(2))                                     /* 15.2.13.4.3  */
   MRB_MT_ENTRY(mrb_hash_clear,            MRB_SYM(clear),           MRB_ARGS_NONE())                                     /* 15.2.13.4.4  */

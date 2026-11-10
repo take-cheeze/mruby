@@ -2018,26 +2018,39 @@ ary_eq(mrb_state *mrb, mrb_value ary1, mrb_value ary2)
  *  Object.==) the corresponding element in the other array.
  *
  */
-static mrb_value
-mrb_ary_eq(mrb_state *mrb, mrb_value ary1)
+/* `up` is the chain of pairs being compared above this call, on the C stack (see mrb_eq_chain_p); frame_guard is
+ * set when a frame was pushed for this == (a send), whose caller may be a frame-pushing == above. */
+static mrb_bool
+ary_eq_chain(mrb_state *mrb, mrb_value ary1, mrb_value ary2, const struct mrb_eq_pair *up, mrb_bool frame_guard)
 {
-  mrb_value ary2 = mrb_get_arg1(mrb);
   mrb_int n = ary_eq(mrb, ary1, ary2);
 
-  if (n == 1) return mrb_true_value();
-  if (n == 0) return mrb_false_value();
+  if (n == 1) return TRUE;
+  if (n == 0) return FALSE;
 
   /* Check for recursion */
-  if (MRB_RECURSIVE_BINARY_FUNC_P(mrb, MRB_OPSYM(eq), ary1, ary2)) {
-    return mrb_false_value();
-  }
+  if (mrb_eq_chain_p(mrb, up, ary1, ary2)) return FALSE;
+  if (frame_guard && MRB_RECURSIVE_BINARY_FUNC_P(mrb, MRB_OPSYM(eq), ary1, ary2)) return FALSE;
 
+  const struct mrb_eq_pair here = { ary1, ary2, up };
   int ai = mrb_gc_arena_save(mrb);
   for (mrb_int i=0; i<RARRAY_LEN(ary1); i++) {
-    if (!mrb_eq_send(mrb, mrb_ary_entry(ary1, i), mrb_ary_entry(ary2, i))) return mrb_false_value();
+    if (!mrb_eq_send_chain(mrb, mrb_ary_entry(ary1, i), mrb_ary_entry(ary2, i), &here)) return FALSE;
     mrb_gc_arena_restore(mrb, ai);
   }
-  return mrb_true_value();
+  return TRUE;
+}
+
+mrb_bool
+mrb_ary_eq_chain(mrb_state *mrb, mrb_value ary1, mrb_value ary2, const struct mrb_eq_pair *up)
+{
+  return ary_eq_chain(mrb, ary1, ary2, up, FALSE);
+}
+
+mrb_value
+mrb_ary_eq_m(mrb_state *mrb, mrb_value ary1)
+{
+  return mrb_bool_value(ary_eq_chain(mrb, ary1, mrb_get_arg1(mrb), NULL, TRUE));
 }
 
 /*
@@ -2372,7 +2385,7 @@ static const mrb_mt_entry array_rom_entries[] = {
   MRB_MT_ENTRY(mrb_ary_delete,       MRB_SYM(delete),          MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_ary_delete_at,    MRB_SYM(delete_at),       MRB_ARGS_REQ(1))                    /* 15.2.12.5.9  */
   MRB_MT_ENTRY(mrb_ary_empty_p,      MRB_SYM_Q(empty),         MRB_ARGS_NONE())                    /* 15.2.12.5.12 */
-  MRB_MT_ENTRY(mrb_ary_eq,           MRB_OPSYM(eq),            MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_ary_eq_m,         MRB_OPSYM(eq),            MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_ary_eql,          MRB_SYM_Q(eql),           MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_ary_first,        MRB_SYM(first),           MRB_ARGS_OPT(1))                    /* 15.2.12.5.13 */
   MRB_MT_ENTRY(mrb_ary_index_m,      MRB_SYM(index),           MRB_ARGS_OPT(1))                    /* 15.2.12.5.14 */

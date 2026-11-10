@@ -624,6 +624,78 @@ static void mc_clear_by_id(mrb_state *mrb, mrb_sym mid);
 #define mc_clear_by_id(mrb,mid) ((void)(mrb)->mt_epoch++)
 #endif
 
+/* The hook defaults are no-op ROM entries. A build that leaves one out (MRB_MT_EXCLUDE_HEADER) answers "not found"
+   with "nothing to run"; elsewhere a missing or undef'd hook still reaches the funcall and raises. */
+#ifdef MRB_MT_EXCLUDE_Class_SYM__inherited
+# define HOOK_GONE_inherited TRUE
+#else
+# define HOOK_GONE_inherited FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_Module_SYM__const_added
+# define HOOK_GONE_const_added TRUE
+#else
+# define HOOK_GONE_const_added FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_Module_SYM__extended
+# define HOOK_GONE_extended TRUE
+#else
+# define HOOK_GONE_extended FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_Module_SYM__prepended
+# define HOOK_GONE_prepended TRUE
+#else
+# define HOOK_GONE_prepended FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_Module_SYM__method_added
+# define HOOK_GONE_method_added TRUE
+#else
+# define HOOK_GONE_method_added FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_Module_SYM__method_removed
+# define HOOK_GONE_method_removed TRUE
+#else
+# define HOOK_GONE_method_removed FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_Module_SYM__method_undefined
+# define HOOK_GONE_method_undefined TRUE
+#else
+# define HOOK_GONE_method_undefined FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_BasicObject_SYM__singleton_method_added
+# define HOOK_GONE_singleton_method_added TRUE
+#else
+# define HOOK_GONE_singleton_method_added FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_BasicObject_SYM__singleton_method_removed
+# define HOOK_GONE_singleton_method_removed TRUE
+#else
+# define HOOK_GONE_singleton_method_removed FALSE
+#endif
+#ifdef MRB_MT_EXCLUDE_BasicObject_SYM__singleton_method_undefined
+# define HOOK_GONE_singleton_method_undefined TRUE
+#else
+# define HOOK_GONE_singleton_method_undefined FALSE
+#endif
+
+static void
+hook_call(mrb_state *mrb, mrb_value obj, mrb_sym mid, mrb_bool gone, mrb_value arg)
+{
+  struct RClass *c = mrb_class(mrb, obj);
+  mrb_method_t m = mrb_method_search_vm(mrb, &c, mid);
+
+  if (MRB_METHOD_UNDEF_P(m)) {
+    if (gone) return;
+  }
+  else if (MRB_METHOD_FUNC_P(m)) {
+    if (MRB_METHOD_FUNC(m) == mrb_do_nothing) return;
+  }
+  else {
+    const struct RProc *p = MRB_METHOD_PROC(m);
+    if (MRB_PROC_CFUNC_P(p) && MRB_PROC_CFUNC(p) == mrb_do_nothing) return;
+  }
+  mrb_funcall_argv(mrb, obj, mid, 1, &arg);
+}
+
 static void
 mrb_class_inherited(mrb_state *mrb, struct RClass *super, struct RClass *klass)
 {
@@ -632,13 +704,7 @@ mrb_class_inherited(mrb_state *mrb, struct RClass *super, struct RClass *klass)
     super = mrb->object_class;
   super->flags |= MRB_FL_CLASS_IS_INHERITED;
 
-  mrb_value s = mrb_obj_value(super);
-  mrb_sym mid = MRB_SYM(inherited);
-
-  if (!mrb_func_basic_p(mrb, s, mid, mrb_do_nothing)) {
-    mrb_value c = mrb_obj_value(klass);
-    mrb_funcall_argv(mrb, s, mid, 1, &c);
-  }
+  hook_call(mrb, mrb_obj_value(super), MRB_SYM(inherited), HOOK_GONE_inherited, mrb_obj_value(klass));
 }
 
 struct RClass*
@@ -2122,16 +2188,13 @@ mrb_mod_prepend(mrb_state *mrb, mrb_value mod)
   struct RClass *c = mrb_class_ptr(mod);
   mrb_int argc;
   mrb_value *argv;
-  mrb_sym prepended = MRB_SYM(prepended);
 
   mrb_get_args(mrb, "*", &argv, &argc);
   while (argc--) {
     mrb_value m = argv[argc];
     mrb_check_type(mrb, m, MRB_TT_MODULE);
     mrb_prepend_module(mrb, c, mrb_class_ptr(m));
-    if (!mrb_func_basic_p(mrb, m, prepended, mrb_do_nothing)) {
-      mrb_funcall_argv(mrb, m, prepended, 1, &mod);
-    }
+    hook_call(mrb, m, MRB_SYM(prepended), HOOK_GONE_prepended, mod);
   }
   return mod;
 }
@@ -2217,7 +2280,6 @@ mrb_obj_extend(mrb_state *mrb, mrb_value obj)
 {
   mrb_int argc;
   mrb_value *argv;
-  mrb_sym extended = MRB_SYM(extended);
 
   mrb_get_args(mrb, "*", &argv, &argc);
 
@@ -2226,9 +2288,7 @@ mrb_obj_extend(mrb_state *mrb, mrb_value obj)
     mrb_value mod = argv[argc];
     mrb_check_type(mrb, mod, MRB_TT_MODULE);
     mrb_include_module(mrb, mrb_class_ptr(cc), mrb_class_ptr(mod));
-    if (!mrb_func_basic_p(mrb, mod, extended, mrb_do_nothing)) {
-      mrb_funcall_argv(mrb, mod, extended, 1, &obj);
-    }
+    hook_call(mrb, mod, MRB_SYM(extended), HOOK_GONE_extended, obj);
   }
   return obj;
 }
@@ -3528,23 +3588,16 @@ mrb_mod_alias(mrb_state *mrb, mrb_value mod)
 static void
 undef_method(mrb_state *mrb, struct RClass *c, mrb_sym a)
 {
-  mrb_sym undefined;
-  mrb_value recv;
   mrb_method_t m;
 
   MRB_METHOD_FROM_PROC(m, NULL);
   mrb_define_method_raw(mrb, c, a, m);
   if (c->tt == MRB_TT_SCLASS) {
-    undefined = MRB_SYM(singleton_method_undefined);
-    recv = mrb_iv_get(mrb, mrb_obj_value(c), MRB_SYM(__attached__));
+    hook_call(mrb, mrb_iv_get(mrb, mrb_obj_value(c), MRB_SYM(__attached__)), MRB_SYM(singleton_method_undefined),
+              HOOK_GONE_singleton_method_undefined, mrb_symbol_value(a));
   }
   else {
-    undefined = MRB_SYM(method_undefined);
-    recv = mrb_obj_value(c);
-  }
-  if (!mrb_func_basic_p(mrb, recv, undefined, mrb_do_nothing)) {
-    mrb_value sym = mrb_symbol_value(a);
-    mrb_funcall_argv(mrb, recv, undefined, 1, &sym);
+    hook_call(mrb, mrb_obj_value(c), MRB_SYM(method_undefined), HOOK_GONE_method_undefined, mrb_symbol_value(a));
   }
 }
 
@@ -3703,20 +3756,11 @@ mrb_remove_method(mrb_state *mrb, struct RClass *c0, mrb_sym mid)
   }
   mc_clear_by_id(mrb, mid);
   if (c0->tt == MRB_TT_SCLASS) {
-    mrb_sym cb = MRB_SYM(singleton_method_removed);
-    mrb_value recv = mrb_iv_get(mrb, mrb_obj_value(c0), MRB_SYM(__attached__));
-    if (!mrb_func_basic_p(mrb, recv, cb, mrb_do_nothing)) {
-      mrb_value sym = mrb_symbol_value(mid);
-      mrb_funcall_argv(mrb, recv, cb, 1, &sym);
-    }
+    hook_call(mrb, mrb_iv_get(mrb, mrb_obj_value(c0), MRB_SYM(__attached__)), MRB_SYM(singleton_method_removed),
+              HOOK_GONE_singleton_method_removed, mrb_symbol_value(mid));
   }
   else {
-    mrb_sym cb = MRB_SYM(method_removed);
-    mrb_value recv = mrb_obj_value(c0);
-    if (!mrb_func_basic_p(mrb, recv, cb, mrb_do_nothing)) {
-      mrb_value sym = mrb_symbol_value(mid);
-      mrb_funcall_argv(mrb, recv, cb, 1, &sym);
-    }
+    hook_call(mrb, mrb_obj_value(c0), MRB_SYM(method_removed), HOOK_GONE_method_removed, mrb_symbol_value(mid));
   }
 }
 
@@ -3890,29 +3934,21 @@ mrb_mod_method_defined(mrb_state *mrb, mrb_value mod)
 void
 mrb_method_added(mrb_state *mrb, struct RClass *c, mrb_sym mid)
 {
-  mrb_sym added;
   mrb_value recv = mrb_obj_value(c);
 
   if (c->tt == MRB_TT_SCLASS) {
-    added = MRB_SYM(singleton_method_added);
-    recv = mrb_iv_get(mrb, recv, MRB_SYM(__attached__));
+    hook_call(mrb, mrb_iv_get(mrb, recv, MRB_SYM(__attached__)), MRB_SYM(singleton_method_added),
+              HOOK_GONE_singleton_method_added, mrb_symbol_value(mid));
   }
   else {
-    added = MRB_SYM(method_added);
-  }
-  if (!mrb_func_basic_p(mrb, recv, added, mrb_do_nothing)) {
-    mrb_value sym = mrb_symbol_value(mid);
-    mrb_funcall_argv(mrb, recv, added, 1, &sym);
+    hook_call(mrb, recv, MRB_SYM(method_added), HOOK_GONE_method_added, mrb_symbol_value(mid));
   }
 }
 
 void
 mrb_const_added(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 {
-  if (mrb_method_cfunc_memo(mrb, mod, MRB_SYM(const_added), MRB_MEMO_CONST_ADDED) != mrb_do_nothing) {
-    mrb_value name = mrb_symbol_value(sym);
-    mrb_funcall_argv(mrb, mod, MRB_SYM(const_added), 1, &name);
-  }
+  hook_call(mrb, mod, MRB_SYM(const_added), HOOK_GONE_const_added, mrb_symbol_value(sym));
 }
 
 mrb_value
@@ -4159,7 +4195,8 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
     default:
       break;
   }
-  mrb_func_t f = mrb_method_cfunc_memo(mrb, dest, MRB_SYM(initialize_copy), MRB_MEMO_INIT_COPY);
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, dest, MRB_SYM(initialize_copy), MRB_MEMO_INIT_COPY);
+  mrb_func_t f = memo->f;
   if (f == mrb_obj_init_copy) return;
   /* the builtin copiers of a same-type pair need neither a frame nor a
      funcall; a redefined initialize_copy resolves to another function */
@@ -4172,8 +4209,13 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
   else if (f == mrb_hash_init_copy && mrb_hash_p(dest) && mrb_hash_p(obj)) {
     mrb_hash_init_copy_in_place(mrb, dest, obj);
   }
-  else {
+  else if (MRB_METHOD_UNDEF_P(memo->m)) {
     mrb_funcall_argv(mrb, dest, MRB_SYM(initialize_copy), 1, &obj);
+  }
+  else {
+    /* the method found, in the frame mrb_funcall_argv would push */
+    mrb_method_t m = memo->m;
+    mrb_funcall_with_method(mrb, dest, MRB_SYM(initialize_copy), &m, memo->owner, 1, &obj, mrb_nil_value());
   }
 }
 

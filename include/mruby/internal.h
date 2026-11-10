@@ -51,6 +51,15 @@ mrb_func_t mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid);
 mrb_func_t mrb_method_cfunc_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot);
 const struct mrb_cfunc_memo *mrb_method_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot);
 mrb_bool mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b);
+/* The pairs an Array/Hash == is comparing above this call: a chain in the C frames, so an unwind drops it with them. */
+struct mrb_eq_pair { mrb_value a, b; const struct mrb_eq_pair *up; };
+mrb_bool mrb_eq_chain_p(mrb_state *mrb, const struct mrb_eq_pair *up, mrb_value a, mrb_value b);
+mrb_bool mrb_eq_send_chain(mrb_state *mrb, mrb_value a, mrb_value b, const struct mrb_eq_pair *up);
+mrb_bool mrb_equal_chain(mrb_state *mrb, mrb_value a, mrb_value b, const struct mrb_eq_pair *up);
+mrb_value mrb_ary_eq_m(mrb_state *mrb, mrb_value);
+mrb_value mrb_hash_equal_m(mrb_state *mrb, mrb_value);
+mrb_bool mrb_ary_eq_chain(mrb_state *mrb, mrb_value a, mrb_value b, const struct mrb_eq_pair *up);
+mrb_bool mrb_hash_equal_chain(mrb_state *mrb, mrb_value a, mrb_value b, const struct mrb_eq_pair *up);
 
 /* debug */
 size_t mrb_packed_int_len(uint32_t num);
