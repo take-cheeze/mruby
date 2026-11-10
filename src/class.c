@@ -4159,7 +4159,8 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
     default:
       break;
   }
-  mrb_func_t f = mrb_method_cfunc_memo(mrb, dest, MRB_SYM(initialize_copy), MRB_MEMO_INIT_COPY);
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, dest, MRB_SYM(initialize_copy), MRB_MEMO_INIT_COPY);
+  mrb_func_t f = memo->f;
   if (f == mrb_obj_init_copy) return;
   /* the builtin copiers of a same-type pair need neither a frame nor a
      funcall; a redefined initialize_copy resolves to another function */
@@ -4172,8 +4173,13 @@ init_copy(mrb_state *mrb, mrb_value dest, mrb_value obj)
   else if (f == mrb_hash_init_copy && mrb_hash_p(dest) && mrb_hash_p(obj)) {
     mrb_hash_init_copy_in_place(mrb, dest, obj);
   }
-  else {
+  else if (MRB_METHOD_UNDEF_P(memo->m)) {
     mrb_funcall_argv(mrb, dest, MRB_SYM(initialize_copy), 1, &obj);
+  }
+  else {
+    /* the method found, in the frame mrb_funcall_argv would push */
+    mrb_method_t m = memo->m;
+    mrb_funcall_with_method(mrb, dest, MRB_SYM(initialize_copy), &m, memo->owner, 1, &obj, mrb_nil_value());
   }
 }
 

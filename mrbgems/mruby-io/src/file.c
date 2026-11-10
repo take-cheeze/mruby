@@ -6,6 +6,7 @@
 #include <mruby/array.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
+#include <mruby/proc.h>
 #include <mruby/string.h>
 #include <mruby/io.h>
 #include <mruby/error.h>
@@ -1155,7 +1156,13 @@ mrb_file_init(mrb_state *mrb, mrb_value self)
     sysopen_args[0] = path;
     sysopen_args[1] = mode;
     sysopen_args[2] = perm;
-    args[0] = mrb_funcall_argv(mrb, mrb_obj_value(mrb_class_get_id(mrb, MRB_SYM(IO))), MRB_SYM(sysopen), 3, sysopen_args);
+    /* IO.sysopen as found (a subclass or a redefinition answers); missing is the send itself, which is method_missing */
+    mrb_value io = mrb_obj_value(mrb_class_get_id(mrb, MRB_SYM(IO)));
+    struct RClass *io_meta = mrb_class(mrb, io);
+    mrb_method_t sm = mrb_method_search_vm(mrb, &io_meta, MRB_SYM(sysopen));
+    args[0] = MRB_METHOD_UNDEF_P(sm) ? mrb_funcall_argv(mrb, io, MRB_SYM(sysopen), 3, sysopen_args)
+                                     : mrb_funcall_with_method(mrb, io, MRB_SYM(sysopen), &sm, io_meta, 3, sysopen_args,
+                                                               mrb_nil_value());
   }
   args[1] = mode;
 

@@ -85,7 +85,7 @@ mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
 mrb_bool
 mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
 {
-  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, a, MRB_OPSYM(eq), MRB_MEMO_EQ);
+  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, a, MRB_OPSYM(eq), MRB_MEMO_BY_TYPE(MRB_MEMO_EQ, a));
   mrb_func_t f = memo->f;
 
   if (f == mrb_obj_equal_m) return mrb_obj_eq(mrb, a, b);
@@ -424,14 +424,18 @@ type_name(enum mrb_vtype t)
 static mrb_value
 convert_type(mrb_state *mrb, mrb_value val, const char *tname, mrb_sym method, mrb_bool raise)
 {
-  if (!mrb_respond_to(mrb, val, method)) {
+  /* one search answers both respond_to and the send: nothing runs between them */
+  struct RClass *c = mrb_class(mrb, val);
+  mrb_method_t m = mrb_method_search_vm(mrb, &c, method);
+
+  if (MRB_METHOD_UNDEF_P(m)) {
     if (raise) {
       if (tname) mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %Y into %s", val, tname);
       mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %Y", val);
     }
     return mrb_nil_value();
   }
-  return mrb_funcall_argv(mrb, val, method, 0, 0);
+  return mrb_funcall_with_method(mrb, val, method, &m, c, 0, NULL, mrb_nil_value());
 }
 
 /*
