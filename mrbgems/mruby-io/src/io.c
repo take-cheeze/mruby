@@ -2084,12 +2084,8 @@ io_read(mrb_state *mrb, mrb_value io)
 mrb_bool
 mrb_io_read_direct(mrb_state *mrb, mrb_value io, mrb_value len, mrb_value *result)
 {
-  struct RClass *c = mrb_obj_class(mrb, io);
-  mrb_method_t method = mrb_method_search_vm(mrb, &c, MRB_SYM(read));
-  if (MRB_METHOD_UNDEF_P(method) || !MRB_METHOD_CFUNC_P(method) ||
-      MRB_METHOD_CFUNC(method) != io_read) {
-    return FALSE;
-  }
+  if (!mrb_data_p(io) || DATA_TYPE(io) != &mrb_io_type) return FALSE;
+  if (mrb_method_memo(mrb, io, MRB_SYM(read), MRB_MEMO_IO_READ)->f != io_read) return FALSE;
   *result = io_read_impl(mrb, io_get_read_fptr(mrb, io), !mrb_nil_p(len), len, mrb_nil_value());
   return TRUE;
 }

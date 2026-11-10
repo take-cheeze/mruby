@@ -268,7 +268,8 @@ enum { MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_EQL, MR
        /* the *_direct entry points (a native called with its arguments as C values, no frame): each remembers the
         * method its own receiver's class finds, so the check that it is still the native's body is a compare */
        MRB_MEMO_ARY_LSHIFT = MRB_MEMO_RESPOND_MISSING + MRB_MEMO_TYPES, MRB_MEMO_STR_LSHIFT, MRB_MEMO_PACK,
-       MRB_MEMO_IO_GETBYTE, MRB_MEMO_IO_EOF, MRB_MEMO_STRIO_GETBYTE, MRB_MEMO_STRIO_EOF,
+       MRB_MEMO_IO_GETBYTE, MRB_MEMO_IO_EOF, MRB_MEMO_IO_READ, MRB_MEMO_STRIO_GETBYTE, MRB_MEMO_STRIO_EOF,
+       MRB_MEMO_STRIO_READ,
        MRB_MEMO_COUNT };
 
 struct mrb_jmpbuf;
