@@ -1810,7 +1810,7 @@ read_tmpl(mrb_state *mrb, struct tmpl *tmpl, enum pack_type *typep, mrb_int *siz
  *   ["hello"].pack("A10")     #=> "hello     "
  */
 static mrb_value
-mrb_pack_pack(mrb_state *mrb, mrb_value ary)
+pack_pack(mrb_state *mrb, mrb_value ary, mrb_value fmt)
 {
   mrb_value o;
   struct tmpl tmpl;
@@ -1820,7 +1820,8 @@ mrb_pack_pack(mrb_state *mrb, mrb_value ary)
   unsigned int flags;
   enum pack_dir dir;
 
-  prepare_tmpl(mrb, &tmpl);
+  tmpl.str = fmt;
+  tmpl.idx = 0;
 
   mrb_value result = mrb_str_new(mrb, NULL, 128);  /* allocate initial buffer */
   mrb_int aidx = 0;
@@ -1954,6 +1955,30 @@ mrb_pack_pack(mrb_state *mrb, mrb_value ary)
 
   mrb_str_resize(mrb, result, ridx);
   return result;
+}
+
+static mrb_value
+mrb_pack_pack(mrb_state *mrb, mrb_value ary)
+{
+  mrb_value fmt;
+
+  mrb_get_args(mrb, "S", &fmt);
+  return pack_pack(mrb, ary, fmt);
+}
+
+/* Array#pack(String) without a VM frame or mrb_get_args when method lookup still resolves to mrb_pack_pack. Returns
+ * FALSE for a template that is not a String (the wrapper converts it) or another `pack`. */
+mrb_bool
+mrb_pack_pack_direct(mrb_state *mrb, mrb_value ary, mrb_value fmt, mrb_value *result)
+{
+  if (!mrb_array_p(ary) || !mrb_string_p(fmt)) return FALSE;
+  if (mrb_method_memo(mrb, ary, MRB_SYM(pack), MRB_MEMO_PACK)->f != mrb_pack_pack) return FALSE;
+  int ai = mrb_gc_arena_save(mrb);
+  mrb_value val = pack_pack(mrb, ary, fmt);
+  mrb_gc_arena_restore(mrb, ai);
+  mrb_gc_protect(mrb, val);
+  *result = val;
+  return TRUE;
 }
 
 static mrb_value

@@ -879,6 +879,18 @@ mrb_ary_push_m(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+/* Array#<<(x) without a VM frame when method lookup still resolves to mrb_ary_push_m (its one-argument branch).
+ * Returns FALSE for another receiver type or `<<`; the caller then sends. */
+mrb_bool
+mrb_ary_lshift_direct(mrb_state *mrb, mrb_value ary, mrb_value x, mrb_value *result)
+{
+  if (!mrb_array_p(ary)) return FALSE;
+  if (mrb_method_memo(mrb, ary, MRB_OPSYM(lshift), MRB_MEMO_ARY_LSHIFT)->f != mrb_ary_push_m) return FALSE;
+  mrb_ary_push(mrb, ary, x);
+  *result = ary;
+  return TRUE;
+}
+
 /**
  * Removes and returns the last element from an array.
  *

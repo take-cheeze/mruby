@@ -1959,6 +1959,17 @@ io_eof(mrb_state *mrb, mrb_value io)
   return mrb_bool_value(fptr->eof);
 }
 
+/* IO#eof? without a VM frame (io_eof reads none) when method lookup still resolves to that body. Returns FALSE for
+ * a receiver that is not an IO or whose `eof?` is something else; the caller then sends. */
+mrb_bool
+mrb_io_eof_direct(mrb_state *mrb, mrb_value io, mrb_value *result)
+{
+  if (!mrb_data_p(io) || DATA_TYPE(io) != &mrb_io_type) return FALSE;
+  if (mrb_method_memo(mrb, io, MRB_SYM_Q(eof), MRB_MEMO_IO_EOF)->f != io_eof) return FALSE;
+  *result = io_eof(mrb, io);
+  return TRUE;
+}
+
 static void
 io_buf_cat(mrb_state *mrb, mrb_value outbuf, struct mrb_io_buf *buf, mrb_int n)
 {
@@ -2269,6 +2280,16 @@ io_getbyte(mrb_state *mrb, mrb_value io)
   unsigned char c = buf->mem[buf->start];
   io_buf_shift(buf, 1);
   return mrb_int_value(mrb, (mrb_int)c);
+}
+
+/* IO#getbyte without a VM frame (io_getbyte reads none), as mrb_io_eof_direct. */
+mrb_bool
+mrb_io_getbyte_direct(mrb_state *mrb, mrb_value io, mrb_value *result)
+{
+  if (!mrb_data_p(io) || DATA_TYPE(io) != &mrb_io_type) return FALSE;
+  if (mrb_method_memo(mrb, io, MRB_SYM(getbyte), MRB_MEMO_IO_GETBYTE)->f != io_getbyte) return FALSE;
+  *result = io_getbyte(mrb, io);
+  return TRUE;
 }
 
 /*

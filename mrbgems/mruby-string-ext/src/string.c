@@ -172,6 +172,21 @@ str_concat_m(mrb_state *mrb, mrb_value self)
   return str_concat0(mrb, self, binary);
 }
 
+/* String#<<(x) without a VM frame when method lookup still resolves to str_concat_m (its one-argument branch).
+ * Returns FALSE for another receiver type or `<<`; the caller then sends. */
+mrb_bool
+mrb_str_lshift_direct(mrb_state *mrb, mrb_value str, mrb_value x, mrb_value *result)
+{
+  if (!mrb_string_p(str)) return FALSE;
+  if (mrb_method_memo(mrb, str, MRB_OPSYM(lshift), MRB_MEMO_STR_LSHIFT)->f != str_concat_m) return FALSE;
+  int ai = mrb_gc_arena_save(mrb);
+  mrb_value val = mrb_str_ext_concat_impl(mrb, str, x);
+  mrb_gc_arena_restore(mrb, ai);
+  mrb_gc_protect(mrb, val);
+  *result = val;
+  return TRUE;
+}
+
 /*
  *  call-seq:
  *     str.append_as_bytes(*obj)     -> str
