@@ -257,8 +257,15 @@ struct mrb_cfunc_memo {
   mrb_method_t m;
   struct RClass *owner;
 };
-enum { MRB_MEMO_EQ, MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_EQL, MRB_MEMO_CMP, MRB_MEMO_ALLOCATE,
-       MRB_MEMO_INITIALIZE, MRB_MEMO_COUNT };
+/* A caller whose receivers are of many classes takes a block of MRB_MEMO_TYPES slots and picks one by the receiver's
+ * type (MRB_MEMO_BY_TYPE), so classes of different types do not evict each other's answer. */
+#define MRB_MEMO_TYPES 16
+#define MRB_MEMO_BY_TYPE(base, obj) ((base) + (mrb_type(obj) & (MRB_MEMO_TYPES - 1)))
+enum { MRB_MEMO_HASH, MRB_MEMO_INIT_COPY, MRB_MEMO_CONST_ADDED, MRB_MEMO_EQL, MRB_MEMO_CMP, MRB_MEMO_ALLOCATE,
+       MRB_MEMO_INITIALIZE, MRB_MEMO_DEFAULT,
+       MRB_MEMO_EQ, MRB_MEMO_KEY_EQL = MRB_MEMO_EQ + MRB_MEMO_TYPES,
+       MRB_MEMO_RESPOND_MISSING = MRB_MEMO_KEY_EQL + MRB_MEMO_TYPES,
+       MRB_MEMO_COUNT = MRB_MEMO_RESPOND_MISSING + MRB_MEMO_TYPES };
 
 struct mrb_jmpbuf;
 

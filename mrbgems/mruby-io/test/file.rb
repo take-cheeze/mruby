@@ -20,6 +20,25 @@ assert('File.superclass', '15.2.21.2') do
   assert_equal IO, File.superclass
 end
 
+assert('File#initialize opens through IO.sysopen as found, redefinitions included') do
+  $file_init_seen = []
+  class << IO
+    alias __file_init_sysopen sysopen
+    def sysopen(*a); $file_init_seen << a[0]; __file_init_sysopen(*a); end
+  end
+  begin
+    File.open($mrbtest_io_rfname, "r") { |f| assert_equal File, f.class }
+    assert_equal [$mrbtest_io_rfname], $file_init_seen
+  ensure
+    class << IO
+      alias sysopen __file_init_sysopen
+    end
+  end
+  $file_init_seen = []
+  File.open($mrbtest_io_rfname, "r") { |f| f.close }
+  assert_equal [], $file_init_seen
+end
+
 assert('File#initialize', '15.2.21.4.1') do
   io = File.open($mrbtest_io_rfname, "r")
   assert_nil io.close

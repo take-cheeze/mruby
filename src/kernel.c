@@ -660,7 +660,7 @@ obj_respond_to(mrb_state *mrb, mrb_value self)
   respond_to_p = mrb_respond_to(mrb, self, id);
   if (!respond_to_p) {
     mrb_sym rtm_id = MRB_SYM_Q(respond_to_missing);
-    if (!mrb_func_basic_p(mrb, self, rtm_id, mrb_false)) {
+    if (mrb_method_cfunc_memo(mrb, self, rtm_id, MRB_MEMO_BY_TYPE(MRB_MEMO_RESPOND_MISSING, self)) != mrb_false) {
       mrb_value v = mrb_funcall_id(mrb, self, rtm_id, 2, mrb_symbol_value(id), mrb_bool_value(priv));
       return mrb_bool_value(mrb_bool(v));
     }
