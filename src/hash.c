@@ -2494,23 +2494,21 @@ mrb_hash_rassoc(mrb_state *mrb, mrb_value hash)
 }
 
 /* 15.2.13.4.1 */
-static mrb_value
-mrb_hash_equal(mrb_state *mrb, mrb_value hash)
+static mrb_bool
+hash_equal_chain(mrb_state *mrb, mrb_value hash, mrb_value hash2, const struct mrb_eq_pair *up, mrb_bool frame_guard)
 {
-  mrb_value hash2 = mrb_get_arg1(mrb);
-
-  if (mrb_obj_equal(mrb, hash, hash2)) return mrb_true_value();
+  if (mrb_obj_equal(mrb, hash, hash2)) return TRUE;
   if (!mrb_hash_p(hash2)) {
-    return mrb_false_value();
+    return FALSE;
   }
   if (mrb_hash_size(mrb, hash) != mrb_hash_size(mrb, hash2)) {
-    return mrb_false_value();
+    return FALSE;
   }
 
   /* Check for recursion */
-  if (MRB_RECURSIVE_BINARY_FUNC_P(mrb, MRB_OPSYM(eq), hash, hash2)) {
-    return mrb_false_value();
-  }
+  if (mrb_eq_chain_p(mrb, up, hash, hash2)) return FALSE;
+  if (frame_guard && MRB_RECURSIVE_BINARY_FUNC_P(mrb, MRB_OPSYM(eq), hash, hash2)) return FALSE;
+  const struct mrb_eq_pair here = { hash, hash2, up };
 
   struct RHash *h1 = mrb_hash_ptr(hash);
   struct RHash *h2 = mrb_hash_ptr(hash2);
@@ -2524,18 +2522,30 @@ mrb_hash_equal(mrb_state *mrb, mrb_value hash)
       found = h_get(mrb, h2, stored, &val2);
     }
     if (!found) {
-      return mrb_false_value();
+      return FALSE;
     }
     /* the lookup's eql? can vacate this slot of h1 without moving its size */
     entry_check_vacated(mrb, entry, stored);
     H_CHECK_MODIFIED(mrb, h1) {
-      if (!mrb_equal(mrb, entry->val, val2)) {
-        return mrb_false_value();
+      if (!mrb_equal_chain(mrb, entry->val, val2, &here)) {
+        return FALSE;
       }
     }
   }
 
-  return mrb_true_value();
+  return TRUE;
+}
+
+mrb_bool
+mrb_hash_equal_chain(mrb_state *mrb, mrb_value hash, mrb_value hash2, const struct mrb_eq_pair *up)
+{
+  return hash_equal_chain(mrb, hash, hash2, up, FALSE);
+}
+
+mrb_value
+mrb_hash_equal_m(mrb_state *mrb, mrb_value hash)
+{
+  return mrb_bool_value(hash_equal_chain(mrb, hash, mrb_get_arg1(mrb), NULL, TRUE));
 }
 
 /*
@@ -2592,7 +2602,7 @@ mrb_hash_eql(mrb_state *mrb, mrb_value hash)
 /* ---------------------------*/
 #define MRB_MT_CLASS Hash
 static const mrb_mt_entry hash_rom_entries[] = {
-  MRB_MT_ENTRY(mrb_hash_equal,            MRB_OPSYM(eq),            MRB_ARGS_REQ(1))                                     /* 15.2.13.4.1  */
+  MRB_MT_ENTRY(mrb_hash_equal_m,          MRB_OPSYM(eq),            MRB_ARGS_REQ(1))                                     /* 15.2.13.4.1  */
   MRB_MT_ENTRY(mrb_hash_aget,             MRB_OPSYM(aref),          MRB_ARGS_REQ(1))                                     /* 15.2.13.4.2  */
   MRB_MT_ENTRY(mrb_hash_aset,             MRB_OPSYM(aset),          MRB_ARGS_REQ(2))                                     /* 15.2.13.4.3  */
   MRB_MT_ENTRY(mrb_hash_clear,            MRB_SYM(clear),           MRB_ARGS_NONE())                                     /* 15.2.13.4.4  */

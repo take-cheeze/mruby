@@ -76,14 +76,23 @@ mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
   return mrb_obj_eq(mrb, v1, v2);
 }
 
+mrb_bool
+mrb_eq_chain_p(mrb_state *mrb, const struct mrb_eq_pair *up, mrb_value a, mrb_value b)
+{
+  for (; up; up = up->up) {
+    if (mrb_obj_eq(mrb, a, up->a) && mrb_obj_eq(mrb, b, up->b)) return TRUE;
+  }
+  return FALSE;
+}
+
 /*
  * `a == b` truthiness, as sending `==` to `a` would answer it. The builtin
- * bodies that need no frame run in place (a redefinition is found by the
- * method lookup and sent normally); Array/Hash/Struct stay sends since their
- * recursion guard reads the call frames.
+ * bodies run in place, with no frame (a redefinition is found by the method
+ * lookup and sent normally); the Array/Hash recursion guard is the `up` chain
+ * of C-frame pairs, and a send's frame is seen by mrb_recursive_func_p.
  */
 mrb_bool
-mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
+mrb_eq_send_chain(mrb_state *mrb, mrb_value a, mrb_value b, const struct mrb_eq_pair *up)
 {
   const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, a, MRB_OPSYM(eq), MRB_MEMO_BY_TYPE(MRB_MEMO_EQ, a));
   mrb_func_t f = memo->f;
@@ -94,10 +103,18 @@ mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
 #ifndef MRB_NO_FLOAT
   if (f == mrb_flo_equal_m) return mrb_flo_equal(mrb, a, b);
 #endif
+  if (f == mrb_ary_eq_m) return mrb_ary_eq_chain(mrb, a, b, up);
+  if (f == mrb_hash_equal_m) return mrb_hash_equal_chain(mrb, a, b, up);
   if (MRB_METHOD_UNDEF_P(memo->m)) return mrb_test(mrb_funcall_argv(mrb, a, MRB_OPSYM(eq), 1, &b));
   /* any other method found runs in the frame the send would push (a recursion guard still sees it) */
   mrb_method_t m = memo->m;
   return mrb_test(mrb_funcall_with_method(mrb, a, MRB_OPSYM(eq), &m, memo->owner, 1, &b, mrb_nil_value()));
+}
+
+mrb_bool
+mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
+{
+  return mrb_eq_send_chain(mrb, a, b, NULL);
 }
 
 /*
@@ -111,8 +128,8 @@ mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b)
  * `==` operator (MRB_OPSYM(eq)) on `obj1` with `obj2` as an argument,
  * unless `obj1`'s `==` method is the default `mrb_obj_equal_m`.
  */
-MRB_API mrb_bool
-mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
+mrb_bool
+mrb_equal_chain(mrb_state *mrb, mrb_value obj1, mrb_value obj2, const struct mrb_eq_pair *up)
 {
   if (mrb_obj_eq(mrb, obj1, obj2)) return TRUE;
 #ifndef MRB_NO_FLOAT
@@ -134,9 +151,15 @@ mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
   }
 #endif
   else {
-    return mrb_eq_send(mrb, obj1, obj2);
+    return mrb_eq_send_chain(mrb, obj1, obj2, up);
   }
   return FALSE;
+}
+
+MRB_API mrb_bool
+mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
+{
+  return mrb_equal_chain(mrb, obj1, obj2, NULL);
 }
 
 /*
