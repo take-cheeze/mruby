@@ -269,4 +269,3 @@ assert('Range#to_a with a Float end past the largest mrb_int') do
   assert_equal([max - 1, max], (max - 1...top).to_a)
   assert_raise(RangeError) { (0..top).to_a }
 end
-

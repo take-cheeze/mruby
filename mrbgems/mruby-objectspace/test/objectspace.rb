@@ -74,4 +74,3 @@ assert('ObjectSpace.each_object does not reach the frames of Array#join') do
   e.outer = [[e], "a", "b"]
   assert_equal("e,a,b", e.outer.join(","))
 end
-

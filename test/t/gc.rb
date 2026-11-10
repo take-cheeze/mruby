@@ -106,4 +106,3 @@ assert('OP_ENTER keeps the block alive while it lays out a short argument list')
   end
   assert_equal 0, bad
 end
-
