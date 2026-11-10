@@ -55,12 +55,13 @@ jobs:
         id: cache-cosmocc
         with:
           path: ~/cosmo
-          key: cosmocc-${{ runner.os }}-20260104
+          key: cosmocc-${{ runner.os }}-4.0.2
       - name: Install cosmocc
         if: steps.cache-cosmocc.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/cosmo && cd ~/cosmo
-          wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
+          wget --tries=3 --timeout=60 https://github.com/jart/cosmopolitan/releases/download/4.0.2/cosmocc-4.0.2.zip -O cosmocc.zip
+          echo "85b8c37a406d862e656ad4ec14be9f6ce474c1b436b9615e91a55208aced3f44  cosmocc.zip" | sha256sum -c -
           unzip cosmocc.zip
       - name: Build and test
         run: |
