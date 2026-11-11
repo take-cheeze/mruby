@@ -421,11 +421,22 @@ mrb_obj_hash_code(mrb_state *mrb, mrb_value key)
   return hash_code ^ (hash_code << 2) ^ (hash_code >> 2);
 }
 
+static inline mrb_bool
+h_identity_p(const struct RHash *h)
+{
+  return (h->flags & MRB_HASH_IDENTITY) != 0;
+}
+
 static uint32_t
 obj_hash_code(mrb_state *mrb, mrb_value key, struct RHash *h)
 {
   uint32_t hash_code = 0;
 
+  if (h && h_identity_p(h)) {
+    /* compare_by_identity: the object's id, so no user code runs and the code is stable for the object's life. */
+    uint64_t id = (uint64_t)mrb_obj_id(key);
+    return (uint32_t)(id ^ (id >> 32));
+  }
   H_CHECK_MODIFIED(mrb, h) {
     hash_code = mrb_obj_hash_code(mrb, key);
   }
@@ -523,6 +534,8 @@ static mrb_bool
 obj_eql(mrb_state *mrb, mrb_value a, mrb_value b, struct RHash *h)
 {
   mrb_bool eql = FALSE;
+
+  if (h && h_identity_p(h)) return mrb_obj_equal(mrb, a, b);
 
   switch (mrb_type(a)) {
   case MRB_TT_STRING:
@@ -1256,7 +1269,7 @@ ht_rehash(mrb_state *mrb, struct RHash *h)
 static mrb_value
 h_key_for(mrb_state *mrb, struct RHash *h, mrb_value key)
 {
-  if (mrb_string_p(key) && !mrb_frozen_p(mrb_str_ptr(key))) {
+  if (!h_identity_p(h) && mrb_string_p(key) && !mrb_frozen_p(mrb_str_ptr(key))) {
     key = mrb_str_dup(mrb, key);
     mrb_str_ptr(key)->frozen = 1;
     mrb_field_write_barrier_value(mrb, (struct RBasic*)h, key);
@@ -1522,6 +1535,8 @@ hash_replace(mrb_state *mrb, mrb_value self, mrb_value orig)
   uint32_t mask = MRB_HASH_DEFAULT | MRB_HASH_PROC_DEFAULT;
   mrb_sym name;
   h_replace(mrb, h, orig_h);
+  if (h_identity_p(orig_h)) h->flags |= MRB_HASH_IDENTITY;
+  else h->flags &= ~MRB_HASH_IDENTITY;
   name = MRB_SYM(ifnone);
   if (orig_h->flags & MRB_HASH_DEFAULT) {
     mrb_iv_set(mrb, self, name, mrb_iv_get(mrb, orig, name));
@@ -2272,6 +2287,25 @@ mrb_hash_rehash(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+/* Hash#compare_by_identity: keys compare by object identity from now on. The table is rebuilt, since its entries were
+   placed by value. */
+static mrb_value
+mrb_hash_compare_by_identity(mrb_state *mrb, mrb_value self)
+{
+  struct RHash *h = mrb_hash_ptr(self);
+  hash_modify(mrb, self);
+  if (h_identity_p(h)) return self;
+  h->flags |= MRB_HASH_IDENTITY;
+  h_rehash(mrb, h);
+  return self;
+}
+
+static mrb_value
+mrb_hash_compare_by_identity_p(mrb_state *mrb, mrb_value self)
+{
+  return mrb_bool_value(h_identity_p(mrb_hash_ptr(self)));
+}
+
 static mrb_value
 mrb_hash_compact(mrb_state *mrb, mrb_value hash)
 {
@@ -2603,6 +2637,8 @@ mrb_hash_eql(mrb_state *mrb, mrb_value hash)
 #define MRB_MT_CLASS Hash
 static const mrb_mt_entry hash_rom_entries[] = {
   MRB_MT_ENTRY(mrb_hash_equal_m,          MRB_OPSYM(eq),            MRB_ARGS_REQ(1))                                     /* 15.2.13.4.1  */
+  MRB_MT_ENTRY(mrb_hash_compare_by_identity,   MRB_SYM(compare_by_identity),  MRB_ARGS_NONE())
+  MRB_MT_ENTRY(mrb_hash_compare_by_identity_p, MRB_SYM_Q(compare_by_identity), MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_hash_aget,             MRB_OPSYM(aref),          MRB_ARGS_REQ(1))                                     /* 15.2.13.4.2  */
   MRB_MT_ENTRY(mrb_hash_aset,             MRB_OPSYM(aset),          MRB_ARGS_REQ(2))                                     /* 15.2.13.4.3  */
   MRB_MT_ENTRY(mrb_hash_clear,            MRB_SYM(clear),           MRB_ARGS_NONE())                                     /* 15.2.13.4.4  */
