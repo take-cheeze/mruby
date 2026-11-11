@@ -97,6 +97,7 @@ mt_get(mrb_state *mrb, mrb_mt_tbl *t, mrb_sym sym, union mrb_mt_ptr *pp, uint32_
     for (int i = 0; i < t->size; i++) {
       if (entries[i].key == sym) {
         if (MRB_MT_REMOVED_P(entries[i])) return FALSE;
+        if (entries[i].flags & MRB_MT_CTOR_ROW) break;
         *pp = entries[i].val;
         *fp = entries[i].flags;
         return TRUE;
@@ -133,7 +134,7 @@ mt_chain_has(mrb_mt_tbl *t, mrb_sym sym)
   while (t) {
     mrb_mt_entry *entries = t->ptr;
     for (int i = 0; i < t->size; i++) {
-      if (entries[i].key == sym) return TRUE;
+      if (entries[i].key == sym && !(entries[i].flags & MRB_MT_CTOR_ROW)) return TRUE;
     }
     t = t->next;
   }
@@ -238,7 +239,7 @@ mrb_mt_foreach(mrb_state *mrb, struct RClass *c, mrb_mt_foreach_func *fn, void *
   if (!t->next) {
     mrb_mt_entry *entries = t->ptr;
     for (int i = 0; i < t->size; i++) {
-      if (MRB_MT_REMOVED_P(entries[i])) continue;
+      if (MRB_MT_REMOVED_P(entries[i]) || (entries[i].flags & MRB_MT_CTOR_ROW)) continue;
       if (fn(mrb, entries[i].key,
              create_method_value(mrb, entries[i].flags, entries[i].val), p) != 0)
         return;
@@ -250,7 +251,7 @@ mrb_mt_foreach(mrb_state *mrb, struct RClass *c, mrb_mt_foreach_func *fn, void *
   for (mrb_mt_tbl *layer = t; layer; layer = layer->next) {
     mrb_mt_entry *entries = layer->ptr;
     for (int i = 0; i < layer->size; i++) {
-      if (MRB_MT_REMOVED_P(entries[i])) continue;
+      if (MRB_MT_REMOVED_P(entries[i]) || (entries[i].flags & MRB_MT_CTOR_ROW)) continue;
       mrb_sym sym = entries[i].key;
       /* check if shadowed by a higher layer */
       if (layer != t) {
@@ -2752,6 +2753,36 @@ mc_clear_by_id(mrb_state *mrb, mrb_sym id)
 }
 #endif // MRB_NO_METHOD_CACHE
 
+/*
+ * The method a construction (mrb_obj_new, Class#new, dup and clone) runs for `mid` (`initialize` or `initialize_copy`)
+ * on an instance of `c`: what mrb_vm_find_method finds, except that a class's constructor row (MRB_MT_CTOR_ROW) answers
+ * where its class sits in the chain. Not cached: the callers keep it in their memo slot.
+ */
+mrb_method_t
+mrb_vm_find_ctor(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
+{
+  mrb_method_t m;
+
+  for (; c; c = c->super) {
+    for (mrb_mt_tbl *t = c->mt; t; t = t->next) {
+      mrb_mt_entry *entries = t->ptr;
+      int i;
+      for (i = 0; i < t->size; i++) {
+        if (entries[i].key == mid) break;
+      }
+      if (i == t->size) continue;
+      if (MRB_MT_REMOVED_P(entries[i])) goto next_class;
+      if (entries[i].val.proc == 0 && !(entries[i].flags & MRB_MT_FUNC)) goto undef;
+      *cp = c;
+      return create_method_value(mrb, entries[i].flags & ~(uint32_t)MRB_MT_CTOR_ROW, entries[i].val);
+    }
+  next_class:;
+  }
+undef:
+  MRB_METHOD_FROM_PROC(m, NULL);
+  return m;
+}
+
 #ifdef MRB_USE_METHOD_LOOKUP_HOOK
 static mrb_method_t
 method_search_without_hook(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
@@ -3012,10 +3043,7 @@ mrb_instance_new(mrb_state *mrb, mrb_value cv)
 
   mrb_get_args(mrb, "*!&", &argv, &argc, &blk);
   mrb_value obj = mrb_instance_alloc(mrb, cv);
-  mrb_sym init = MRB_SYM(initialize);
-  if (!mrb_func_basic_p(mrb, obj, init, mrb_do_nothing)) {
-    mrb_funcall_with_block(mrb, obj, init, argc, argv, blk);
-  }
+  mrb_obj_init(mrb, obj, argc, argv, blk);
   return obj;
 }
 
@@ -3040,21 +3068,27 @@ mrb_instance_new(mrb_state *mrb, mrb_value cv)
  *   2. Calls the `initialize` method of the new object if it's a user-defined one.
  *      This `initialize` call can have arbitrary side effects.
  */
-MRB_API mrb_value
-mrb_obj_new(mrb_state *mrb, struct RClass *c, mrb_int argc, const mrb_value *argv)
+MRB_API void
+mrb_obj_init(mrb_state *mrb, mrb_value obj, mrb_int argc, const mrb_value *argv, mrb_value blk)
 {
-  mrb_value obj = mrb_instance_alloc(mrb, mrb_obj_value(c));
   mrb_sym mid = MRB_SYM(initialize);
   const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, obj, mid, MRB_MEMO_INITIALIZE);
 
   if (MRB_METHOD_UNDEF_P(memo->m)) {
-    mrb_funcall_argv(mrb, obj, mid, argc, argv);
+    mrb_funcall_with_block(mrb, obj, mid, argc, argv, blk);
   }
   else if (memo->f != mrb_do_nothing) {
     /* the method found, in the frame mrb_funcall_argv would push */
     mrb_method_t m = memo->m;
-    mrb_funcall_with_method(mrb, obj, mid, &m, memo->owner, argc, argv, mrb_nil_value());
+    mrb_funcall_with_method(mrb, obj, mid, &m, memo->owner, argc, argv, blk);
   }
+}
+
+MRB_API mrb_value
+mrb_obj_new(mrb_state *mrb, struct RClass *c, mrb_int argc, const mrb_value *argv)
+{
+  mrb_value obj = mrb_instance_alloc(mrb, mrb_obj_value(c));
+  mrb_obj_init(mrb, obj, argc, argv, mrb_nil_value());
   return obj;
 }
 

@@ -131,6 +131,11 @@ typedef struct mrb_mt_tbl {
    without one; this lets an excluded entry vanish from the table. */
 #define MRB_MT_ENTRY_ROM_(fn, sym, flags) \
   { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC },
+/* A constructor row: an `initialize` or `initialize_copy` entry that method lookup, respond_to? and the method list
+   do not see; only the constructions (mrb_obj_new, Class#new, dup and clone) find it (mrb_vm_find_ctor). */
+#define MRB_MT_CTOR_ROW (1 << 28)
+#define MRB_MT_ENTRY_CTOR_(fn, sym, flags) \
+  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC | MRB_MT_CTOR_ROW },
 
 #ifndef MRB_MT_EXCLUDE_HEADER
 #define MRB_MT_ENTRY(fn, sym, flags) MRB_MT_ENTRY_ROM_(fn, sym, flags)
@@ -141,6 +146,7 @@ typedef struct mrb_mt_tbl {
      #define MRB_MT_EXCLUDE_String_SYM__squeeze 1     String#squeeze
      #define MRB_MT_EXCLUDE_Array_SYM_B__rotate 1     Array#rotate!
      #define MRB_MT_EXCLUDE_Integer_OPSYM__cmp 1      Integer#<=>
+   or to 2 to keep an `initialize`/`initialize_copy` entry as a constructor row (MRB_MT_CTOR_ROW).
    <Class> is the MRB_MT_CLASS a table defines before its entries. */
 #include MRB_MT_EXCLUDE_HEADER
 
@@ -159,6 +165,7 @@ typedef struct mrb_mt_tbl {
 #define MRB_MT_ENTRY2_(x, fn, sym, flags) MRB_MT_ENTRY3_(MRB_MT_EXCL_P_##x, fn, sym, flags)
 #define MRB_MT_ENTRY3_(p, fn, sym, flags) MRB_MT_EXPAND_(MRB_MT_SEL_(p MRB_MT_DROP_, MRB_MT_ENTRY_ROM_, ~))(fn, sym, flags)
 #define MRB_MT_EXCL_P_1 ~,
+#define MRB_MT_EXCL_P_2 ~, MRB_MT_ENTRY_CTOR_, ~ MRB_MT_DROP_
 #define MRB_MT_SEL_(a, b, ...) b
 #define MRB_MT_EXPAND_(x) x
 #define MRB_MT_DROP_(fn, sym, flags)
