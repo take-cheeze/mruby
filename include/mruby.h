@@ -740,6 +740,8 @@ MRB_API void mrb_undef_class_method_id(mrb_state *mrb, struct RClass *cls, mrb_s
  * @return [mrb_value] The newly initialized object
  */
 MRB_API mrb_value mrb_obj_new(mrb_state *mrb, struct RClass *c, mrb_int argc, const mrb_value *argv);
+/* Runs on `obj` the `initialize` a construction of its class runs (mrb_obj_new after its allocation, with `blk`). */
+MRB_API void mrb_obj_init(mrb_state *mrb, mrb_value obj, mrb_int argc, const mrb_value *argv, mrb_value blk);
 
 /** @see mrb_obj_new */
 MRB_INLINE mrb_value mrb_class_new_instance(mrb_state *mrb, mrb_int argc, const mrb_value *argv, struct RClass *c)
