@@ -3043,15 +3043,7 @@ mrb_instance_new(mrb_state *mrb, mrb_value cv)
 
   mrb_get_args(mrb, "*!&", &argv, &argc, &blk);
   mrb_value obj = mrb_instance_alloc(mrb, cv);
-  mrb_sym init = MRB_SYM(initialize);
-  const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, obj, init, MRB_MEMO_INITIALIZE);
-  if (MRB_METHOD_UNDEF_P(memo->m)) {
-    mrb_funcall_with_block(mrb, obj, init, argc, argv, blk);
-  }
-  else if (memo->f != mrb_do_nothing) {
-    mrb_method_t m = memo->m;
-    mrb_funcall_with_method(mrb, obj, init, &m, memo->owner, argc, argv, blk);
-  }
+  mrb_obj_init(mrb, obj, argc, argv, blk);
   return obj;
 }
 
@@ -3076,21 +3068,27 @@ mrb_instance_new(mrb_state *mrb, mrb_value cv)
  *   2. Calls the `initialize` method of the new object if it's a user-defined one.
  *      This `initialize` call can have arbitrary side effects.
  */
-MRB_API mrb_value
-mrb_obj_new(mrb_state *mrb, struct RClass *c, mrb_int argc, const mrb_value *argv)
+MRB_API void
+mrb_obj_init(mrb_state *mrb, mrb_value obj, mrb_int argc, const mrb_value *argv, mrb_value blk)
 {
-  mrb_value obj = mrb_instance_alloc(mrb, mrb_obj_value(c));
   mrb_sym mid = MRB_SYM(initialize);
   const struct mrb_cfunc_memo *memo = mrb_method_memo(mrb, obj, mid, MRB_MEMO_INITIALIZE);
 
   if (MRB_METHOD_UNDEF_P(memo->m)) {
-    mrb_funcall_argv(mrb, obj, mid, argc, argv);
+    mrb_funcall_with_block(mrb, obj, mid, argc, argv, blk);
   }
   else if (memo->f != mrb_do_nothing) {
     /* the method found, in the frame mrb_funcall_argv would push */
     mrb_method_t m = memo->m;
-    mrb_funcall_with_method(mrb, obj, mid, &m, memo->owner, argc, argv, mrb_nil_value());
+    mrb_funcall_with_method(mrb, obj, mid, &m, memo->owner, argc, argv, blk);
   }
+}
+
+MRB_API mrb_value
+mrb_obj_new(mrb_state *mrb, struct RClass *c, mrb_int argc, const mrb_value *argv)
+{
+  mrb_value obj = mrb_instance_alloc(mrb, mrb_obj_value(c));
+  mrb_obj_init(mrb, obj, argc, argv, mrb_nil_value());
   return obj;
 }
 
