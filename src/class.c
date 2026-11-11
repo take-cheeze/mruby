@@ -1325,6 +1325,7 @@ ensure_class_type(mrb_state *mrb, mrb_value val)
 MRB_API mrb_int
 mrb_get_argc(mrb_state *mrb)
 {
+  if (mrb->direct_call) return mrb->direct_call->argc;
   mrb_int argc = mrb->c->ci->n;
 
   if (argc == 15) {
@@ -1353,6 +1354,7 @@ mrb_get_argc(mrb_state *mrb)
 MRB_API const mrb_value*
 mrb_get_argv(mrb_state *mrb)
 {
+  if (mrb->direct_call) return mrb->direct_call->stack + 1;
   mrb_int argc = mrb->c->ci->n;
   mrb_value *array_argv = mrb->c->ci->stack + 1;
   if (argc == 15) {
@@ -1380,6 +1382,10 @@ mrb_get_argv(mrb_state *mrb)
 MRB_API mrb_value
 mrb_get_arg1(mrb_state *mrb)
 {
+  if (mrb->direct_call) {
+    if (mrb->direct_call->argc != 1) mrb_argnum_error(mrb, mrb->direct_call->argc, 1, 1);
+    return mrb->direct_call->stack[1];
+  }
   mrb_callinfo *ci = mrb->c->ci;
   mrb_int argc = ci->n;
   mrb_value *array_argv = ci->stack + 1;
@@ -1411,6 +1417,7 @@ mrb_get_arg1(mrb_state *mrb)
 MRB_API mrb_bool
 mrb_block_given_p(mrb_state *mrb)
 {
+  MRB_DIRECT_FRAME(mrb, "mrb_block_given_p");
   mrb_callinfo *ci = mrb->c->ci;
   mrb_value b = ci->stack[mrb_ci_bidx(ci)];
 
@@ -1426,6 +1433,14 @@ get_args_v(mrb_state *mrb, mrb_args_format format, void** ptr, va_list *ap)
   char c;
   mrb_int i = 0;
   mrb_callinfo *ci = mrb->c->ci;
+  mrb_callinfo direct_ci;
+  if (mrb->direct_call) {
+    /* A frame-free call: the arguments read as they would on the stack of the frame it was not given. */
+    memset(&direct_ci, 0, sizeof direct_ci);
+    direct_ci.n = (uint8_t)mrb->direct_call->argc;
+    direct_ci.stack = mrb->direct_call->stack;
+    ci = &direct_ci;
+  }
   mrb_int argc = ci->n;
   const mrb_value *argv = ci->stack+1;
   mrb_bool argv_on_stack;

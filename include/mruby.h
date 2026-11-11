@@ -284,8 +284,28 @@ typedef struct mrb_task_state {
 } mrb_task_state;
 #endif
 
+/*
+ * A native called without its frame (mrb_call_direct, vm.c). The arguments sit in `stack` as they would on the VM
+ * stack (self, the arguments, a nil block slot); the argument readers (class.c) serve from it and anything else that
+ * needs the frame gets it first (mrb_direct_materialize). At most one is active, because pushing any other frame
+ * materializes it.
+ */
+#define MRB_DIRECT_ARGS_MAX 14
+struct mrb_direct_call {
+  mrb_value stack[MRB_DIRECT_ARGS_MAX + 2];
+  mrb_int argc;
+  mrb_sym mid;
+  struct RClass *owner;
+};
+
+/* mrb_state.frame_free_p: whether mrb_funcall_with_method may call `f` without a frame */
+typedef mrb_bool mrb_frame_free_func(struct mrb_state *mrb, mrb_func_t f);
+
 typedef struct mrb_state {
   struct mrb_jmpbuf *jmp;
+  struct mrb_direct_call *direct_call;    /* the active frame-free native call, or NULL */
+  /* which C functions mrb_funcall_with_method may call without a frame (mrb_call_direct); NULL: none */
+  mrb_frame_free_func *frame_free_p;
 
   struct mrb_context *c;
   struct mrb_context *root_c;
@@ -1232,6 +1252,21 @@ MRB_API mrb_value mrb_funcall_argv(mrb_state *mrb, mrb_value val, mrb_sym name, 
  * Call existing Ruby functions with a block.
  */
 MRB_API mrb_value mrb_funcall_with_block(mrb_state *mrb, mrb_value val, mrb_sym name, mrb_int argc, const mrb_value *argv, mrb_value block);
+
+/**
+ * Calls the C function `f`, registered as `mid` on `owner`, on `self` without pushing a frame: the arguments are
+ * served to its argument readers from the call, and the frame is pushed when the function raises, pushes another
+ * frame, or reads the frame some other way. Only for a function whose body reads the frame through the argument
+ * readers alone (bc2cpp's NativeFrameUse proves that); the arity was checked by the caller and no block is passed.
+ */
+MRB_API mrb_value mrb_call_direct(mrb_state *mrb, mrb_value self, mrb_sym mid, mrb_func_t f, struct RClass *owner,
+                                  mrb_int argc, const mrb_value *argv);
+/* Pushes the frame of the active frame-free call, if there is one. */
+MRB_API void mrb_direct_materialize(mrb_state *mrb);
+/* A frame-reading service reached by a frame-free call: its frame is pushed (or, with MRB_FRAMEFREE_VERIFY, it aborts,
+   because the analysis called the function frame-free). */
+MRB_API void mrb_direct_frame_needed(mrb_state *mrb, const char *what);
+#define MRB_DIRECT_FRAME(mrb, what) do { if ((mrb)->direct_call) mrb_direct_frame_needed((mrb), (what)); } while (0)
 /**
  * Create a symbol from C string. But usually it's better to
  * use MRB_SYM, MRB_OPSYM, MRB_CVSYM, MRB_IVSYM, MRB_GVSYM,

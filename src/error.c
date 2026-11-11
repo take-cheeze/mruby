@@ -185,6 +185,8 @@ mrb_exc_set(mrb_state *mrb, mrb_value exc)
     mrb->exc = 0;
   }
   else {
+    /* The backtrace shows the frame of a native that was called without one. */
+    if (mrb->direct_call) mrb_direct_materialize(mrb);
     mrb->exc = mrb_obj_ptr(exc);
     if (mrb->gc.arena_idx > 0 &&
         (struct RBasic*)mrb->exc == mrb->gc.arena[mrb->gc.arena_idx-1]) {
@@ -199,6 +201,7 @@ mrb_exc_set(mrb_state *mrb, mrb_value exc)
 static mrb_noreturn void
 exc_throw(mrb_state *mrb, mrb_value exc)
 {
+  if (mrb->direct_call) mrb_direct_materialize(mrb); /* a break leaves through here without mrb_exc_set */
   if (!mrb->jmp) {
     mrb_print_error(mrb);
     abort();
