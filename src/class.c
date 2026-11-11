@@ -2798,6 +2798,17 @@ undef:
   return m;
 }
 
+/*
+ * The method a call on a receiver its caller proved runs (a closed-world compiler's owner call): what
+ * mrb_method_search_vm finds, except that a row (MRB_MT_CTOR_ROW) answers where its class sits in the chain, as it
+ * would were it an entry. Not cached: the method cache serves the lookups that do not see rows.
+ */
+MRB_API mrb_method_t
+mrb_method_search_rows(mrb_state *mrb, struct RClass **cp, mrb_sym mid)
+{
+  return mrb_vm_find_ctor(mrb, *cp, cp, mid);
+}
+
 #ifdef MRB_USE_METHOD_LOOKUP_HOOK
 static mrb_method_t
 method_search_without_hook(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
