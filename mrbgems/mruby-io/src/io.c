@@ -2068,21 +2068,6 @@ io_read(mrb_state *mrb, mrb_value io)
   return io_read_impl(mrb, fptr, length_given, len, outbuf);
 }
 
-/* Call the core IO#read(len) body without a VM argument frame when method lookup still resolves to that body.
- * `len` is nil (read everything) or an Integer. Returns FALSE when Ruby overrides it. */
-mrb_bool
-mrb_io_read_direct(mrb_state *mrb, mrb_value io, mrb_value len, mrb_value *result)
-{
-  struct RClass *c = mrb_obj_class(mrb, io);
-  mrb_method_t method = mrb_method_search_vm(mrb, &c, MRB_SYM(read));
-  if (MRB_METHOD_UNDEF_P(method) || !MRB_METHOD_CFUNC_P(method) ||
-      MRB_METHOD_CFUNC(method) != io_read) {
-    return FALSE;
-  }
-  *result = io_read_impl(mrb, io_get_read_fptr(mrb, io), !mrb_nil_p(len), len, mrb_nil_value());
-  return TRUE;
-}
-
 static mrb_int
 io_find_index(struct mrb_io *fptr, const char *rs, mrb_int rslen)
 {
