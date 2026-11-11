@@ -59,6 +59,7 @@ struct RProc*
 mrb_proc_new(mrb_state *mrb, const mrb_irep *irep)
 {
   struct RProc *p;
+  MRB_DIRECT_FRAME(mrb, "mrb_proc_new");
   mrb_callinfo *ci = mrb->c->ci;
 
   p = MRB_OBJ_ALLOC(mrb, MRB_TT_PROC, mrb->proc_class);
@@ -245,6 +246,7 @@ mrb_closure_new_cfunc(mrb_state *mrb, mrb_func_t func, int nlocals)
 MRB_API mrb_value
 mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx)
 {
+  MRB_DIRECT_FRAME(mrb, "mrb_proc_cfunc_env_get");
   const struct RProc *p = mrb->c->ci->proc;
   struct REnv *e;
 
