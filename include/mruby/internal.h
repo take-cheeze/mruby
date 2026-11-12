@@ -51,6 +51,7 @@ mrb_func_t mrb_method_cfunc(mrb_state *mrb, mrb_value obj, mrb_sym mid);
 mrb_func_t mrb_method_cfunc_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot);
 const struct mrb_cfunc_memo *mrb_method_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot);
 mrb_method_t mrb_vm_find_ctor(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid);
+mrb_method_t mrb_vm_find_method_rows(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid);
 mrb_bool mrb_eq_send(mrb_state *mrb, mrb_value a, mrb_value b);
 /* The pairs an Array/Hash == is comparing above this call: a chain in the C frames, so an unwind drops it with them. */
 struct mrb_eq_pair { mrb_value a, b; const struct mrb_eq_pair *up; };

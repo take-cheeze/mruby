@@ -248,6 +248,17 @@ struct mrb_cache_entry {
 };
 #endif
 
+/* mrb_vm_find_method_rows' answers, valid while mt_epoch is unchanged. */
+#ifndef MRB_ROWS_CACHE_SIZE
+# define MRB_ROWS_CACHE_SIZE (1<<6)
+#endif
+struct mrb_rows_cache_entry {
+  struct RClass *c, *c0;
+  mrb_sym mid;
+  uint32_t epoch;
+  mrb_method_t m;
+};
+
 /* The method a hot by-name caller found for a class (m, found in owner; f its C
  * function or NULL), valid while mt_epoch is unchanged (see mrb_method_memo). */
 struct mrb_cfunc_memo {
@@ -373,6 +384,7 @@ typedef struct mrb_state {
    * compare against this holds. Wraps; compare for equality only. */
   uint32_t mt_epoch;
   struct mrb_cfunc_memo cfunc_memo[MRB_MEMO_COUNT];
+  struct mrb_rows_cache_entry rows_cache[MRB_ROWS_CACHE_SIZE];
 
 #ifndef MRB_NO_METHOD_CACHE
   struct mrb_cache_entry cache[MRB_METHOD_CACHE_SIZE];

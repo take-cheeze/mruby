@@ -23,7 +23,7 @@ MRB_API mrb_bool
 mrb_func_basic_p(mrb_state *mrb, mrb_value obj, mrb_sym mid, mrb_func_t func)
 {
   struct RClass *c = mrb_class(mrb, obj);
-  mrb_method_t m = mrb_method_search_vm(mrb, &c, mid);
+  mrb_method_t m = mrb_vm_find_method_rows(mrb, c, &c, mid);
   const struct RProc *p;
 
   if (MRB_METHOD_UNDEF_P(m)) return FALSE;
@@ -71,9 +71,8 @@ mrb_method_memo(mrb_state *mrb, mrb_value obj, mrb_sym mid, int slot)
 #endif
   if (keep && memo->c == c && memo->epoch == mrb->mt_epoch) return memo;
   struct RClass *owner = c;
-  /* a construction also finds a class's constructor row (MRB_MT_CTOR_ROW) */
-  mrb_method_t m = (slot == MRB_MEMO_INITIALIZE || slot == MRB_MEMO_INIT_COPY) ?
-    mrb_vm_find_ctor(mrb, c, &owner, mid) : mrb_method_search_vm(mrb, &owner, mid);
+  /* a C caller finds a row where its entry would be (mrb_vm_find_method_rows) */
+  mrb_method_t m = mrb_vm_find_method_rows(mrb, c, &owner, mid);
   mrb_func_t f = NULL;
   if (!MRB_METHOD_UNDEF_P(m)) {
     if (MRB_METHOD_FUNC_P(m)) f = MRB_METHOD_FUNC(m);
