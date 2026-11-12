@@ -2809,6 +2809,44 @@ mrb_method_search_rows(mrb_state *mrb, struct RClass **cp, mrb_sym mid)
   return mrb_vm_find_ctor(mrb, *cp, cp, mid);
 }
 
+/*
+ * The method a C by-name call (mrb_funcall and its variants, mrb_method_memo) runs: mrb_method_search_rows, remembered
+ * per (class, name) until a method table changes (mt_epoch). A row is an entry no Ruby-level lookup sees; a C caller
+ * finds it where the entry would be, so the closed build may make a row of an entry only C calls name (C_CALL_ROWS).
+ */
+mrb_method_t
+mrb_vm_find_method_rows(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
+{
+  struct RClass *oc = c;
+  int h = mrb_int_hash_func(mrb, ((intptr_t)oc) ^ mid) & (MRB_ROWS_CACHE_SIZE-1);
+  struct mrb_rows_cache_entry *rc = &mrb->rows_cache[h];
+  mrb_bool keep = TRUE;
+  mrb_method_t m;
+
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+  keep = !mrb->method_lookup_hook;
+#endif
+  if (keep && rc->c == oc && rc->mid == mid && rc->epoch == mrb->mt_epoch) {
+    *cp = rc->c0;
+    return rc->m;
+  }
+  m = mrb_vm_find_ctor(mrb, c, cp, mid);
+#ifdef MRB_USE_METHOD_LOOKUP_HOOK
+  if (mrb->method_lookup_hook) {
+    struct RClass *owner = MRB_METHOD_UNDEF_P(m) ? NULL : *cp;
+    mrb->method_lookup_hook(mrb, oc, owner, mid, &m);
+  }
+#endif
+  if (keep) {
+    rc->c = oc;
+    rc->c0 = *cp;
+    rc->mid = mid;
+    rc->epoch = mrb->mt_epoch;
+    rc->m = m;
+  }
+  return m;
+}
+
 #ifdef MRB_USE_METHOD_LOOKUP_HOOK
 static mrb_method_t
 method_search_without_hook(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym mid)
