@@ -1953,6 +1953,10 @@ mrb_pack_pack(mrb_state *mrb, mrb_value ary)
   }
 
   mrb_str_resize(mrb, result, ridx);
+  /* CRuby: Array#pack returns ASCII-8BIT, except when the template starts with 'U' (UTF-8). */
+  if (!(RSTRING_LEN(tmpl.str) > 0 && RSTRING_PTR(tmpl.str)[0] == 'U')) {
+    mrb_str_ptr(result)->flags |= MRB_STR_BINARY;
+  }
   return result;
 }
 
