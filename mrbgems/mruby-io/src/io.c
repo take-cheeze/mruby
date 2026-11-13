@@ -1091,7 +1091,7 @@ mrb_io_puts_direct(mrb_state *mrb, mrb_value io, mrb_int argc,
                   const mrb_value *argv, mrb_value *result)
 {
   struct RClass *c = mrb_obj_class(mrb, io);
-  mrb_method_t method = mrb_method_search_vm(mrb, &c, MRB_SYM(puts));
+  mrb_method_t method = mrb_vm_find_method_rows(mrb, c, &c, MRB_SYM(puts));
   if (MRB_METHOD_UNDEF_P(method) || !MRB_METHOD_CFUNC_P(method) ||
       MRB_METHOD_CFUNC(method) != io_puts_method) {
     return FALSE;
