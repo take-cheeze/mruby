@@ -791,7 +791,8 @@ prepare_missing(mrb_state *mrb, mrb_callinfo *ci, mrb_value recv, mrb_sym mid, m
   if (mid != missing) {
     ci->u.target_class = mrb_class(mrb, recv);
   }
-  m = mrb_vm_find_method(mrb, ci->u.target_class, &ci->u.target_class, missing);
+  /* a C by-name lookup: finds a row where its entry would be (mrb_vm_find_method_rows) */
+  m = mrb_vm_find_method_rows(mrb, ci->u.target_class, &ci->u.target_class, missing);
   if (MRB_METHOD_UNDEF_P(m)) goto method_missing; /* just in case */
   stack_extend(mrb, 4);
 
@@ -1246,7 +1247,7 @@ send_method(mrb_state *mrb, mrb_value self, mrb_bool pub)
        it takes them, the name first, and keep their keyword hash, which a
        funcall would pass as a positional hash. */
     c = mrb_class(mrb, self);
-    m = mrb_vm_find_method(mrb, c, &c, MRB_SYM(method_missing));
+    m = mrb_vm_find_method_rows(mrb, c, &c, MRB_SYM(method_missing));
     if (MRB_METHOD_UNDEF_P(m)) goto funcall;    /* just in case */
     if (n == 15) {      /* a copy: the array may be the caller's own */
       regs[0] = mrb_ary_new_from_values(mrb, RARRAY_LEN(regs[0]), RARRAY_PTR(regs[0]));

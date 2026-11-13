@@ -1159,7 +1159,7 @@ mrb_file_init(mrb_state *mrb, mrb_value self)
     /* IO.sysopen as found (a subclass or a redefinition answers); missing is the send itself, which is method_missing */
     mrb_value io = mrb_obj_value(mrb_class_get_id(mrb, MRB_SYM(IO)));
     struct RClass *io_meta = mrb_class(mrb, io);
-    mrb_method_t sm = mrb_method_search_vm(mrb, &io_meta, MRB_SYM(sysopen));
+    mrb_method_t sm = mrb_vm_find_method_rows(mrb, io_meta, &io_meta, MRB_SYM(sysopen));
     args[0] = MRB_METHOD_UNDEF_P(sm) ? mrb_funcall_argv(mrb, io, MRB_SYM(sysopen), 3, sysopen_args)
                                      : mrb_funcall_with_method(mrb, io, MRB_SYM(sysopen), &sm, io_meta, 3, sysopen_args,
                                                                mrb_nil_value());
@@ -1167,7 +1167,7 @@ mrb_file_init(mrb_state *mrb, mrb_value self)
   args[1] = mode;
 
   struct RClass *owner = mrb_class_get_id(mrb, MRB_SYM(File))->super;
-  mrb_method_t m = mrb_method_search_vm(mrb, &owner, MRB_SYM(initialize));
+  mrb_method_t m = mrb_vm_find_method_rows(mrb, owner, &owner, MRB_SYM(initialize));
   return mrb_funcall_with_method(mrb, self, MRB_SYM(initialize), &m, owner, 2, args, blk);
 }
 
