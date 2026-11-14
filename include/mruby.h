@@ -1484,6 +1484,10 @@ MRB_API mrb_int mrb_obj_id(mrb_value obj);
 MRB_API mrb_sym mrb_obj_to_sym(mrb_state *mrb, mrb_value name);
 
 MRB_API mrb_bool mrb_obj_eq(mrb_state *mrb, mrb_value a, mrb_value b);
+/** identity of two values without a state (the same object, or the same immediate value) */
+MRB_API mrb_bool mrb_value_identical(mrb_value a, mrb_value b);
+/** identity of two values without a state (the same object, or the same immediate value) */
+MRB_API mrb_bool mrb_value_identical(mrb_value a, mrb_value b);
 MRB_API mrb_bool mrb_obj_equal(mrb_state *mrb, mrb_value a, mrb_value b);
 MRB_API mrb_bool mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
 #ifndef MRB_NO_FLOAT
