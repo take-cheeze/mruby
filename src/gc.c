@@ -697,6 +697,12 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
   case MRB_TT_OBJECT:
   case MRB_TT_DATA:
   case MRB_TT_EXCEPTION:
+    if (obj->tt == MRB_TT_DATA) {
+      struct RData *d = (struct RData*)obj;
+      if (d->type && d->type->mark && d->data) {
+        d->type->mark(mrb, d->data);
+      }
+    }
     mrb_gc_mark_iv(mrb, (struct RObject*)obj);
     break;
 

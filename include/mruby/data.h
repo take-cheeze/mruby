@@ -25,6 +25,13 @@ typedef struct mrb_data_type {
 
   /** data type release function pointer */
   void (*dfree)(mrb_state *mrb, void*);
+
+  /**
+   * Optional mark function, called by the GC while it marks the object (NULL: none).
+   * It marks each mrb_value the native data holds with mrb_gc_mark_value(mrb, v).
+   * The data may be NULL after dfree has run, so the function must check it.
+   */
+  void (*mark)(mrb_state *mrb, void *data);
 } mrb_data_type;
 
 struct RData {
