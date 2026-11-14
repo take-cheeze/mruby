@@ -943,6 +943,12 @@ struct mrb_kwargs
  */
 MRB_API mrb_int mrb_get_args(mrb_state *mrb, mrb_args_format format, ...);
 
+/**
+ * Whether the method being run was called with a block. This is the block slot that mrb_get_args()
+ * reads with "&": the current call frame's argument count locates it (CRuby's rb_block_given_p).
+ */
+MRB_API mrb_bool mrb_block_given_p(mrb_state *mrb);
+
 MRB_INLINE mrb_sym
 mrb_get_mid(mrb_state *mrb) /* get method symbol */
 {

@@ -179,6 +179,20 @@ mrb_f_block_given_p_m(mrb_state *mrb, mrb_value self)
   return mrb_true_value();
 }
 
+MRB_API mrb_bool
+mrb_block_given_p(mrb_state *mrb)
+{
+  mrb_value *bp;
+
+  if (mrb->c->ci->argc < 0) {
+    bp = mrb->c->stack + 2;
+  }
+  else {
+    bp = mrb->c->stack + mrb->c->ci->argc + 1;
+  }
+  return !mrb_nil_p(*bp);
+}
+
 /* 15.3.1.3.7  */
 /*
  *  call-seq:
