@@ -10,8 +10,9 @@
 #include <mruby/string.h>
 #include <mruby/class.h>
 
+/* identity of two values: the same object, or the same immediate value (no mruby state is needed) */
 MRB_API mrb_bool
-mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
+mrb_value_identical(mrb_value v1, mrb_value v2)
 {
   if (mrb_type(v1) != mrb_type(v2)) return FALSE;
   switch (mrb_type(v1)) {
@@ -39,6 +40,13 @@ mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
 {
   /* temporary definition */
   return mrb_obj_eq(mrb, v1, v2);
+}
+
+MRB_API mrb_bool
+mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
+{
+  (void)mrb;
+  return mrb_value_identical(v1, v2);
 }
 
 MRB_API mrb_bool
