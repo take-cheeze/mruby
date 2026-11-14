@@ -81,6 +81,9 @@ typedef struct mrb_gc {
   mrb_bool generational  :1;
   mrb_bool out_of_memory :1;
   size_t majorgc_old_threshold;
+  mrb_value **addr_roots;   /* addresses of values kept alive (mrb_gc_register_address) */
+  size_t addr_roots_len;
+  size_t addr_roots_capa;
 } mrb_gc;
 
 MRB_API mrb_bool

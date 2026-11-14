@@ -389,6 +389,9 @@ mrb_gc_init(mrb_state *mrb, mrb_gc *gc)
   gc->arena_capa = MRB_GC_ARENA_SIZE;
 #endif
 
+  gc->addr_roots = NULL;
+  gc->addr_roots_len = 0;
+  gc->addr_roots_capa = 0;
   gc->current_white_part = GC_WHITE_A;
   gc->heaps = NULL;
   gc->free_heaps = NULL;
@@ -429,6 +432,7 @@ void
 mrb_gc_destroy(mrb_state *mrb, mrb_gc *gc)
 {
   free_heap(mrb, gc);
+  mrb_free(mrb, gc->addr_roots);
 #ifndef MRB_GC_FIXED_ARENA
   mrb_free(mrb, gc->arena);
 #endif
@@ -470,6 +474,41 @@ mrb_gc_protect(mrb_state *mrb, mrb_value obj)
    arguments.  Don't forget to remove the object using
    mrb_gc_unregister, otherwise your object will leak.
 */
+
+/* address roots: the GC marks *ptr for each registered address at every collection (mark_addr_roots). */
+MRB_API void
+mrb_gc_register_address(mrb_state *mrb, mrb_value *ptr)
+{
+  mrb_gc *gc = &mrb->gc;
+  if (gc->addr_roots_len == gc->addr_roots_capa) {
+    size_t capa = gc->addr_roots_capa ? gc->addr_roots_capa * 2 : 16;
+    gc->addr_roots = (mrb_value **)mrb_realloc(mrb, gc->addr_roots, sizeof(mrb_value *) * capa);
+    gc->addr_roots_capa = capa;
+  }
+  gc->addr_roots[gc->addr_roots_len++] = ptr;
+}
+
+MRB_API void
+mrb_gc_unregister_address(mrb_state *mrb, mrb_value *ptr)
+{
+  mrb_gc *gc = &mrb->gc;
+  size_t i;
+  for (i = gc->addr_roots_len; i > 0; i--) {
+    if (gc->addr_roots[i - 1] == ptr) {
+      gc->addr_roots[i - 1] = gc->addr_roots[--gc->addr_roots_len];
+      return;
+    }
+  }
+}
+
+static void
+mark_addr_roots(mrb_state *mrb, mrb_gc *gc)
+{
+  size_t i;
+  for (i = 0; i < gc->addr_roots_len; i++) {
+    mrb_gc_mark_value(mrb, *gc->addr_roots[i]);
+  }
+}
 
 MRB_API void
 mrb_gc_register(mrb_state *mrb, mrb_value obj)
@@ -918,6 +957,7 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
   }
 
   mrb_gc_mark_gv(mrb);
+  mark_addr_roots(mrb, gc);
   /* mark arena */
   for (i=0,e=gc->arena_idx; i<e; i++) {
     mrb_gc_mark(mrb, gc->arena[i]);
@@ -1084,6 +1124,7 @@ final_marking_phase(mrb_state *mrb, mrb_gc *gc)
     mrb_gc_mark(mrb, gc->arena[i]);
   }
   mrb_gc_mark_gv(mrb);
+  mark_addr_roots(mrb, gc);
   mark_context(mrb, mrb->c);
   mark_context(mrb, mrb->root_c);
   mrb_gc_mark(mrb, (struct RBasic*)mrb->exc);

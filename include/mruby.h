@@ -1278,6 +1278,10 @@ mrb_value mrb_yield_cont(mrb_state *mrb, mrb_value b, mrb_value self, mrb_int ar
 MRB_API void mrb_gc_protect(mrb_state *mrb, mrb_value obj);
 /* mrb_gc_register() keeps the object from GC. */
 MRB_API void mrb_gc_register(mrb_state *mrb, mrb_value obj);
+/* mrb_gc_register_address() keeps the value at *ptr alive for as long as ptr is registered: the value
+   is read at each GC, so a store through ptr is rooted. Unregister with mrb_gc_unregister_address(). */
+MRB_API void mrb_gc_register_address(mrb_state *mrb, mrb_value *ptr);
+MRB_API void mrb_gc_unregister_address(mrb_state *mrb, mrb_value *ptr);
 /* mrb_gc_unregister() removes the object from GC root. */
 MRB_API void mrb_gc_unregister(mrb_state *mrb, mrb_value obj);
 
