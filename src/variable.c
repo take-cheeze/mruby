@@ -813,6 +813,20 @@ mrb_const_get(mrb_state *mrb, mrb_value mod, mrb_sym sym)
   return const_get(mrb, mrb_class_ptr(mod), sym);
 }
 
+MRB_API mrb_value
+mrb_const_get_at(mrb_state *mrb, struct RClass *c, mrb_sym sym)
+{
+  mrb_value v;
+
+  if (iv_get(mrb, c->iv, sym, &v)) {
+    return v;
+  }
+  {
+    mrb_value name = mrb_symbol_value(sym);
+    return mrb_funcall_argv(mrb, mrb_obj_value(c), mrb_intern_lit(mrb, "const_missing"), 1, &name);
+  }
+}
+
 mrb_value
 mrb_vm_const_get(mrb_state *mrb, mrb_sym sym)
 {

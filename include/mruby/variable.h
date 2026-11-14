@@ -36,6 +36,11 @@ void mrb_vm_cv_set(mrb_state*, mrb_sym, mrb_value);
 mrb_value mrb_vm_const_get(mrb_state*, mrb_sym);
 void mrb_vm_const_set(mrb_state*, mrb_sym, mrb_value);
 MRB_API mrb_value mrb_const_get(mrb_state*, mrb_value, mrb_sym);
+/**
+ * Looks up a constant in the given module or class only, not in its ancestors (CRuby's rb_const_get_at).
+ * A missing constant goes to const_missing, as with mrb_const_get().
+ */
+MRB_API mrb_value mrb_const_get_at(mrb_state*, struct RClass*, mrb_sym);
 MRB_API void mrb_const_set(mrb_state*, mrb_value, mrb_sym, mrb_value);
 MRB_API mrb_bool mrb_const_defined(mrb_state*, mrb_value, mrb_sym);
 MRB_API void mrb_const_remove(mrb_state*, mrb_value, mrb_sym);
