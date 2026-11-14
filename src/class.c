@@ -4712,3 +4712,24 @@ mrb_init_class(mrb_state *mrb)
   mrb->top_self = MRB_OBJ_ALLOC(mrb, MRB_TT_OBJECT, mrb->object_class);
   MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(mrb->top_self)), top_self_rom_entries);
 }
+
+/* An included module is an MRB_TT_ICLASS entry in the super chain whose c is the module. */
+static int
+class_chain_has(struct RClass *from, struct RClass *target)
+{
+  struct RClass *c;
+  for (c = from; c; c = c->super) {
+    if (c == target) return 1;
+    if (c->tt == MRB_TT_ICLASS && c->c == target) return 1;
+  }
+  return 0;
+}
+
+MRB_API mrb_value
+mrb_class_inherited_p(mrb_state *mrb, struct RClass *mod, struct RClass *arg)
+{
+  if (mod == arg) return mrb_true_value();
+  if (class_chain_has(mod->super, arg)) return mrb_true_value();
+  if (class_chain_has(arg->super, mod)) return mrb_false_value();
+  return mrb_nil_value();
+}
