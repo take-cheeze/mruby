@@ -1434,3 +1434,12 @@ mrb_init_hash(mrb_state *mrb)
   mrb_define_method(mrb, h, "values",          mrb_hash_values,      MRB_ARGS_NONE()); /* 15.2.13.4.28 */
   mrb_define_method(mrb, h, "rehash",          mrb_hash_rehash,      MRB_ARGS_NONE());
 }
+
+MRB_API void
+mrb_hash_bulk_insert(mrb_state *mrb, mrb_int argc, const mrb_value *argv, mrb_value hash)
+{
+  mrb_int i;
+  for (i = 0; i + 1 < argc; i += 2) {
+    mrb_hash_set(mrb, hash, argv[i], argv[i + 1]);
+  }
+}

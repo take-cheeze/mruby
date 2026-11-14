@@ -53,6 +53,8 @@ MRB_API mrb_value mrb_hash_new(mrb_state *mrb);
  * @return The value.
  */
 MRB_API void mrb_hash_set(mrb_state *mrb, mrb_value hash, mrb_value key, mrb_value val);
+/* CRuby rb_hash_bulk_insert: argv holds argc elements, alternating keys and values */
+MRB_API void mrb_hash_bulk_insert(mrb_state *mrb, mrb_int argc, const mrb_value *argv, mrb_value hash);
 
 /*
  * Gets a value from a key. If the key is not found, the default of the

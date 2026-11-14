@@ -2313,3 +2313,24 @@ mrb_init_class(mrb_state *mrb)
   mrb_define_singleton_method(mrb, mrb->top_self, "to_s", inspect_main, MRB_ARGS_NONE());
   mrb_define_singleton_method(mrb, mrb->top_self, "define_method", top_define_method, MRB_ARGS_ARG(1,1));
 }
+
+/* An included module is an MRB_TT_ICLASS entry in the super chain whose c is the module. */
+static int
+class_chain_has(struct RClass *from, struct RClass *target)
+{
+  struct RClass *c;
+  for (c = from; c; c = c->super) {
+    if (c == target) return 1;
+    if (c->tt == MRB_TT_ICLASS && c->c == target) return 1;
+  }
+  return 0;
+}
+
+MRB_API mrb_value
+mrb_class_inherited_p(mrb_state *mrb, struct RClass *mod, struct RClass *arg)
+{
+  if (mod == arg) return mrb_true_value();
+  if (class_chain_has(mod->super, arg)) return mrb_true_value();
+  if (class_chain_has(arg->super, mod)) return mrb_false_value();
+  return mrb_nil_value();
+}

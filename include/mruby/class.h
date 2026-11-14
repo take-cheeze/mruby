@@ -83,6 +83,8 @@ MRB_API void mrb_alias_method(mrb_state*, struct RClass *c, mrb_sym a, mrb_sym b
 
 MRB_API mrb_method_t mrb_method_search_vm(mrb_state*, struct RClass**, mrb_sym);
 MRB_API mrb_method_t mrb_method_search(mrb_state*, struct RClass*, mrb_sym);
+/* mod <= arg: true if mod is arg or a subclass or includes arg, false if arg is a subclass of mod, nil if unrelated */
+MRB_API mrb_value mrb_class_inherited_p(mrb_state *mrb, struct RClass *mod, struct RClass *arg);
 
 MRB_API struct RClass* mrb_class_real(struct RClass* cl);
 mrb_value mrb_instance_new(mrb_state *mrb, mrb_value cv);
