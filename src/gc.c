@@ -777,6 +777,9 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
     if (obj->tt == MRB_TT_CDATA) {
       struct RData *data = (struct RData*)obj;
       /* data is NULL until mrb_data_init runs, and stays NULL if #initialize raised first. */
+      if (data->type && data->data && data->type->mark) {
+        data->type->mark(mrb, data->data);
+      }
       if (data->type && data->type->ivars && data->data) {
         for (size_t i = 0; i < data->type->ivar_count; ++i) {
           /* A typed slot is a raw C value, never a reference. */
