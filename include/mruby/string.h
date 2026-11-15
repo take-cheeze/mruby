@@ -112,6 +112,8 @@ struct RStringEmbed {
 #define RSTRING_CSTR(mrb,s)  mrb_string_cstr(mrb, s)
 
 MRB_API void mrb_str_modify(mrb_state *mrb, struct RString *s);
+/* Ruby format (mruby-sprintf): fmt formatted with argc values of argv; CRuby rb_str_format */
+MRB_API mrb_value mrb_str_format(mrb_state *mrb, mrb_int argc, const mrb_value *argv, mrb_value fmt);
 /* CRuby ruby_scan_digits: the value of up to len (negative: no limit) digits of base at str, retlen the characters used,
    overflow set when the value does not fit an unsigned long */
 MRB_API unsigned long mrb_scan_digits(const char *str, mrb_int len, int base, size_t *retlen, int *overflow);
