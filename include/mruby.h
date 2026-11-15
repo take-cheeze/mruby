@@ -1206,6 +1206,9 @@ MRB_API void mrb_field_write_barrier(mrb_state *, struct RBasic*, struct RBasic*
   if (!mrb_immediate_p(val)) mrb_field_write_barrier((mrb), (obj), mrb_basic_ptr(val)); \
 } while (0)
 MRB_API void mrb_write_barrier(mrb_state *, struct RBasic*);
+/* Store v into the field slot of obj, with mruby's field write barrier (CRuby's RB_OBJ_WRITE: the barrier is run once) */
+#define mrb_write_field(mrb, obj, slot, v) do { mrb_value nfcx_wf_v = (v); *(slot) = nfcx_wf_v; \
+  mrb_field_write_barrier_value((mrb), mrb_basic_ptr(obj), nfcx_wf_v); } while (0)
 
 MRB_API mrb_value mrb_check_convert_type(mrb_state *mrb, mrb_value val, enum mrb_vtype type, const char *tname, const char *method);
 MRB_API mrb_value mrb_any_to_s(mrb_state *mrb, mrb_value obj);
