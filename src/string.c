@@ -3225,3 +3225,41 @@ done:
     return fraction;
 }
 #endif
+
+static int
+scan_digit_value(unsigned char c)
+{
+  if ('0' <= c && c <= '9') return c - '0';
+  if ('a' <= c && c <= 'z') return c - 'a' + 10;
+  if ('A' <= c && c <= 'Z') return c - 'A' + 10;
+  return -1;
+}
+
+MRB_API unsigned long
+mrb_scan_digits(const char *str, mrb_int len, int base, size_t *retlen, int *overflow)
+{
+  const char *start = str;
+  unsigned long ret = 0, x;
+  unsigned long mul_overflow = (~(unsigned long)0) / base;
+
+  *overflow = 0;
+  if (!len) {
+    *retlen = 0;
+    return 0;
+  }
+  do {
+    int d = scan_digit_value((unsigned char)*str++);
+    if (d == -1 || base <= d) {
+      --str;
+      break;
+    }
+    if (mul_overflow < ret) *overflow = 1;
+    ret *= base;
+    x = ret;
+    ret += d;
+    if (ret < x) *overflow = 1;
+  } while (len < 0 || --len);
+  *retlen = str - start;
+  return ret;
+}
+
