@@ -1573,6 +1573,32 @@ mrb_cmp(mrb_state *mrb, mrb_value obj1, mrb_value obj2)
   }
 }
 
+MRB_API int
+mrb_cmpint(mrb_state *mrb, mrb_value val, mrb_value a, mrb_value b)
+{
+  if (mrb_nil_p(val)) cmperr(mrb, a, b);
+  if (mrb_fixnum_p(val)) {
+    mrb_int i = mrb_fixnum(val);
+    return (i > 0) ? 1 : (i < 0) ? -1 : 0;
+  }
+  if (mrb_test(mrb_funcall(mrb, val, ">", 1, mrb_fixnum_value(0)))) return 1;
+  if (mrb_test(mrb_funcall(mrb, val, "<", 1, mrb_fixnum_value(0)))) return -1;
+  return 0;
+}
+
+MRB_API mrb_int
+mrb_memhash(const void *p, size_t len)
+{
+  const unsigned char *s = (const unsigned char *)p;
+  uint32_t h = 2166136261u;
+  size_t i;
+  for (i = 0; i < len; i++) {
+    h ^= s[i];
+    h *= 16777619u;
+  }
+  return (mrb_int)(h & 0x3fffffffu);
+}
+
 static mrb_value
 num_finite_p(mrb_state *mrb, mrb_value self)
 {
