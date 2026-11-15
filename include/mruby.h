@@ -1500,6 +1500,10 @@ MRB_API mrb_value mrb_inspect(mrb_state *mrb, mrb_value obj);
 MRB_API mrb_bool mrb_eql(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
 /* mrb_cmp(mrb, obj1, obj2): 1:0:-1; -2 for error */
 MRB_API mrb_int mrb_cmp(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
+/* CRuby rb_cmpint: the int sign of a <=> result; nil raises ArgumentError (comparison failed) */
+MRB_API int mrb_cmpint(mrb_state *mrb, mrb_value val, mrb_value a, mrb_value b);
+/* CRuby rb_memhash: a hash of len bytes at p (FNV-1a), as a fixnum-sized value */
+MRB_API mrb_int mrb_memhash(const void *p, size_t len);
 
 /* recursion detection */
 MRB_API mrb_bool mrb_recursive_method_p(mrb_state *mrb, mrb_sym mid, mrb_value obj1, mrb_value obj2);
