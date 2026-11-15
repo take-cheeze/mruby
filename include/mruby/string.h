@@ -92,6 +92,9 @@ struct RStringEmbed {
 # define RSTR_COPY_ASCII_FLAG(dst, src) (void)0
 #endif
 
+#define RSTR_BINARY_P(s) ((s)->flags & MRB_STR_BINARY)
+#define RSTR_SET_BINARY_FLAG(s) ((s)->flags |= MRB_STR_BINARY)
+#define RSTR_UNSET_BINARY_FLAG(s) ((s)->flags &= ~MRB_STR_BINARY)
 #define RSTR_POOL_P(s) ((s)->flags & MRB_STR_POOL)
 #define RSTR_SET_POOL_FLAG(s) ((s)->flags |= MRB_STR_POOL)
 
@@ -114,6 +117,7 @@ MRB_API mrb_int mrb_str_strlen(mrb_state*, struct RString*);
 #define MRB_STR_EMBED     8  /* type flags up to here */
 #define MRB_STR_POOL     16  /* status flags from here */
 #define MRB_STR_ASCII    32
+#define MRB_STR_BINARY 2048  /* bit 11: the encoding is ASCII-8BIT (binary), not UTF-8 (mruby-encoding) */
 #define MRB_STR_EMBED_LEN_SHIFT 6
 #define MRB_STR_EMBED_LEN_BIT 5
 #define MRB_STR_EMBED_LEN_MASK (((1 << MRB_STR_EMBED_LEN_BIT) - 1) << MRB_STR_EMBED_LEN_SHIFT)
