@@ -95,6 +95,9 @@ MRuby::GemBox.new do |conf|
   # Use Regexp (Onigmo through the system oniguruma library; mrbgems/mruby-onig-regexp, ported to this fork)
   conf.gem :core => "mruby-onig-regexp"
 
+  # Use require for the features this build provides (mrbgems/mruby-require: a feature is a built gem's name)
+  conf.gem :core => "mruby-require"
+
   # Use mruby-compiler to build other mrbgems
   conf.gem :core => "mruby-compiler"
 end

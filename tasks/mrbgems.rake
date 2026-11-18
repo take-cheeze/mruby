@@ -18,6 +18,16 @@ MRuby.each_target do
         gem_init_calls = gem_func_gems.each_with_object('') do |g, s|
           s << "  GENERATED_TMP_mrb_#{g.funcname}_gem_init(mrb);\n"
         end
+        # with mruby-require, every gem's name (and its name without the mruby- prefix: CRuby's feature name, as "time" for
+        # mruby-time) is a loaded feature, so require of a built-in library returns false (see mrbgems/mruby-require)
+        if gems.any? { |g| g.name == 'mruby-require' }
+          gem_func_decls = gem_func_decls + "void mrb_require_provide(mrb_state *mrb, const char *name);\n"
+          gems.each do |g|
+            [g.name, g.name.sub(/\Amruby-/, '')].uniq.each do |feature|
+              gem_init_calls = gem_init_calls + "  mrb_require_provide(mrb, \"#{feature}\");\n"
+            end
+          end
+        end
         gem_final_calls = gem_func_gems.reverse_each.with_object('') do |g, s|
           s << "  GENERATED_TMP_mrb_#{g.funcname}_gem_final(mrb);\n"
         end
