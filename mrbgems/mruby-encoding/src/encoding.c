@@ -6,6 +6,7 @@
 #include <mruby.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
+#include <mruby/encoding.h>
 #include <string.h>
 #include <strings.h>
 
@@ -113,4 +114,59 @@ mrb_mruby_encoding_gem_init(mrb_state *mrb)
 void
 mrb_mruby_encoding_gem_final(mrb_state *mrb)
 {
+}
+
+/* ---- the C side: rb_encoding descriptors (see include/mruby/encoding.h) ---- */
+
+static rb_encoding enc_utf8 = { "UTF-8", 0 };
+static rb_encoding enc_binary = { "ASCII-8BIT", 1 };
+
+rb_encoding *
+rb_utf8_encoding(void)
+{
+  return &enc_utf8;
+}
+
+rb_encoding *
+rb_ascii8bit_encoding(void)
+{
+  return &enc_binary;
+}
+
+rb_encoding *
+rb_default_external_encoding(void)
+{
+  return &enc_utf8;
+}
+
+rb_encoding *
+rb_default_internal_encoding(void)
+{
+  return NULL;
+}
+
+rb_encoding *
+rb_enc_get(mrb_value str)
+{
+  return RSTR_BINARY_P(mrb_str_ptr(str)) ? &enc_binary : &enc_utf8;
+}
+
+mrb_value
+rb_enc_associate(mrb_value str, rb_encoding *enc)
+{
+  struct RString *s = mrb_str_ptr(str);
+  if (enc && enc->binary) {
+    RSTR_SET_BINARY_FLAG(s);
+  }
+  else {
+    RSTR_UNSET_BINARY_FLAG(s);
+  }
+  return str;
+}
+
+mrb_value
+rb_str_export_to_enc(mrb_value str, rb_encoding *enc)
+{
+  (void)enc;
+  return str;
 }
