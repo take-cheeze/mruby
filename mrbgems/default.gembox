@@ -89,6 +89,9 @@ MRuby::GemBox.new do |conf|
   # Use Method/UnboundMethod class
   conf.gem :core => "mruby-method"
 
+  # Use Encoding (a minimal UTF-8 and ASCII-8BIT encoding model, mrbgems/mruby-encoding)
+  conf.gem :core => "mruby-encoding"
+
   # Use mruby-compiler to build other mrbgems
   conf.gem :core => "mruby-compiler"
 end
