@@ -1,7 +1,8 @@
 /*
- * Poorman's Encoding: UTF-8 and ASCII-8BIT (BINARY) only.
+ * Poorman's Encoding: ASCII-8BIT (BINARY), UTF-8 and US-ASCII; no transcoding.
  * An encoding is the frozen name string of the Encoding constant, not an object.
- * A binary string has the MRB_STR_BINARY flag; every other string is UTF-8.
+ * A string carries its encoding in two flags: MRB_STR_BINARY (ASCII-8BIT) and MRB_STR_USASCII
+ * (US-ASCII); a string with neither flag is UTF-8.
  */
 #include <mruby.h>
 #include <mruby/string.h>
@@ -40,13 +41,24 @@ utf8_valid(const unsigned char *p, const unsigned char *e)
   return 1;
 }
 
+static int
+ascii_only(const unsigned char *p, const unsigned char *e)
+{
+  for (; p < e; p++) {
+    if (*p >= 0x80) return 0;
+  }
+  return 1;
+}
+
 static mrb_value
 str_valid_enc_p(mrb_state *mrb, mrb_value str)
 {
   struct RString *s = mrb_str_ptr(str);
+  const unsigned char *p = (const unsigned char *)RSTR_PTR(s);
+  const unsigned char *e = p + RSTR_LEN(s);
   if (RSTR_BINARY_P(s)) return mrb_true_value();
-  return mrb_bool_value(utf8_valid((const unsigned char *)RSTR_PTR(s),
-                                   (const unsigned char *)RSTR_PTR(s) + RSTR_LEN(s)));
+  if (RSTR_USASCII_P(s)) return mrb_bool_value(ascii_only(p, e));
+  return mrb_bool_value(utf8_valid(p, e));
 }
 
 static mrb_value
@@ -59,9 +71,9 @@ get_encoding(mrb_state *mrb, const char *name)
 static mrb_value
 str_encoding(mrb_state *mrb, mrb_value self)
 {
-  if (RSTR_BINARY_P(mrb_str_ptr(self))) {
-    return get_encoding(mrb, "BINARY");
-  }
+  struct RString *s = mrb_str_ptr(self);
+  if (RSTR_BINARY_P(s)) return get_encoding(mrb, "BINARY");
+  if (RSTR_USASCII_P(s)) return get_encoding(mrb, "US_ASCII");
   return get_encoding(mrb, "UTF_8");
 }
 
@@ -82,15 +94,187 @@ str_force_encoding(mrb_state *mrb, mrb_value self)
 
   s = mrb_str_ptr(self);
   if (name_is(enc, "ASCII-8BIT") || name_is(enc, "BINARY")) {
+    RSTR_UNSET_USASCII_FLAG(s);
     RSTR_SET_BINARY_FLAG(s);
   }
   else if (name_is(enc, "UTF-8")) {
+    RSTR_UNSET_USASCII_FLAG(s);
     RSTR_UNSET_BINARY_FLAG(s);
+  }
+  else if (name_is(enc, "US-ASCII") || name_is(enc, "ASCII")) {
+    RSTR_UNSET_BINARY_FLAG(s);
+    RSTR_SET_USASCII_FLAG(s);
   }
   else {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "unknown encoding name - %v", enc);
   }
   return self;
+}
+
+/* ---- the C side: rb_encoding descriptors (see include/mruby/encoding.h) ---- */
+
+static rb_encoding enc_binary = { "ASCII-8BIT", 1, ENCINDEX_ASCII_8BIT };
+static rb_encoding enc_utf8 = { "UTF-8", 0, ENCINDEX_UTF_8 };
+static rb_encoding enc_usascii = { "US-ASCII", 0, ENCINDEX_US_ASCII };
+
+rb_encoding *
+rb_utf8_encoding(void)
+{
+  return &enc_utf8;
+}
+
+rb_encoding *
+rb_ascii8bit_encoding(void)
+{
+  return &enc_binary;
+}
+
+rb_encoding *
+rb_usascii_encoding(void)
+{
+  return &enc_usascii;
+}
+
+rb_encoding *
+rb_default_external_encoding(void)
+{
+  return &enc_utf8;
+}
+
+rb_encoding *
+rb_default_internal_encoding(void)
+{
+  return NULL;
+}
+
+rb_encoding *
+rb_enc_from_index(int index)
+{
+  switch (index) {
+    case ENCINDEX_ASCII_8BIT: return &enc_binary;
+    case ENCINDEX_UTF_8:      return &enc_utf8;
+    case ENCINDEX_US_ASCII:   return &enc_usascii;
+    default:                  return NULL;
+  }
+}
+
+int
+rb_enc_find_index(const char *name)
+{
+  if (strcasecmp(name, "ASCII-8BIT") == 0 || strcasecmp(name, "BINARY") == 0) return ENCINDEX_ASCII_8BIT;
+  if (strcasecmp(name, "UTF-8") == 0) return ENCINDEX_UTF_8;
+  if (strcasecmp(name, "US-ASCII") == 0 || strcasecmp(name, "ASCII") == 0) return ENCINDEX_US_ASCII;
+  return -1;
+}
+
+int
+rb_enc_to_index(rb_encoding *enc)
+{
+  return enc ? enc->index : ENCINDEX_ASCII_8BIT;
+}
+
+int rb_utf8_encindex(void) { return ENCINDEX_UTF_8; }
+int rb_ascii8bit_encindex(void) { return ENCINDEX_ASCII_8BIT; }
+int rb_usascii_encindex(void) { return ENCINDEX_US_ASCII; }
+
+int
+rb_enc_get_index(mrb_value str)
+{
+  struct RString *s = mrb_str_ptr(str);
+  if (RSTR_BINARY_P(s)) return ENCINDEX_ASCII_8BIT;
+  if (RSTR_USASCII_P(s)) return ENCINDEX_US_ASCII;
+  return ENCINDEX_UTF_8;
+}
+
+rb_encoding *
+rb_enc_get(mrb_value str)
+{
+  return rb_enc_from_index(rb_enc_get_index(str));
+}
+
+void
+rb_enc_set_index(mrb_value str, int index)
+{
+  struct RString *s = mrb_str_ptr(str);
+  switch (index) {
+    case ENCINDEX_ASCII_8BIT:
+      RSTR_UNSET_USASCII_FLAG(s);
+      RSTR_SET_BINARY_FLAG(s);
+      break;
+    case ENCINDEX_UTF_8:
+      RSTR_UNSET_USASCII_FLAG(s);
+      RSTR_UNSET_BINARY_FLAG(s);
+      break;
+    case ENCINDEX_US_ASCII:
+      RSTR_UNSET_BINARY_FLAG(s);
+      RSTR_SET_USASCII_FLAG(s);
+      break;
+    default:
+      break;
+  }
+}
+
+mrb_value
+rb_enc_associate_index(mrb_value str, int index)
+{
+  rb_enc_set_index(str, index);
+  return str;
+}
+
+mrb_value
+rb_enc_associate(mrb_value str, rb_encoding *enc)
+{
+  rb_enc_set_index(str, enc ? enc->index : ENCINDEX_UTF_8);
+  return str;
+}
+
+mrb_value
+rb_str_export_to_enc(mrb_value str, rb_encoding *enc)
+{
+  (void)enc;
+  return str;
+}
+
+/* the length in bytes of the UTF-8 sequence that starts with c (a malformed lead byte counts one) */
+static int
+utf8_seq_len(unsigned char c)
+{
+  if (c < 0x80) return 1;
+  if (c >= 0xC2 && c <= 0xDF) return 2;
+  if (c >= 0xE0 && c <= 0xEF) return 3;
+  if (c >= 0xF0 && c <= 0xF4) return 4;
+  return 1;
+}
+
+int
+rb_enc_mbclen(const char *p, const char *e, rb_encoding *enc)
+{
+  const unsigned char *u = (const unsigned char *)p;
+  int n;
+  if (p >= e) return 0;
+  if (!enc || enc->index != ENCINDEX_UTF_8) return 1;
+  n = utf8_seq_len(*u);
+  if (e - p < n) return 1;
+  return utf8_valid(u, u + n) ? n : 1;
+}
+
+long
+rb_enc_strlen(const char *p, const char *e, rb_encoding *enc)
+{
+  long count = 0;
+  if (!enc || enc->index != ENCINDEX_UTF_8) return (long)(e - p);
+  while (p < e) {
+    p += rb_enc_mbclen(p, e, enc);
+    count++;
+  }
+  return count;
+}
+
+int
+rb_enc_str_asciionly_p(mrb_value str)
+{
+  struct RString *s = mrb_str_ptr(str);
+  return ascii_only((const unsigned char *)RSTR_PTR(s), (const unsigned char *)RSTR_PTR(s) + RSTR_LEN(s));
 }
 
 void
@@ -109,64 +293,14 @@ mrb_mruby_encoding_gem_init(mrb_state *mrb)
   mrb_define_const(mrb, e, "ASCII_8BIT", b);
   mrb_define_const(mrb, e, "BINARY", b);
   mrb_define_const(mrb, e, "UTF_8", mrb_str_new_lit_frozen(mrb, "UTF-8"));
+  mrb_define_const(mrb, e, "US_ASCII", mrb_str_new_lit_frozen(mrb, "US-ASCII"));
+  mrb_define_const(mrb, e, "ASCII", mrb_str_new_lit_frozen(mrb, "US-ASCII"));
+
+  /* CRuby's EncodingError (the Encoding family's error; its subclasses are not defined) */
+  mrb_define_class(mrb, "EncodingError", mrb_class_get(mrb, "StandardError"));
 }
 
 void
 mrb_mruby_encoding_gem_final(mrb_state *mrb)
 {
-}
-
-/* ---- the C side: rb_encoding descriptors (see include/mruby/encoding.h) ---- */
-
-static rb_encoding enc_utf8 = { "UTF-8", 0 };
-static rb_encoding enc_binary = { "ASCII-8BIT", 1 };
-
-rb_encoding *
-rb_utf8_encoding(void)
-{
-  return &enc_utf8;
-}
-
-rb_encoding *
-rb_ascii8bit_encoding(void)
-{
-  return &enc_binary;
-}
-
-rb_encoding *
-rb_default_external_encoding(void)
-{
-  return &enc_utf8;
-}
-
-rb_encoding *
-rb_default_internal_encoding(void)
-{
-  return NULL;
-}
-
-rb_encoding *
-rb_enc_get(mrb_value str)
-{
-  return RSTR_BINARY_P(mrb_str_ptr(str)) ? &enc_binary : &enc_utf8;
-}
-
-mrb_value
-rb_enc_associate(mrb_value str, rb_encoding *enc)
-{
-  struct RString *s = mrb_str_ptr(str);
-  if (enc && enc->binary) {
-    RSTR_SET_BINARY_FLAG(s);
-  }
-  else {
-    RSTR_UNSET_BINARY_FLAG(s);
-  }
-  return str;
-}
-
-mrb_value
-rb_str_export_to_enc(mrb_value str, rb_encoding *enc)
-{
-  (void)enc;
-  return str;
 }
