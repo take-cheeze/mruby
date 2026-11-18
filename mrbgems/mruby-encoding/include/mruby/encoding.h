@@ -66,6 +66,9 @@ MRB_API mrb_value rb_str_export_to_enc(mrb_value str, rb_encoding *enc);
 MRB_API long rb_enc_strlen(const char *p, const char *e, rb_encoding *enc);
 /* the byte length of the character at p (1 for ASCII-8BIT and US-ASCII; the UTF-8 sequence length, at least 1) */
 MRB_API int rb_enc_mbclen(const char *p, const char *e, rb_encoding *enc);
+/* CRuby's rb_enc_check: the encoding two strings combine in (mrb is needed to raise Encoding::CompatibilityError when they
+   cannot: two non-ASCII strings in different encodings) */
+MRB_API rb_encoding *rb_enc_check(mrb_state *mrb, mrb_value a, mrb_value b);
 /* 1 when every byte of the string is ASCII (7-bit), 0 otherwise */
 MRB_API int rb_enc_str_asciionly_p(mrb_value str);
 

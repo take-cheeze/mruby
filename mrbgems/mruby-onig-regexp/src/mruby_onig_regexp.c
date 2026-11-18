@@ -148,6 +148,12 @@ static struct mrb_data_type mrb_onig_regexp_type = {
   "PosixRegexp", onig_regexp_free
 };
 
+/* CRuby's RB_TYPE_P(v, T_REGEXP) (mruby/onigmo.h): whether v is a Regexp object of this gem */
+int
+mruby_onig_regexp_is(mrb_value v) {
+  return mrb_type(v) == MRB_TT_DATA && DATA_TYPE(v) == &mrb_onig_regexp_type;
+}
+
 #define ONIG_REGEXP_P(obj) \
   ((mrb_type(obj) == MRB_TT_DATA) && (DATA_TYPE(obj) == &mrb_onig_regexp_type))
 

@@ -277,6 +277,24 @@ rb_enc_str_asciionly_p(mrb_value str)
   return ascii_only((const unsigned char *)RSTR_PTR(s), (const unsigned char *)RSTR_PTR(s) + RSTR_LEN(s));
 }
 
+/* CRuby's rb_enc_check: the encoding two strings can be combined in. The same encoding is that one; otherwise an ASCII-only
+   string takes the other's encoding; two non-ASCII strings in different encodings raise Encoding::CompatibilityError */
+rb_encoding *
+rb_enc_check(mrb_state *mrb, mrb_value a, mrb_value b)
+{
+  rb_encoding *ea = rb_enc_get(a);
+  rb_encoding *eb = rb_enc_get(b);
+  if (ea == eb) return ea;
+  if (ascii_only((const unsigned char *)RSTRING_PTR(b), (const unsigned char *)RSTRING_PTR(b) + RSTRING_LEN(b))) return ea;
+  if (ascii_only((const unsigned char *)RSTRING_PTR(a), (const unsigned char *)RSTRING_PTR(a) + RSTRING_LEN(a))) return eb;
+  {
+    struct RClass *enc_mod = mrb_module_get(mrb, "Encoding");
+    struct RClass *cls = (struct RClass *)mrb_ptr(mrb_const_get(mrb, mrb_obj_value(enc_mod), mrb_intern_cstr(mrb, "CompatibilityError")));
+    mrb_raisef(mrb, cls, "incompatible character encodings: %s and %s", ea->name, eb->name);
+  }
+  return NULL;
+}
+
 void
 mrb_mruby_encoding_gem_init(mrb_state *mrb)
 {
@@ -296,8 +314,11 @@ mrb_mruby_encoding_gem_init(mrb_state *mrb)
   mrb_define_const(mrb, e, "US_ASCII", mrb_str_new_lit_frozen(mrb, "US-ASCII"));
   mrb_define_const(mrb, e, "ASCII", mrb_str_new_lit_frozen(mrb, "US-ASCII"));
 
-  /* CRuby's EncodingError (the Encoding family's error; its subclasses are not defined) */
-  mrb_define_class(mrb, "EncodingError", mrb_class_get(mrb, "StandardError"));
+  /* CRuby's EncodingError, and Encoding::CompatibilityError (raised when two strings cannot be combined) */
+  {
+    struct RClass *ee = mrb_define_class(mrb, "EncodingError", mrb_class_get(mrb, "StandardError"));
+    mrb_define_class_under(mrb, e, "CompatibilityError", ee);
+  }
 }
 
 void
