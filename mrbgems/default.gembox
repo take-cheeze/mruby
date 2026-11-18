@@ -92,6 +92,9 @@ MRuby::GemBox.new do |conf|
   # Use Encoding (a minimal UTF-8 and ASCII-8BIT encoding model, mrbgems/mruby-encoding)
   conf.gem :core => "mruby-encoding"
 
+  # Use Regexp (Onigmo through the system oniguruma library; mrbgems/mruby-onig-regexp, ported to this fork)
+  conf.gem :core => "mruby-onig-regexp"
+
   # Use mruby-compiler to build other mrbgems
   conf.gem :core => "mruby-compiler"
 end
