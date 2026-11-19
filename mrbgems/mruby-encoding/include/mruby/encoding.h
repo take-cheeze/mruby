@@ -69,6 +69,15 @@ MRB_API int rb_enc_mbclen(const char *p, const char *e, rb_encoding *enc);
 /* CRuby's rb_enc_check: the encoding two strings combine in (mrb is needed to raise Encoding::CompatibilityError when they
    cannot: two non-ASCII strings in different encodings) */
 MRB_API rb_encoding *rb_enc_check(mrb_state *mrb, mrb_value a, mrb_value b);
+/* the codepoint of the character at p (UTF-8 decoded; a byte is its own codepoint in ASCII-8BIT and US-ASCII); *len_p
+   gets its length. An invalid UTF-8 sequence raises ArgumentError (CRuby's rb_enc_codepoint_len) */
+MRB_API unsigned int rb_enc_codepoint_len(mrb_state *mrb, const char *p, const char *e, int *len_p, rb_encoding *enc);
+/* the Encoding object of enc (the Encoding name string here); nil for NULL */
+MRB_API mrb_value rb_enc_from_encoding(mrb_state *mrb, rb_encoding *enc);
+/* the string in enc (CRuby's rb_str_conv_enc): an ASCII-only string, or a conversion into ASCII-8BIT, or a valid UTF-8 string
+   into UTF-8, is retagged; any other conversion is not possible here, and the string is returned unchanged (as CRuby does on
+   a failed conversion) */
+MRB_API mrb_value rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *to);
 /* 1 when every byte of the string is ASCII (7-bit), 0 otherwise */
 MRB_API int rb_enc_str_asciionly_p(mrb_value str);
 

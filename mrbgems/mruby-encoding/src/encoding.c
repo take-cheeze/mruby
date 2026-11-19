@@ -295,6 +295,57 @@ rb_enc_check(mrb_state *mrb, mrb_value a, mrb_value b)
   return NULL;
 }
 
+/* the codepoint of the character at p (see encoding.h) */
+unsigned int
+rb_enc_codepoint_len(mrb_state *mrb, const char *p, const char *e, int *len_p, rb_encoding *enc)
+{
+  const unsigned char *u = (const unsigned char *)p;
+  int n;
+  if (p >= e) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "empty string");
+  }
+  if (!enc || enc->index != ENCINDEX_UTF_8) {
+    if (len_p) *len_p = 1;
+    return *u;
+  }
+  n = utf8_seq_len(*u);
+  if (n == 1) {
+    if (*u >= 0x80) {
+      mrb_raisef(mrb, mrb_class_get(mrb, "ArgumentError"), "invalid byte sequence in UTF-8");
+    }
+    if (len_p) *len_p = 1;
+    return *u;
+  }
+  if (e - p < n || !utf8_valid(u, u + n)) {
+    mrb_raisef(mrb, mrb_class_get(mrb, "ArgumentError"), "invalid byte sequence in UTF-8");
+  }
+  if (len_p) *len_p = n;
+  if (n == 2) return ((u[0] & 0x1F) << 6) | (u[1] & 0x3F);
+  if (n == 3) return ((u[0] & 0x0F) << 12) | ((u[1] & 0x3F) << 6) | (u[2] & 0x3F);
+  return ((u[0] & 0x07) << 18) | ((u[1] & 0x3F) << 12) | ((u[2] & 0x3F) << 6) | (u[3] & 0x3F);
+}
+
+mrb_value
+rb_enc_from_encoding(mrb_state *mrb, rb_encoding *enc)
+{
+  if (!enc) return mrb_nil_value();
+  return get_encoding(mrb, enc->index == ENCINDEX_ASCII_8BIT ? "BINARY" : enc->index == ENCINDEX_US_ASCII ? "US_ASCII" : "UTF_8");
+}
+
+mrb_value
+rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *to)
+{
+  struct RString *s = mrb_str_ptr(str);
+  (void)mrb;
+  if (!to || (from && from->index == to->index)) return str;
+  /* an ASCII-only string has the same characters in each of the three encodings: it takes the target's tag. Anything else is
+     not converted (no transcoding), and is returned unchanged, as CRuby does for a failed conversion */
+  if (ascii_only((const unsigned char *)RSTR_PTR(s), (const unsigned char *)RSTR_PTR(s) + RSTR_LEN(s))) {
+    rb_enc_set_index(str, to->index);
+  }
+  return str;
+}
+
 void
 mrb_mruby_encoding_gem_init(mrb_state *mrb)
 {
