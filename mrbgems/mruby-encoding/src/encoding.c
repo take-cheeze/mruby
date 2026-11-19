@@ -8,6 +8,7 @@
 #include <mruby/string.h>
 #include <mruby/variable.h>
 #include <mruby/encoding.h>
+#include <stdarg.h>
 #include <string.h>
 #include <strings.h>
 
@@ -344,6 +345,18 @@ rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *t
     rb_enc_set_index(str, to->index);
   }
   return str;
+}
+
+mrb_value
+rb_enc_sprintf(mrb_state *mrb, rb_encoding *enc, const char *format, ...)
+{
+  va_list ap;
+  mrb_value s;
+  va_start(ap, format);
+  s = mrb_vformat(mrb, format, ap);
+  va_end(ap);
+  if (enc) rb_enc_set_index(s, enc->index);
+  return s;
 }
 
 void

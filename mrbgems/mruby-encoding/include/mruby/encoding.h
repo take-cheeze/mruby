@@ -78,6 +78,9 @@ MRB_API mrb_value rb_enc_from_encoding(mrb_state *mrb, rb_encoding *enc);
    into UTF-8, is retagged; any other conversion is not possible here, and the string is returned unchanged (as CRuby does on
    a failed conversion) */
 MRB_API mrb_value rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *to);
+/* CRuby's rb_enc_sprintf: the formatted string (mrb_vformat), tagged with enc (the converter maps PRIsVALUE in the
+   format as rb_sprintf does) */
+MRB_API mrb_value rb_enc_sprintf(mrb_state *mrb, rb_encoding *enc, const char *format, ...);
 /* 1 when every byte of the string is ASCII (7-bit), 0 otherwise */
 MRB_API int rb_enc_str_asciionly_p(mrb_value str);
 
