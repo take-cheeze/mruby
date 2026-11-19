@@ -22,4 +22,7 @@ MRuby::GemBox.new do |conf|
 
   # Generate mruby-config command
   conf.gem :core => "mruby-bin-config"
+
+  # Use StringIO (take-cheeze/mruby-stringio, vendored in mrbgems/mruby-stringio)
+  conf.gem :core => "mruby-stringio"
 end
