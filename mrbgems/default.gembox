@@ -98,6 +98,9 @@ MRuby::GemBox.new do |conf|
   # Use require for the features this build provides (mrbgems/mruby-require: a feature is a built gem's name)
   conf.gem :core => "mruby-require"
 
+  # Use StringIO (take-cheeze/mruby-stringio, vendored in mrbgems/mruby-stringio)
+  conf.gem :core => "mruby-stringio"
+
   # Use mruby-compiler to build other mrbgems
   conf.gem :core => "mruby-compiler"
 end
