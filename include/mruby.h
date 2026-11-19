@@ -286,6 +286,9 @@ typedef struct mrb_state {
   uint16_t ecall_nest;                    /* prevent infinite recursive ecall() */
 } mrb_state;
 
+/* the Integer class (upstream name): this build's fixnum_class is Integer */
+#define integer_class fixnum_class
+
 /**
  * Defines a new class.
  *
@@ -1265,6 +1268,7 @@ MRB_API mrb_value mrb_vformat(mrb_state *mrb, const char *format, va_list ap);
 #define E_ARGUMENT_ERROR            (mrb_exc_get(mrb, "ArgumentError"))
 #define E_INDEX_ERROR               (mrb_exc_get(mrb, "IndexError"))
 #define E_RANGE_ERROR               (mrb_exc_get(mrb, "RangeError"))
+#define E_ZERODIV_ERROR             (mrb_exc_get(mrb, "ZeroDivisionError"))
 #define E_NAME_ERROR                (mrb_exc_get(mrb, "NameError"))
 #define E_NOMETHOD_ERROR            (mrb_exc_get(mrb, "NoMethodError"))
 #define E_SCRIPT_ERROR              (mrb_exc_get(mrb, "ScriptError"))

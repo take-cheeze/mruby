@@ -53,6 +53,7 @@ struct mrb_state;
 
 #if defined(MRB_INT64)
   typedef int64_t mrb_int;
+  typedef uint64_t mrb_uint;
 # define MRB_INT_BIT 64
 # define MRB_INT_MIN (INT64_MIN>>MRB_FIXNUM_SHIFT)
 # define MRB_INT_MAX (INT64_MAX>>MRB_FIXNUM_SHIFT)
@@ -61,6 +62,7 @@ struct mrb_state;
 # define MRB_PRIx PRIx64
 #else
   typedef int32_t mrb_int;
+  typedef uint32_t mrb_uint;
 # define MRB_INT_BIT 32
 # define MRB_INT_MIN (INT32_MIN>>MRB_FIXNUM_SHIFT)
 # define MRB_INT_MAX (INT32_MAX>>MRB_FIXNUM_SHIFT)
@@ -128,8 +130,12 @@ enum mrb_vtype {
   MRB_TT_FIBER,       /*  22 */
   MRB_TT_ISTRUCT,     /*  23 */
   MRB_TT_BREAK,       /*  24 */
-  MRB_TT_MAXDEFINE    /*  25 */
+  MRB_TT_BIGINT,      /*  25 */ /* an arbitrary-precision Integer (mrbgems/mruby-bigint) */
+  MRB_TT_MAXDEFINE    /*  26 */
 };
+
+/* the Integer tag, as upstream names it (the fixnum tag is the Integer tag of this build) */
+#define MRB_TT_INTEGER MRB_TT_FIXNUM
 
 #include <mruby/object.h>
 
@@ -173,6 +179,11 @@ typedef void mrb_value;
 #endif
 #ifndef mrb_fixnum_p
 #define mrb_fixnum_p(o) (mrb_type(o) == MRB_TT_FIXNUM)
+#ifdef MRB_USE_BIGINT
+#define mrb_bigint_p(o) (mrb_type(o) == MRB_TT_BIGINT)
+#else
+#define mrb_bigint_p(o) FALSE
+#endif
 #endif
 #ifndef mrb_symbol_p
 #define mrb_symbol_p(o) (mrb_type(o) == MRB_TT_SYMBOL)

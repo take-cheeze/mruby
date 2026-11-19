@@ -843,6 +843,12 @@ obj_free(mrb_state *mrb, struct RBasic *obj, int end)
     mrb_gc_free_iv(mrb, (struct RObject*)obj);
     break;
 
+#ifdef MRB_USE_BIGINT
+  case MRB_TT_BIGINT:
+    /* an arbitrary-precision Integer: no child objects (its limbs are released with the gem's own storage) */
+    break;
+#endif
+
   case MRB_TT_EXCEPTION:
     mrb_gc_free_iv(mrb, (struct RObject*)obj);
     break;

@@ -101,6 +101,9 @@ MRuby::GemBox.new do |conf|
   # Use StringIO (take-cheeze/mruby-stringio, vendored in mrbgems/mruby-stringio)
   conf.gem :core => "mruby-stringio"
 
+  # Use arbitrary-precision Integer (mrbgems/mruby-bigint, fgmp-based; needs MRB_USE_BIGINT)
+  conf.gem :core => "mruby-bigint"
+
   # Use mruby-compiler to build other mrbgems
   conf.gem :core => "mruby-compiler"
 end

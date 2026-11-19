@@ -568,6 +568,7 @@ mrb_init_exception(mrb_state *mrb)
 
   mrb->eStandardError_class = mrb_define_class(mrb, "StandardError", mrb->eException_class); /* 15.2.23 */
   mrb_define_class(mrb, "RuntimeError", mrb->eStandardError_class);          /* 15.2.28 */
+  mrb_define_class(mrb, "ZeroDivisionError", mrb->eStandardError_class);
   script_error = mrb_define_class(mrb, "ScriptError", mrb->eException_class);                /* 15.2.37 */
   mrb_define_class(mrb, "SyntaxError", script_error);                                        /* 15.2.38 */
   stack_error = mrb_define_class(mrb, "SystemStackError", exception);
