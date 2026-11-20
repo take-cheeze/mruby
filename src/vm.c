@@ -2221,7 +2221,11 @@ RETRY_TRY_BLOCK:
     break
 #ifdef MRB_WITHOUT_FLOAT
 #define OP_MATH_CASE_FLOAT(op_name, t1, t2) (void)0
+#ifdef MRB_USE_BIGINT
+#define OP_MATH_OVERFLOW_INT(op_name, x, y, z) regs[a] = mrb_bint_##op_name##_ii(mrb, x, y)
+#else
 #define OP_MATH_OVERFLOW_INT(op_name, x, y, z) SET_INT_VALUE(regs[a], z)
+#endif
 #else
 #define OP_MATH_CASE_FLOAT(op_name, t1, t2)                                     \
   case TYPES2(OP_MATH_TT_##t1, OP_MATH_TT_##t2):                                \
@@ -2230,8 +2234,12 @@ RETRY_TRY_BLOCK:
       SET_FLOAT_VALUE(mrb, regs[a], z);                                         \
     }                                                                           \
     break
+#ifdef MRB_USE_BIGINT
+#define OP_MATH_OVERFLOW_INT(op_name, x, y, z) regs[a] = mrb_bint_##op_name##_ii(mrb, x, y)
+#else
 #define OP_MATH_OVERFLOW_INT(op_name, x, y, z) \
   SET_FLOAT_VALUE(mrb, regs[a], (mrb_float)x OP_MATH_OP_##op_name (mrb_float)y)
+#endif
 #endif
 #define OP_MATH_CASE_STRING_add()                                           \
   case TYPES2(MRB_TT_STRING, MRB_TT_STRING):                                \

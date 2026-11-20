@@ -185,4 +185,20 @@ mrb_int_mul_overflow(mrb_int multiplier, mrb_int multiplicand, mrb_int *product)
 
 MRB_END_DECL
 
+#ifdef MRB_USE_BIGINT
+/* the arbitrary-precision Integer (mrbgems/mruby-bigint): the operations the Integer methods use on overflow and on a
+   bigint operand. An Integer result is a fixnum when it fits one, a bigint otherwise. */
+MRB_API mrb_value mrb_bint_new_int(mrb_state *mrb, mrb_int x);
+MRB_API mrb_value mrb_bint_add_ii(mrb_state *mrb, mrb_int x, mrb_int y);
+MRB_API mrb_value mrb_bint_sub_ii(mrb_state *mrb, mrb_int x, mrb_int y);
+MRB_API mrb_value mrb_bint_mul_ii(mrb_state *mrb, mrb_int x, mrb_int y);
+MRB_API mrb_value mrb_bint_add(mrb_state *mrb, mrb_value x, mrb_value y);
+MRB_API mrb_value mrb_bint_sub(mrb_state *mrb, mrb_value x, mrb_value y);
+MRB_API mrb_value mrb_bint_mul(mrb_state *mrb, mrb_value x, mrb_value y);
+MRB_API mrb_value mrb_bint_lshift(mrb_state *mrb, mrb_value x, mrb_int width);
+MRB_API mrb_value mrb_bint_to_s(mrb_state *mrb, mrb_value x, mrb_int base);
+MRB_API mrb_int mrb_bint_cmp(mrb_state *mrb, mrb_value x, mrb_value y);
+MRB_API mrb_float mrb_bint_as_float(mrb_state *mrb, mrb_value x);
+#endif
+
 #endif  /* MRUBY_NUMERIC_H */

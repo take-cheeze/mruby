@@ -791,6 +791,9 @@ fixnum_mul(mrb_state *mrb, mrb_value x, mrb_value y)
 {
   mrb_int a;
 
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(x) || mrb_bigint_p(y)) return mrb_bint_mul(mrb, x, y);
+#endif
   a = mrb_fixnum(x);
   if (mrb_fixnum_p(y)) {
     mrb_int b, c;
@@ -798,6 +801,9 @@ fixnum_mul(mrb_state *mrb, mrb_value x, mrb_value y)
     if (a == 0) return x;
     b = mrb_fixnum(y);
     if (mrb_int_mul_overflow(a, b, &c)) {
+#ifdef MRB_USE_BIGINT
+      return mrb_bint_mul_ii(mrb, a, b);
+#endif
 #ifndef MRB_WITHOUT_FLOAT
       return mrb_float_value(mrb, (mrb_float)a * (mrb_float)b);
 #endif
@@ -998,6 +1004,18 @@ fix_equal(mrb_state *mrb, mrb_value x)
   mrb_value y;
 
   mrb_get_args(mrb, "o", &y);
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(x) || mrb_bigint_p(y)) {
+    /* an Integer is a fixnum or a bigint; a bigint is never equal to a Float here (as before) */
+    if ((mrb_fixnum_p(x) || mrb_bigint_p(x)) && (mrb_fixnum_p(y) || mrb_bigint_p(y))) {
+      return mrb_bool_value(mrb_bint_cmp(mrb, x, y) == 0);
+    }
+    if (mrb_bigint_p(x) && mrb_float_p(y)) {
+      return mrb_bool_value(mrb_bint_as_float(mrb, x) == mrb_float(y));
+    }
+    return mrb_false_value();
+  }
+#endif
   switch (mrb_type(y)) {
   case MRB_TT_FIXNUM:
     return mrb_bool_value(mrb_fixnum(x) == mrb_fixnum(y));
@@ -1173,11 +1191,20 @@ fix_lshift(mrb_state *mrb, mrb_value x)
   if (width == 0) {
     return x;
   }
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(x)) return mrb_bint_lshift(mrb, x, width);
+#endif
   val = mrb_fixnum(x);
   if (val == 0) return x;
   if (width < 0) {
     return rshift(val, -width);
   }
+#ifdef MRB_USE_BIGINT
+  if (width > 0 &&
+      (width >= MRB_INT_BIT || (val > 0 ? (val > (MRB_INT_MAX >> width)) : (val <= (MRB_INT_MIN >> width))))) {
+    return mrb_bint_lshift(mrb, mrb_fixnum_value(val), width);
+  }
+#endif
   return lshift(mrb, val, width);
 }
 
@@ -1265,6 +1292,9 @@ fixnum_plus(mrb_state *mrb, mrb_value x, mrb_value y)
 {
   mrb_int a;
 
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(x) || mrb_bigint_p(y)) return mrb_bint_add(mrb, x, y);
+#endif
   a = mrb_fixnum(x);
   if (mrb_fixnum_p(y)) {
     mrb_int b, c;
@@ -1272,6 +1302,9 @@ fixnum_plus(mrb_state *mrb, mrb_value x, mrb_value y)
     if (a == 0) return y;
     b = mrb_fixnum(y);
     if (mrb_int_add_overflow(a, b, &c)) {
+#ifdef MRB_USE_BIGINT
+      return mrb_bint_add_ii(mrb, a, b);
+#endif
 #ifndef MRB_WITHOUT_FLOAT
       return mrb_float_value(mrb, (mrb_float)a + (mrb_float)b);
 #endif
@@ -1323,12 +1356,18 @@ fixnum_minus(mrb_state *mrb, mrb_value x, mrb_value y)
 {
   mrb_int a;
 
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(x) || mrb_bigint_p(y)) return mrb_bint_sub(mrb, x, y);
+#endif
   a = mrb_fixnum(x);
   if (mrb_fixnum_p(y)) {
     mrb_int b, c;
 
     b = mrb_fixnum(y);
     if (mrb_int_sub_overflow(a, b, &c)) {
+#ifdef MRB_USE_BIGINT
+      return mrb_bint_sub_ii(mrb, a, b);
+#endif
 #ifndef MRB_WITHOUT_FLOAT
       return mrb_float_value(mrb, (mrb_float)a - (mrb_float)b);
 #endif
@@ -1428,6 +1467,9 @@ fix_to_s(mrb_state *mrb, mrb_value self)
   mrb_int base = 10;
 
   mrb_get_args(mrb, "|i", &base);
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(self)) return mrb_bint_to_s(mrb, self, base);
+#endif
   return mrb_fixnum_to_str(mrb, self, base);
 }
 
@@ -1658,7 +1700,12 @@ mrb_init_numeric(mrb_state *mrb)
 
   /* Integer Class */
   integer = mrb_define_class(mrb, "Integer",  numeric);                          /* 15.2.8 */
+#ifdef MRB_USE_BIGINT
+  /* an Integer object is a bigint (a fixnum is an immediate, and the Fixnum class is a subclass of Integer) */
+  MRB_SET_INSTANCE_TT(integer, MRB_TT_BIGINT);
+#else
   MRB_SET_INSTANCE_TT(integer, MRB_TT_FIXNUM);
+#endif
   mrb_undef_class_method(mrb, integer, "new");
   mrb_define_method(mrb, integer, "to_i",     int_to_i,        MRB_ARGS_NONE()); /* 15.2.8.3.24 */
   mrb_define_method(mrb, integer, "to_int",   int_to_i,        MRB_ARGS_NONE());
@@ -1688,6 +1735,16 @@ mrb_init_numeric(mrb_state *mrb)
 #endif
   mrb_define_method(mrb, fixnum,  "to_s",     fix_to_s,        MRB_ARGS_OPT(1)); /* 15.2.8.3.25 */
   mrb_define_method(mrb, fixnum,  "inspect",  fix_to_s,        MRB_ARGS_OPT(1));
+#ifdef MRB_USE_BIGINT
+  /* an Integer object (a bigint) takes the same operators as a fixnum: the methods above read the fixnum tag, these read either */
+  mrb_define_method(mrb, integer, "inspect",  fix_to_s,        MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, integer, "to_s",     fix_to_s,        MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, integer, "+",        fix_plus,        MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, integer, "-",        fix_minus,       MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, integer, "*",        fix_mul,         MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, integer, "<<",       fix_lshift,      MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, integer, "==",       fix_equal,       MRB_ARGS_REQ(1));
+#endif
   mrb_define_method(mrb, fixnum,  "divmod",   fix_divmod,      MRB_ARGS_REQ(1)); /* 15.2.8.3.30 (x) */
 
 #ifndef MRB_WITHOUT_FLOAT

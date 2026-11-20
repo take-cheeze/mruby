@@ -286,9 +286,6 @@ typedef struct mrb_state {
   uint16_t ecall_nest;                    /* prevent infinite recursive ecall() */
 } mrb_state;
 
-/* the Integer class (upstream name): this build's fixnum_class is Integer */
-#define integer_class fixnum_class
-
 /**
  * Defines a new class.
  *

@@ -2,6 +2,8 @@ MRuby::Gem::Specification.new('mruby-bigint') do |spec|
   spec.license = 'MIT'
   spec.author  = 'mruby developers'
   spec.summary = 'Integer class extension to multiple-precision'
+  # MRB_USE_BIGINT is for the whole build: the core's Integer operators and the gem read the same configuration
+  build.cc.defines << 'MRB_USE_BIGINT'
   spec.cc.defines << 'MRB_USE_BIGINT'
 
   # the bigint sources are in core/ and are linked into libmruby with the core (as mruby-compiler's are)

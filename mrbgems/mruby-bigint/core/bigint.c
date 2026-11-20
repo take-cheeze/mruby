@@ -5288,7 +5288,7 @@ bint_set(mpz_ctx_t *ctx, struct RBigint *b, mpz_t *x)
 static struct RBigint*
 bint_new(mpz_ctx_t *ctx, mpz_t *x)
 {
-  struct RBigint *b = (struct RBigint *)mrb_obj_alloc(MPZ_MRB(ctx), MRB_TT_BIGINT, MPZ_MRB(ctx)->integer_class);
+  struct RBigint *b = (struct RBigint *)mrb_obj_alloc(MPZ_MRB(ctx), MRB_TT_BIGINT, mrb_class_get(MPZ_MRB(ctx), "Integer"));
   bint_set(ctx, b, x);
   return b;
 }
@@ -5544,10 +5544,24 @@ int_fit_limb_p(mrb_int i)
 }
 
 /* unnormalize version of mrb_bint_add */
+/* a bigint for a receiver that may be a fixnum (the core passes one when the other operand is a bigint): an object, not
+   normalised back to a fixnum */
+static mrb_value
+bint_promote(mrb_state *mrb, mrb_value v)
+{
+  if (mrb_bigint_p(v)) return v;
+  {
+    MPZ_CTX_INIT(mrb, ctx, pool);
+    return mrb_obj_value(bint_new_int(ctx, mrb_fixnum(v)));
+  }
+}
+
 mrb_value
 mrb_bint_add_n(mrb_state *mrb, mrb_value x, mrb_value y)
 {
   mpz_t a, b, z;
+
+  x = bint_promote(mrb, x);
 
   bint_as_mpz(RBIGINT(x), &a);
 
@@ -5578,6 +5592,7 @@ mrb_bint_add_n(mrb_state *mrb, mrb_value x, mrb_value y)
 mrb_value
 mrb_bint_add(mrb_state *mrb, mrb_value x, mrb_value y)
 {
+  x = bint_promote(mrb, x);
 #ifndef MRB_NO_FLOAT
   if (mrb_float_p(y)) {
     mrb_float v1 = mrb_bint_as_float(mrb, x);
@@ -5593,6 +5608,7 @@ mrb_bint_add(mrb_state *mrb, mrb_value x, mrb_value y)
 mrb_value
 mrb_bint_sub_n(mrb_state *mrb, mrb_value x, mrb_value y)
 {
+  x = bint_promote(mrb, x);
   mpz_t a, b, z;
   MPZ_CTX_INIT(mrb, ctx, pool);
 
@@ -5622,6 +5638,7 @@ mrb_bint_sub_n(mrb_state *mrb, mrb_value x, mrb_value y)
 mrb_value
 mrb_bint_sub(mrb_state *mrb, mrb_value x, mrb_value y)
 {
+  x = bint_promote(mrb, x);
 #ifndef MRB_NO_FLOAT
   if (mrb_float_p(y)) {
     mrb_float v1 = mrb_bint_as_float(mrb, x);
@@ -5673,6 +5690,7 @@ bint_mul(mrb_state *mrb, mrb_value x, mrb_value y)
 mrb_value
 mrb_bint_mul(mrb_state *mrb, mrb_value x, mrb_value y)
 {
+  x = bint_promote(mrb, x);
   if (mrb_integer_p(y)) {
     if (mrb_integer(y) == 0) return mrb_fixnum_value(0);
     if (mrb_integer(y) == 1) return bint_norm(mrb, RBIGINT(x));
@@ -5690,6 +5708,7 @@ mrb_bint_mul(mrb_state *mrb, mrb_value x, mrb_value y)
 mrb_value
 mrb_bint_mul_n(mrb_state *mrb, mrb_value x, mrb_value y)
 {
+  x = bint_promote(mrb, x);
   struct RBigint *b = bint_mul(mrb, x, y);
   return mrb_obj_value(b);
 }
@@ -5845,6 +5864,7 @@ mrb_bint_divmod(mrb_state *mrb, mrb_value x, mrb_value y)
 mrb_int
 mrb_bint_cmp(mrb_state *mrb, mrb_value x, mrb_value y)
 {
+  x = bint_promote(mrb, x);
 #ifndef MRB_NO_FLOAT
   if (mrb_float_p(y)) {
     mrb_float f = mrb_float(y);
@@ -6189,7 +6209,13 @@ mrb_bint_lshift(mrb_state *mrb, mrb_value x, mrb_int width)
   mpz_t a, z;
   MPZ_CTX_INIT(mrb, ctx, pool);
 
-  bint_as_mpz(RBIGINT(x), &a);
+  /* the receiver is a bigint, or a fixnum (the core passes one when a shift overflows) */
+  if (mrb_bigint_p(x)) {
+    bint_as_mpz(RBIGINT(x), &a);
+  }
+  else {
+    mpz_init_set_int(ctx, &a, mrb_fixnum(x));
+  }
   mpz_init(ctx, &z);
   if (width < 0) {
     mpz_fdiv_q_2exp(ctx, &z, &a, -width);
