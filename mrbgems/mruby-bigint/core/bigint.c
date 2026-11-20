@@ -240,7 +240,6 @@ mpz_set_int(mpz_ctx_t *ctx, mpz_t *y, mrb_int v)
   y->sz = 1;
 }
 
-#ifdef MRB_INT32
 static void
 mpz_set_int64(mpz_ctx_t *ctx, mpz_t *y, int64_t v)
 {
@@ -258,7 +257,6 @@ mpz_set_int64(mpz_ctx_t *ctx, mpz_t *y, int64_t v)
     y->sn = -1;
   }
 }
-#endif
 
 static void
 mpz_init_set_int(mpz_ctx_t *ctx, mpz_t *y, mrb_int v)
@@ -5309,12 +5307,16 @@ mrb_bint_new_int(mrb_state *mrb, mrb_int x)
   return mrb_obj_value(b);
 }
 
-#ifdef MRB_INT32
+static mrb_value bint_promote(mrb_state *mrb, mrb_value v);
+
+/* The result is a fixnum when the value fits one (as CRuby's rb_ll2inum does
+   for a fixnum-sized value) and a bigint otherwise. */
 mrb_value
 mrb_bint_new_int64(mrb_state *mrb, int64_t n)
 {
   mpz_t x;
   MPZ_CTX_INIT(mrb, ctx, pool);
+  if (n >= MRB_INT_MIN && n <= MRB_INT_MAX) return mrb_fixnum_value((mrb_int)n);
 
   /* mpz_set_int64() reallocates `x` to hold the value, which reads the size
      and the limbs it already has, so it is given an initialized one rather
@@ -5325,13 +5327,13 @@ mrb_bint_new_int64(mrb_state *mrb, int64_t n)
   struct RBigint *b = bint_new(ctx, &x);
   return mrb_obj_value(b);
 }
-#endif
 
 mrb_value
 mrb_bint_new_uint64(mrb_state *mrb, uint64_t x)
 {
   mpz_t z;
   MPZ_CTX_INIT(mrb, ctx, pool);
+  if (x <= (uint64_t)MRB_INT_MAX) return mrb_fixnum_value((mrb_int)x);
 
   mpz_init(ctx, &z);
   mpz_set_uint64(ctx, &z, x);
@@ -5474,11 +5476,11 @@ mrb_bint_as_int(mrb_state *mrb, mrb_value x)
   return i;
 }
 
-#ifdef MRB_INT32
 int64_t
 mrb_bint_as_int64(mrb_state *mrb, mrb_value x)
 {
   mpz_t m;
+  x = bint_promote(mrb, x);
   bint_as_mpz(RBIGINT(x), &m);
 
   uint64_t u = 0;
@@ -5504,12 +5506,12 @@ mrb_bint_as_int64(mrb_state *mrb, mrb_value x)
   if (u > INT64_MAX) goto out_of_range;
   return (int64_t)u;
 }
-#endif
 
 uint64_t
 mrb_bint_as_uint64(mrb_state *mrb, mrb_value x)
 {
   mpz_t m;
+  x = bint_promote(mrb, x);
   bint_as_mpz(RBIGINT(x), &m);
 
   uint64_t u = 0;
@@ -6288,10 +6290,16 @@ mrb_bint_new_mpz(mpz_ctx_t *ctx, mpz_t *z)
   return bint_norm(MPZ_MRB(ctx), bint_new(ctx, z));
 }
 
+/* -1, 0 or 1: the sign of an Integer (a fixnum or a bigint; a bigint is never zero) */
 mrb_int
-mrb_bint_sign(mrb_state *mrb, mrb_value bint)
+mrb_bint_sign(mrb_state *mrb, mrb_value x)
 {
-  return RBIGINT_SIGN(RBIGINT(bint));
+  (void)mrb;
+  if (mrb_fixnum_p(x)) {
+    mrb_int i = mrb_fixnum(x);
+    return i > 0 ? 1 : (i < 0 ? -1 : 0);
+  }
+  return RBIGINT_SIGN(RBIGINT(x));
 }
 
 /* The bytes of the magnitude, which is what CRuby's Integer#size answers
@@ -6308,6 +6316,33 @@ mrb_bint_abs_bytes(mrb_value x)
   int top = 0;
   for (mp_limb t = z.p[n-1]; t; t >>= 1) top++;
   return ((n - 1) * DIG_SIZE + top + 7) / 8;
+}
+
+/* CRuby's rb_absint_size(): the bytes of |x|, and in *nlz_bits the number of
+   zero bits above the top bit of the top byte (0 for zero). */
+size_t
+mrb_bint_absint_size(mrb_state *mrb, mrb_value x, int *nlz_bits)
+{
+  x = bint_promote(mrb, x);
+  size_t n = mrb_bint_abs_bytes(x);
+  if (nlz_bits) {
+    *nlz_bits = 0;
+    if (n > 0) {
+      mpz_t z;
+      bint_as_mpz(RBIGINT(x), &z);
+      mp_limb top = z.p[0];
+      size_t i = 0;
+      /* the top limb holding the highest set bit */
+      for (size_t k = z.sz; k-- > 0; ) {
+        if (z.p[k]) { top = z.p[k]; i = k; break; }
+      }
+      int bits = 0;
+      for (mp_limb t = top; t; t >>= 1) bits++;
+      int used = (int)(((i * DIG_SIZE) + bits) % 8);
+      *nlz_bits = used ? 8 - used : 0;
+    }
+  }
+  return n;
 }
 
 mrb_int

@@ -199,6 +199,14 @@ MRB_API mrb_value mrb_bint_lshift(mrb_state *mrb, mrb_value x, mrb_int width);
 MRB_API mrb_value mrb_bint_to_s(mrb_state *mrb, mrb_value x, mrb_int base);
 MRB_API mrb_int mrb_bint_cmp(mrb_state *mrb, mrb_value x, mrb_value y);
 MRB_API mrb_float mrb_bint_as_float(mrb_state *mrb, mrb_value x);
+/* C-extension conversions (CRuby's rb_ll2inum, rb_ull2inum, rb_big2ll, rb_big2ull, rb_absint_size, RBIGNUM_*_P).
+   The new_ forms answer a fixnum when the value fits one; the as_ forms raise RangeError when it does not fit. */
+MRB_API mrb_value mrb_bint_new_int64(mrb_state *mrb, int64_t n);
+MRB_API mrb_value mrb_bint_new_uint64(mrb_state *mrb, uint64_t n);
+MRB_API int64_t mrb_bint_as_int64(mrb_state *mrb, mrb_value x);
+MRB_API uint64_t mrb_bint_as_uint64(mrb_state *mrb, mrb_value x);
+MRB_API mrb_int mrb_bint_sign(mrb_state *mrb, mrb_value x);
+MRB_API size_t mrb_bint_absint_size(mrb_state *mrb, mrb_value x, int *nlz_bits);
 #endif
 
 #endif  /* MRUBY_NUMERIC_H */
