@@ -1002,7 +1002,8 @@ mrb_funcall_with_method(mrb_state *mrb, mrb_value self, mrb_sym mid, const mrb_m
                         mrb_int argc, const mrb_value *argv, mrb_value blk)
 {
   /* the frame-free decision for every caller, C included; mrb_call_direct falls back to the framed call itself */
-  if (mrb->frame_free_p && mrb_nil_p(blk) && MRB_METHOD_FUNC_P(*m) && mrb->frame_free_p(mrb, MRB_METHOD_FUNC(*m))) {
+  if (mrb_nil_p(blk) && MRB_METHOD_FUNC_P(*m) &&
+      ((m->flags & MRB_METHOD_FRAMEFREE_FL) || (mrb->frame_free_p && mrb->frame_free_p(mrb, MRB_METHOD_FUNC(*m))))) {
     return mrb_call_direct(mrb, self, mid, MRB_METHOD_FUNC(*m), owner, argc, argv);
   }
   return funcall_with_block_m(mrb, self, mid, argc, argv, NULL, FALSE, blk, m, owner);

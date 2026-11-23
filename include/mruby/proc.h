@@ -125,6 +125,9 @@ MRB_API mrb_value mrb_proc_cfunc_env_get(mrb_state *mrb, mrb_int idx);
 #define MRB_METHOD_PROTECTED_FL (1 << 26)
 #define MRB_METHOD_VDEFAULT_FL ((1 << 25) | (1 << 26))
 #define MRB_METHOD_VISIBILITY_MASK ((1 << 25) | (1 << 26))
+/* A C function mrb_funcall_with_method may run without a frame (mrb_call_direct). Only an entry whose function a
+   frame-use proof cleared carries it (MRB_MT_FRAMEFREE); it travels with the function, never with a name. */
+#define MRB_METHOD_FRAMEFREE_FL (1 << 27)
 
 #define MRB_METHOD_FUNC_P(m) ((m).flags&MRB_METHOD_FUNC_FL)
 #define MRB_METHOD_FUNC(m) ((m).as.func)

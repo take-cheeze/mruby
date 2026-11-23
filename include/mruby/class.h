@@ -125,12 +125,13 @@ typedef struct mrb_mt_tbl {
 #define MRB_MT_FUNC    (1 << 24)  /* MRB_METHOD_FUNC_FL */
 #define MRB_MT_PUBLIC  0
 #define MRB_MT_PRIVATE (1 << 25)  /* MRB_METHOD_PRIVATE_FL */
+#define MRB_MT_FRAMEFREE (1 << 27)  /* MRB_METHOD_FRAMEFREE_FL */
 
 /* ROM table entry: 3rd param is MRB_ARGS_*() optionally OR'd with MRB_MT_PRIVATE.
    The macro supplies its own trailing comma, so entries are written
    without one; this lets an excluded entry vanish from the table. */
 #define MRB_MT_ENTRY_ROM_(fn, sym, flags) \
-  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC },
+  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC | MRB_MT_FF_(fn) },
 /* A row: an entry that method lookup, respond_to? and the method list do not see. Only the constructions
    (mrb_obj_new, Class#new, dup and clone: mrb_vm_find_ctor) and calls on a receiver the caller proved
    (mrb_method_search_rows) find it. */
@@ -138,10 +139,14 @@ typedef struct mrb_mt_tbl {
 #define MRB_MT_ROWS 1
 MRB_API mrb_method_t mrb_method_search_rows(mrb_state*, struct RClass**, mrb_sym);
 #define MRB_MT_ENTRY_CTOR_(fn, sym, flags) \
-  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC | MRB_MT_CTOR_ROW },
+  { { .func = (fn) }, (sym), (flags) | MRB_MT_FUNC | MRB_MT_CTOR_ROW | MRB_MT_FF_(fn) },
+/* Marks the writable entries of `c`'s own table that hold `f` under `mid` MRB_METHOD_FRAMEFREE_FL; the number marked.
+   The caller vouches for `f`. A read-only (ROM) entry is left as it is: its flag is the table's (MRB_MT_FF_). */
+MRB_API int mrb_mt_mark_frame_free(mrb_state*, struct RClass *c, mrb_sym mid, mrb_func_t f);
 
 #ifndef MRB_MT_EXCLUDE_HEADER
 #define MRB_MT_ENTRY(fn, sym, flags) MRB_MT_ENTRY_ROM_(fn, sym, flags)
+#define MRB_MT_FF_(fn) 0
 #else
 /* Build-time exclusion of ROM entries (see doc/guides/rom-method-table.md).
    MRB_MT_EXCLUDE_HEADER names a header (quoted or <>) that defines
@@ -172,6 +177,14 @@ MRB_API mrb_method_t mrb_method_search_rows(mrb_state*, struct RClass**, mrb_sym
 #define MRB_MT_SEL_(a, b, ...) b
 #define MRB_MT_EXPAND_(x) x
 #define MRB_MT_DROP_(fn, sym, flags)
+
+/* The header also defines MRB_MT_FRAMEFREE_<function> to 1 for each C function the frame-use proof cleared: a ROM
+   entry of that function carries MRB_MT_FRAMEFREE, whatever table or name it sits under. */
+#define MRB_MT_FF_(fn) MRB_MT_FF1_(MRB_MT_FRAMEFREE_##fn)
+#define MRB_MT_FF1_(x) MRB_MT_FF2_(x)
+#define MRB_MT_FF2_(x) MRB_MT_FF3_(MRB_MT_FFP_##x)
+#define MRB_MT_FF3_(p) MRB_MT_SEL_(p 0, 0, ~)
+#define MRB_MT_FFP_1 ~, MRB_MT_FRAMEFREE, ~
 
 /* an excluded C function is left unreferenced; let the compiler drop it quietly */
 #if defined(__GNUC__) || defined(__clang__)
