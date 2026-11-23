@@ -393,6 +393,13 @@ rb_enc_sprintf(mrb_state *mrb, rb_encoding *enc, const char *format, ...)
   return s;
 }
 
+/* CRuby's String#ascii_only?: true when every byte is below 0x80 (an ASCII-compatible string's 7-bit coderange) */
+static mrb_value
+str_ascii_only_p(mrb_state *mrb, mrb_value self)
+{
+  return mrb_bool_value(rb_enc_str_asciionly_p(self));
+}
+
 void
 mrb_mruby_encoding_gem_init(mrb_state *mrb)
 {
@@ -403,6 +410,7 @@ mrb_mruby_encoding_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, s, "valid_encoding?", str_valid_enc_p, MRB_ARGS_NONE());
   mrb_define_method(mrb, s, "encoding",        str_encoding,    MRB_ARGS_NONE());
   mrb_define_method(mrb, s, "force_encoding",  str_force_encoding, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, s, "ascii_only?",    str_ascii_only_p, MRB_ARGS_NONE());
 
   e = mrb_define_module(mrb, "Encoding");
   b = mrb_str_new_lit_frozen(mrb, "ASCII-8BIT");
