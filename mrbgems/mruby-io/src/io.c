@@ -1986,11 +1986,33 @@ io_read_all(mrb_state *mrb, struct mrb_io *fptr, mrb_value outbuf)
   }
 }
 
+/* The room a new result of read(length) starts with: length when it is small,
+ * else what a regular file still holds, up to length, so a large read is one
+ * allocation of its final size instead of a string grown MRB_IO_BUF_SIZE at a
+ * time, past it on the way. Anything else, or with MRB_IO_READ_NO_PRESIZE,
+ * starts empty and grows as before. */
+static mrb_int
+io_read_capa(struct mrb_io *fptr, mrb_int length)
+{
+#ifndef MRB_IO_READ_NO_PRESIZE
+  struct stat sb;
+  off_t cur;
+  if (length <= MRB_IO_BUF_SIZE) return length;
+  if (fstat(fptr->fd, &sb) == 0 && S_ISREG(sb.st_mode) &&
+      (cur = lseek(fptr->fd, 0, SEEK_CUR)) != -1) {
+    off_t left = sb.st_size - cur + fptr->buf->len;
+    if (left < 0) return 0;
+    return left < (off_t)length ? (mrb_int)left : length;
+  }
+#endif
+  return 0;
+}
+
 static mrb_value
 io_reset_outbuf(mrb_state *mrb, mrb_value outbuf, mrb_int len)
 {
   if (mrb_nil_p(outbuf)) {
-    outbuf = mrb_str_new(mrb, NULL, 0);
+    outbuf = mrb_str_new_capa(mrb, len);
   }
   else {
     mrb_str_modify(mrb, mrb_str_ptr(outbuf));
@@ -2031,12 +2053,12 @@ io_read_impl(mrb_state *mrb, struct mrb_io *fptr, mrb_bool length_given, mrb_val
     }
   }
 
-  outbuf = io_reset_outbuf(mrb, outbuf, MRB_IO_BUF_SIZE);
   if (!length_given) {          /* read as much as possible */
-    return io_read_all(mrb, fptr, outbuf);
+    return io_read_all(mrb, fptr, io_reset_outbuf(mrb, outbuf, 0));
   }
 
   struct mrb_io_buf *buf = fptr->buf;
+  outbuf = io_reset_outbuf(mrb, outbuf, io_read_capa(fptr, length));
 
   for (;;) {
     io_fill_buf(mrb, fptr);
