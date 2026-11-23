@@ -220,6 +220,27 @@ mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
   }
 }
 
+/* Being frame-free is a property of the function, so marking every entry that holds `f` is sound wherever the entry is
+   shared; a ROM entry is const and keeps the flag its table gave it. */
+MRB_API int
+mrb_mt_mark_frame_free(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_func_t f)
+{
+  int marked = 0;
+  (void)mrb;
+  MRB_CLASS_ORIGIN(c);
+  for (mrb_mt_tbl *t = c->mt; t; t = t->next) {
+    if (mt_readonly_p(t)) continue;
+    for (int i = 0; i < t->size; i++) {
+      mrb_mt_entry *e = &t->ptr[i];
+      if (e->key == mid && (e->flags & MRB_MT_FUNC) && e->val.func == f && !(e->flags & MRB_MT_FRAMEFREE)) {
+        e->flags |= MRB_MT_FRAMEFREE;
+        marked++;
+      }
+    }
+  }
+  return marked;
+}
+
 /* Creates a method value structure from flags and pointer */
 static inline mrb_method_t
 create_method_value(mrb_state *mrb, uint32_t flags, union mrb_mt_ptr val)

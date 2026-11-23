@@ -309,7 +309,7 @@ struct mrb_direct_call {
   struct RClass *owner;
 };
 
-/* mrb_state.frame_free_p: whether mrb_funcall_with_method may call `f` without a frame */
+/* mrb_state.frame_free_p: whether mrb_funcall_with_method may call `f` without a frame, past MRB_METHOD_FRAMEFREE_FL */
 typedef mrb_bool mrb_frame_free_func(struct mrb_state *mrb, mrb_func_t f);
 
 typedef struct mrb_state {
