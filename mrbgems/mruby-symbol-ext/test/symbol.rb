@@ -9,6 +9,12 @@ if Symbol.respond_to?(:all_symbols)
   end
 end
 
+assert('presym names round-trip') do
+  assert_equal [], presym_round_trip_failures
+  assert_equal :inspect, "inspect".to_sym
+  assert_equal "[]=", :[]=.to_s
+end
+
 %w[size length].each do |n|
   assert("Symbol##{n}") do
     assert_equal 5, :hello.__send__(n)
