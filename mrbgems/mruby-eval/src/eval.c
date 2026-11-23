@@ -386,10 +386,41 @@ f_instance_eval(mrb_state *mrb, mrb_value self)
   }
 }
 
+mrb_value mrb_mod_module_eval(mrb_state*, mrb_value);
+
+/* Module#class_eval / module_eval: a string is evaluated with the module as self and as the target class (CRuby's string form);
+   a block is the core's block form (mrb_mod_module_eval) */
+static mrb_value
+f_module_eval(mrb_state *mrb, mrb_value self)
+{
+  mrb_value b;
+  mrb_int argc; mrb_value *argv;
+
+  mrb_get_args(mrb, "*!&", &argv, &argc, &b);
+
+  if (mrb_nil_p(b)) {
+    char *s;
+    mrb_int len;
+    char *file = NULL;
+    mrb_int line = 1;
+    struct RProc *proc;
+
+    mrb_get_args(mrb, "s|zi", &s, &len, &file, &line);
+    proc = create_proc_from_string(mrb, s, len, mrb_nil_value(), file, line);
+    MRB_PROC_SET_TARGET_CLASS(proc, mrb_class_ptr(self));
+    mrb_assert(!MRB_PROC_CFUNC_P(proc));
+    mrb->c->ci->target_class = mrb_class_ptr(self);
+    return exec_irep(mrb, self, proc);
+  }
+  return mrb_mod_module_eval(mrb, self);
+}
+
 void
 mrb_mruby_eval_gem_init(mrb_state* mrb)
 {
   mrb_define_module_function(mrb, mrb->kernel_module, "eval", f_eval, MRB_ARGS_ARG(1, 3));
+  mrb_define_method(mrb, mrb->module_class, "class_eval", f_module_eval, MRB_ARGS_ANY()|MRB_ARGS_BLOCK());
+  mrb_define_method(mrb, mrb->module_class, "module_eval", f_module_eval, MRB_ARGS_ANY()|MRB_ARGS_BLOCK());
   mrb_define_method(mrb, mrb_class_get(mrb, "BasicObject"), "instance_eval", f_instance_eval, MRB_ARGS_OPT(3)|MRB_ARGS_BLOCK());
 }
 
