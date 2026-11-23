@@ -354,7 +354,8 @@ mrb_class_name_class(mrb_state *mrb, struct RClass *outer, struct RClass *c, mrb
     }
     else {
       mrb_int len;
-      const char *n = mrb_sym_name_len(mrb, id, &len);
+      char buf[MRB_SYM_TMP_LEN];
+      const char *n = mrb_sym_name_tmp(mrb, id, buf, &len);
 
       mrb_str_cat_lit(mrb, name, "::");
       mrb_str_cat(mrb, name, n, len);

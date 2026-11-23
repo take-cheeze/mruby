@@ -18,8 +18,223 @@
 /* const uint16_t presym_len_start[MRB_PRESYM_LEN_MAX+2]  */
 /* const uint32_t presym_len_offset[MRB_PRESYM_LEN_MAX+1] */
 /* const char presym_name_blob[]                          */
+/* or, with MRB_PRESYM_COMPACT, the coded table below     */
 # include <mruby/presym/table.h>
 #endif
+
+#ifdef MRB_PRESYM_COMPACT
+/* PRESYM_COMPACT: presyms are sorted by name and coded in blocks of
+   2**MRB_PRESYM_BLOCK_SHIFT (see MRuby::Presym#write_compact_table_header). */
+#define PRESYM_HEADER_P(b) ((b) >= 0xc0)
+
+/* Appends code c to buf[n..]. */
+static size_t
+presym_expand(uint8_t c, char *buf, size_t n)
+{
+  if (c < MRB_PRESYM_NCHARS) {
+    buf[n] = presym_chars[c];
+    return n+1;
+  }
+  c -= MRB_PRESYM_NCHARS;
+  const char *t = presym_pair_text + (c ? presym_pair_end[c-1] : 0);
+  const char *e = presym_pair_text + presym_pair_end[c];
+  while (t < e) buf[n++] = *t++;
+  return n;
+}
+
+/* Decodes the name at *pp over the previous name of its block in buf, NUL-terminated; returns its length. */
+static size_t
+presym_decode(const uint8_t **pp, char *buf)
+{
+  const uint8_t *p = *pp;
+  size_t n = *p++ & 0x3f;
+
+  while (!PRESYM_HEADER_P(*p)) n = presym_expand(*p++, buf, n);
+  buf[n] = '\0';
+  *pp = p;
+  return n;
+}
+
+/* name against the name at *pp, given buf[0..*mp) == name[0..*mp) and that the
+   name at *pp shares at least *mp bytes with the one before it: decoded only up
+   to where the two differ, which is all a later name of the block can share with
+   it and name both. Returns the sign of name - that name, leaves the shared
+   prefix in *mp and *pp at the next name. */
+static int
+presym_cmp_next(const char *name, size_t len, const uint8_t **pp, char *buf, size_t *mp)
+{
+  const uint8_t *p = *pp + 1;
+  size_t n = *mp, i = *mp;
+  int cmp = 0;
+
+  while (!PRESYM_HEADER_P(*p)) {
+    n = presym_expand(*p++, buf, n);
+    for (; i < n; i++) {
+      if (i == len) { cmp = -1; goto done; }
+      if (name[i] != buf[i]) { cmp = (uint8_t)name[i] < (uint8_t)buf[i] ? -1 : 1; goto done; }
+    }
+  }
+  cmp = len > n;
+ done:
+  while (!PRESYM_HEADER_P(*p)) p++;
+  *pp = p;
+  *mp = i;
+  return cmp;
+}
+
+/* Front-coded search: the block whose first name is the last <= name, then its
+   names. m is the prefix name shares with the name just passed, which is below
+   name: a next name sharing more than m with that one is below name too, and
+   one sharing less is above it, so only a name sharing exactly m is compared.
+   A shared prefix of 63 is a cap (the generator records no more), so a name
+   with it is compared from there. */
+static mrb_sym
+presym_compact_find(const char *name, size_t len)
+{
+  char buf[MRB_PRESYM_LEN_MAX+1];
+  const uint8_t *p;
+  size_t lo, hi, m;
+
+  if (len > MRB_PRESYM_LEN_MAX) return 0;
+  if (len == 0) {
+    lo = 0;
+    hi = presym_first_block[1];
+  }
+  else {
+    if ((uint8_t)name[0] >= 0x80) return 0;
+    /* the blocks before lo start below name, those from hi above it */
+    lo = presym_first_block[(uint8_t)name[0]];
+    hi = presym_first_block[(uint8_t)name[0]+1];
+  }
+  while (lo < hi) {
+    size_t mid = lo + (hi-lo)/2;
+    p = presym_codes + presym_block_offset[mid];
+    m = 0;
+    if (presym_cmp_next(name, len, &p, buf, &m) >= 0) lo = mid+1;
+    else hi = mid;
+  }
+  if (lo == 0) return 0;
+
+  mrb_sym idx = (mrb_sym)(lo-1) << MRB_PRESYM_BLOCK_SHIFT;
+  mrb_sym end = idx + (1 << MRB_PRESYM_BLOCK_SHIFT);
+  if (end > MRB_PRESYM_MAX) end = MRB_PRESYM_MAX;
+  p = presym_codes + presym_block_offset[lo-1];
+  m = 0;
+  for (;;) {
+    int cmp = presym_cmp_next(name, len, &p, buf, &m);
+    if (cmp == 0) return idx+1;
+    if (cmp < 0) return 0;
+    for (;;) {
+      if (++idx == end) return 0;
+      size_t pre = *p & 0x3f;
+      if (pre < m) {
+        if (pre < 0x3f) return 0;
+        m = pre;
+      }
+      if (pre == m) break;
+      for (p++; !PRESYM_HEADER_P(*p); p++)
+        ;
+    }
+  }
+}
+
+/* The decoded names, sorted by symbol: each is in the symbol pool after its
+   16-bit symbol (write_compact_table_header keeps MRB_PRESYM_MAX below 2**16),
+   so a name a caller keeps stays valid until mrb_free_symtbl. */
+struct presym_names {
+  size_t n, capa;
+  const char *names[];
+};
+
+static uint16_t
+presym_names_key(const char *name)
+{
+  uint16_t key;
+  memcpy(&key, name - sizeof(key), sizeof(key));
+  return key;
+}
+
+static char* sym_pool_alloc(mrb_state *mrb, size_t size);
+
+/* The cached name of presym sym, or NULL with *posp where it would go. */
+static const char*
+presym_cached(mrb_state *mrb, mrb_sym sym, size_t *posp)
+{
+  struct presym_names *t = (struct presym_names*)mrb->presym_names;
+  size_t lo = 0, hi = t ? t->n : 0;
+
+  while (lo < hi) {
+    size_t mid = lo + (hi-lo)/2;
+    uint16_t key = presym_names_key(t->names[mid]);
+    if (key == sym) return t->names[mid];
+    if (key < sym) lo = mid+1;
+    else hi = mid;
+  }
+  *posp = lo;
+  return NULL;
+}
+
+static size_t
+presym_decode_sym(mrb_sym sym, char *buf)
+{
+  mrb_sym idx = sym-1;
+  mrb_sym k = idx >> MRB_PRESYM_BLOCK_SHIFT << MRB_PRESYM_BLOCK_SHIFT;
+  const uint8_t *p = presym_codes + presym_block_offset[idx >> MRB_PRESYM_BLOCK_SHIFT];
+  size_t len;
+
+  do {
+    len = presym_decode(&p, buf);
+  } while (k++ < idx);
+  return len;
+}
+
+static const char*
+presym_cache(mrb_state *mrb, mrb_sym sym, size_t pos, const char *name, size_t len)
+{
+  struct presym_names *t = (struct presym_names*)mrb->presym_names;
+
+  if (!t || t->n == t->capa) {
+    size_t n = t ? t->n : 0;
+    size_t capa = t ? t->capa + t->capa/2 + 8 : 32;
+    t = (struct presym_names*)mrb_realloc(mrb, t, sizeof(*t) + capa * sizeof(t->names[0]));
+    t->n = n;
+    t->capa = capa;
+    mrb->presym_names = t;
+  }
+  uint16_t key = (uint16_t)sym;
+  char *s = sym_pool_alloc(mrb, sizeof(key) + len + 1);
+  memcpy(s, &key, sizeof(key));
+  memcpy(s + sizeof(key), name, len + 1);
+  memmove(&t->names[pos+1], &t->names[pos], (t->n - pos) * sizeof(t->names[0]));
+  t->names[pos] = s + sizeof(key);
+  t->n++;
+  return s + sizeof(key);
+}
+
+/* With tmp (MRB_SYM_TMP_LEN bytes), a name not cached yet is decoded there instead. */
+static const char*
+presym_compact_sym2name(mrb_state *mrb, mrb_sym sym, char *tmp, mrb_int *lenp)
+{
+  if (sym > MRB_PRESYM_MAX) return NULL;
+
+  size_t pos;
+  const char *name = presym_cached(mrb, sym, &pos);
+  if (name) {
+    if (lenp) *lenp = (mrb_int)strlen(name);
+    return name;
+  }
+  char buf[MRB_PRESYM_LEN_MAX+1];
+  size_t len = presym_decode_sym(sym, buf);
+  if (lenp) *lenp = (mrb_int)len;
+  if (tmp && len < MRB_SYM_TMP_LEN) return (const char*)memcpy(tmp, buf, len + 1);
+  return presym_cache(mrb, sym, pos, buf, len);
+}
+
+/* own names, so coverage tools merging a plain and a compact build see two functions */
+#define presym_find presym_compact_find
+#define presym_sym2name presym_compact_sym2name
+
+#else
 
 /* Presyms are sorted by (length, name); the names of length L are the
    NUL-terminated run at presym_len_offset[L], indices presym_len_start[L]
@@ -48,8 +263,9 @@ presym_find(const char *name, size_t len)
 }
 
 static const char*
-presym_sym2name(mrb_sym sym, mrb_int *lenp)
+presym_sym2name(mrb_state *mrb, mrb_sym sym, char *tmp, mrb_int *lenp)
 {
+  (void)mrb; (void)tmp;
   if (sym > MRB_PRESYM_MAX) return NULL;
 
   mrb_sym idx = sym-1;
@@ -63,6 +279,8 @@ presym_sym2name(mrb_sym sym, mrb_int *lenp)
   if (lenp) *lenp = (mrb_int)lo;
   return presym_run_name(lo, idx);
 }
+
+#endif  /* MRB_PRESYM_COMPACT */
 
 /* ------------------------------------------------------ */
 
@@ -577,13 +795,13 @@ mrb_check_intern_str(mrb_state *mrb, mrb_value str)
 }
 
 static const char*
-sym2name_len(mrb_state *mrb, mrb_sym sym, char *buf, mrb_int *lenp)
+sym2name_len(mrb_state *mrb, mrb_sym sym, char *buf, char *tmp, mrb_int *lenp)
 {
   if (sym == 0) goto outofsym;
   if (SYMBOL_INLINE_P(sym)) return sym_inline_unpack(sym, buf, lenp);
 
   {
-    const char *name = presym_sym2name(sym, lenp);
+    const char *name = presym_sym2name(mrb, sym, tmp, lenp);
     if (name) return name;
   }
   sym -= MRB_PRESYM_MAX;
@@ -626,10 +844,22 @@ MRB_API const char*
 mrb_sym_name_len(mrb_state *mrb, mrb_sym sym, mrb_int *lenp)
 {
 #ifdef MRB_USE_ALL_SYMBOLS
-  return sym2name_len(mrb, sym, NULL, lenp);
+  return sym2name_len(mrb, sym, NULL, NULL, lenp);
 #else
-  return sym2name_len(mrb, sym, mrb->symbuf, lenp);
+  return sym2name_len(mrb, sym, mrb->symbuf, NULL, lenp);
 #endif
+}
+
+/*
+ * Like mrb_sym_name_len, but the name may be written to buf (MRB_SYM_TMP_LEN
+ * bytes), so it is valid only while buf is: for a caller that copies or
+ * inspects the name and keeps nothing.  Under PRESYM_COMPACT it saves caching
+ * a decoded presym name for the rest of the run.
+ */
+MRB_API const char*
+mrb_sym_name_tmp(mrb_state *mrb, mrb_sym sym, char *buf, mrb_int *lenp)
+{
+  return sym2name_len(mrb, sym, buf, buf, lenp);
 }
 
 void
@@ -643,6 +873,8 @@ mrb_free_symtbl(mrb_state *mrb)
     chunk = next;
   }
   mrb->sym_pool = NULL;
+  mrb_free(mrb, mrb->presym_names);
+  mrb->presym_names = NULL;
 
   mrb_free(mrb, (void*)mrb->symtbl);
 
@@ -661,6 +893,7 @@ mrb_init_symtbl(mrb_state *mrb)
   /* Initialize in linear mode - hash table allocated on demand */
   mrb->symhash = NULL;
   mrb->sym_pool = NULL;
+  mrb->presym_names = NULL;
 }
 
 /**********************************************************************
@@ -994,10 +1227,10 @@ sym_cmp(mrb_state *mrb, mrb_value s1)
     const char *p1, *p2;
     int retval;
     mrb_int len, len1, len2;
-    char buf1[8], buf2[8];
+    char buf1[MRB_SYM_TMP_LEN], buf2[MRB_SYM_TMP_LEN];
 
-    p1 = sym2name_len(mrb, sym1, buf1, &len1);
-    p2 = sym2name_len(mrb, sym2, buf2, &len2);
+    p1 = sym2name_len(mrb, sym1, buf1, buf1, &len1);
+    p2 = sym2name_len(mrb, sym2, buf2, buf2, &len2);
     len = lesser(len1, len2);
     retval = memcmp(p1, p2, len);
     if (retval == 0) {

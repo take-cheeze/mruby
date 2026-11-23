@@ -1128,6 +1128,14 @@ mrb_str_to_cstr(mrb_state *mrb, mrb_value str0)
 MRB_API void
 mrb_str_concat(mrb_state *mrb, mrb_value self, mrb_value other)
 {
+  if (mrb_symbol_p(other)) {
+    /* what mrb_sym_str would give, copied at once: a compact presym table need not cache it */
+    char buf[MRB_SYM_TMP_LEN];
+    mrb_int len;
+    const char *name = mrb_sym_name_tmp(mrb, mrb_symbol(other), buf, &len);
+    mrb_str_cat(mrb, self, name, len);
+    return;
+  }
   other = mrb_obj_as_string(mrb, other);
   mrb_str_cat_str(mrb, self, other);
 }

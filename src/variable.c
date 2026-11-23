@@ -632,7 +632,8 @@ rdata_ivar_find(mrb_state *mrb, struct RObject *obj, mrb_sym sym, char **slot)
   const mrb_data_type *type = data->type;
   if (!type || !type->ivars || !data->data) return NULL;
   mrb_int len;
-  const char *name = mrb_sym_name_len(mrb, sym, &len);
+  char buf[MRB_SYM_TMP_LEN];
+  const char *name = mrb_sym_name_tmp(mrb, sym, buf, &len);
   /* Descriptor names are "@x...", so a shorter name can never match. */
   if (len < 2) return NULL;
   if (type->ivar_hash) {
@@ -786,7 +787,8 @@ assign_class_name(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
 {
   if (namespace_p(mrb_type(v))) {
     struct RObject *c = mrb_obj_ptr(v);
-    const char *name = mrb_sym_name_len(mrb, sym, NULL);
+    char buf[MRB_SYM_TMP_LEN];
+    const char *name = mrb_sym_name_tmp(mrb, sym, buf, NULL);
     if (obj != c && name && ISUPPER(name[0])) {
       mrb_sym id_classname = MRB_SYM(__classname__);
       mrb_value o = mrb_obj_iv_get(mrb, c, id_classname);
@@ -987,7 +989,8 @@ MRB_API mrb_bool
 mrb_iv_name_sym_p(mrb_state *mrb, mrb_sym iv_name)
 {
   mrb_int len;
-  const char *s = mrb_sym_name_len(mrb, iv_name, &len);
+  char buf[MRB_SYM_TMP_LEN];
+  const char *s = mrb_sym_name_tmp(mrb, iv_name, buf, &len);
 
   if (len < 2) return FALSE;
   if (s[0] != '@') return FALSE;

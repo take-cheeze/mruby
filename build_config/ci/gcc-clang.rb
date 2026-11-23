@@ -7,6 +7,8 @@ MRuby::Build.new('full-debug') do |conf|
   # include all core GEMs
   conf.gembox 'full-core'
   conf.cc.defines += %w(MRB_GC_STRESS MRB_USE_DEBUG_HOOK)
+  conf.presym_compact = true
+  conf.gem "#{MRUBY_ROOT}/test/presym-compact"
 
   conf.enable_test
 end
