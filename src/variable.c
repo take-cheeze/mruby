@@ -623,6 +623,12 @@ obj_iv_p(mrb_value obj)
   }
 }
 
+#ifdef MRB_DATA_IVAR_BY_NAME
+# define rdata_ivar_sym(mrb, ivar) mrb_intern_cstr(mrb, (ivar)->name)
+#else
+# define rdata_ivar_sym(mrb, ivar) ((void)(mrb), (ivar)->sym)
+#endif
+
 /* The descriptor entry for `sym` and the address of its slot, or NULL. */
 static const struct mrb_data_ivar*
 rdata_ivar_find(mrb_state *mrb, struct RObject *obj, mrb_sym sym, char **slot)
@@ -631,12 +637,10 @@ rdata_ivar_find(mrb_state *mrb, struct RObject *obj, mrb_sym sym, char **slot)
   struct RData *data = (struct RData*)obj;
   const mrb_data_type *type = data->type;
   if (!type || !type->ivars || !data->data) return NULL;
-  mrb_int len;
-  char buf[MRB_SYM_TMP_LEN];
-  const char *name = mrb_sym_name_tmp(mrb, sym, buf, &len);
-  /* Descriptor names are "@x...", so a shorter name can never match. */
-  if (len < 2) return NULL;
   if (type->ivar_hash) {
+    mrb_int len;
+    char buf[MRB_SYM_TMP_LEN];
+    const char *name = mrb_sym_name_tmp(mrb, sym, buf, &len);
     /* The hash must match tools/bc2cpp/codegen_emit.rb (RDATA_IVAR_HASH). */
     uint32_t h = 2166136261u;
     for (mrb_int i = 0; i < len; ++i) {
@@ -647,7 +651,7 @@ rdata_ivar_find(mrb_state *mrb, struct RObject *obj, mrb_sym sym, char **slot)
       uint16_t idx = type->ivar_hash[p];
       if (idx == 0xFFFF) return NULL;
       const struct mrb_data_ivar *ivar = &type->ivars[idx];
-      if (strncmp(ivar->name, name, (size_t)len) == 0 && ivar->name[len] == '\0') {
+      if (rdata_ivar_sym(mrb, ivar) == sym) {
         *slot = (char*)data->data + ivar->offset;
         return ivar;
       }
@@ -655,7 +659,7 @@ rdata_ivar_find(mrb_state *mrb, struct RObject *obj, mrb_sym sym, char **slot)
   }
   for (size_t i = 0; i < type->ivar_count; ++i) {
     const struct mrb_data_ivar *ivar = &type->ivars[i];
-    if (strncmp(ivar->name, name, (size_t)len) == 0 && ivar->name[len] == '\0') {
+    if (rdata_ivar_sym(mrb, ivar) == sym) {
       *slot = (char*)data->data + ivar->offset;
       return ivar;
     }
@@ -710,7 +714,7 @@ rdata_ivar_store(mrb_state *mrb, struct RObject *obj, const struct mrb_data_ivar
     mrb_field_write_barrier_value(mrb, (struct RBasic*)obj, v);
     return;
   }
-  mrb_raisef(mrb, E_TYPE_ERROR, "%s: expected %s", ivar->name, want);
+  mrb_raisef(mrb, E_TYPE_ERROR, "%n: expected %s", rdata_ivar_sym(mrb, ivar), want);
 }
 
 static iv_tbl*
@@ -879,8 +883,7 @@ mrb_iv_foreach(mrb_state *mrb, mrb_value obj, mrb_iv_foreach_func *func, void *p
         const struct mrb_data_ivar *ivar = &data->type->ivars[i];
         mrb_value val = rdata_ivar_load(ivar, (char*)data->data + ivar->offset);
         if (!mrb_undef_p(val)) {
-          mrb_sym sym = mrb_intern_cstr(mrb, ivar->name);
-          if (func(mrb, sym, val, p) != 0) return;
+          if (func(mrb, rdata_ivar_sym(mrb, ivar), val, p) != 0) return;
         }
       }
     }
@@ -1107,14 +1110,13 @@ mrb_iv_copy(mrb_state *mrb, mrb_value dest, mrb_value src)
         if (ivar->kind != MRB_DATA_IVAR_VALUE) continue;
         mrb_value value = *(mrb_value*)((char*)source->data + ivar->offset);
         if (mrb_undef_p(value)) continue;
-        mrb_sym sym = mrb_intern_cstr(mrb, ivar->name);
         char *slot;
-        const struct mrb_data_ivar *target = rdata_ivar_find(mrb, d, sym, &slot);
+        const struct mrb_data_ivar *target = rdata_ivar_find(mrb, d, rdata_ivar_sym(mrb, ivar), &slot);
         if (target) {
           rdata_ivar_store(mrb, d, target, slot, value);
         }
         else {
-          mrb_obj_iv_set_force(mrb, d, sym, value);
+          mrb_obj_iv_set_force(mrb, d, rdata_ivar_sym(mrb, ivar), value);
         }
       }
     }
@@ -1146,7 +1148,7 @@ mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym)
     if (ivar) {
       /* A typed slot has no unset state: the generated code reads it unboxed. */
       if (ivar->kind != MRB_DATA_IVAR_VALUE) {
-        mrb_raisef(mrb, E_TYPE_ERROR, "%s: cannot remove a typed instance variable", ivar->name);
+        mrb_raisef(mrb, E_TYPE_ERROR, "%n: cannot remove a typed instance variable", rdata_ivar_sym(mrb, ivar));
       }
       mrb_value val = *(mrb_value*)slot;
       *(mrb_value*)slot = mrb_undef_value();
