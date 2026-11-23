@@ -347,6 +347,40 @@ rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *t
   return str;
 }
 
+/* the index of the encoding named by to (an Encoding name: "UTF_8", "US_ASCII" or "BINARY") */
+static int
+encoding_index_of_name(mrb_state *mrb, mrb_value to)
+{
+  const char *name;
+  if (!mrb_string_p(to)) mrb_raise(mrb, E_TYPE_ERROR, "encoding name expected");
+  name = mrb_str_to_cstr(mrb, to);
+  if (strcmp(name, "UTF_8") == 0) return ENCINDEX_UTF_8;
+  if (strcmp(name, "US_ASCII") == 0) return ENCINDEX_US_ASCII;
+  if (strcmp(name, "BINARY") == 0) return ENCINDEX_ASCII_8BIT;
+  mrb_raisef(mrb, mrb_class_get(mrb, "ArgumentError"), "unknown encoding name - %s", name);
+  return ENCINDEX_ASCII_8BIT; /* not reached */
+}
+
+mrb_value
+rb_str_encode(mrb_state *mrb, mrb_value str, mrb_value to, int ecflags, mrb_value ecopts)
+{
+  struct RString *s;
+  mrb_value out;
+  int to_index, from_index;
+  (void)ecflags;
+  (void)ecopts;
+  to_index = encoding_index_of_name(mrb, to);
+  from_index = rb_enc_get_index(str);
+  out = mrb_str_dup(mrb, str);
+  s = mrb_str_ptr(out);
+  if (from_index != to_index &&
+      !ascii_only((const unsigned char *)RSTR_PTR(s), (const unsigned char *)RSTR_PTR(s) + RSTR_LEN(s))) {
+    mrb_raisef(mrb, mrb_class_get(mrb, "ArgumentError"), "string with non-ASCII bytes cannot be converted to %v", to);
+  }
+  rb_enc_set_index(out, to_index);
+  return out;
+}
+
 mrb_value
 rb_enc_sprintf(mrb_state *mrb, rb_encoding *enc, const char *format, ...)
 {

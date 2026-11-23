@@ -78,6 +78,11 @@ MRB_API mrb_value rb_enc_from_encoding(mrb_state *mrb, rb_encoding *enc);
    into UTF-8, is retagged; any other conversion is not possible here, and the string is returned unchanged (as CRuby does on
    a failed conversion) */
 MRB_API mrb_value rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *to);
+/* CRuby's rb_str_encode(str, to, ecflags, ecopts): a new string of str in the encoding named by to (an Encoding name, as
+   rb_enc_from_encoding gives). The three encodings are ASCII-compatible, so a conversion among them is defined for ASCII only:
+   an ASCII-only string takes the target's tag; a string with other bytes raises ArgumentError (CRuby raises
+   Encoding::UndefinedConversionError here). ecflags and ecopts are not used. */
+MRB_API mrb_value rb_str_encode(mrb_state *mrb, mrb_value str, mrb_value to, int ecflags, mrb_value ecopts);
 /* CRuby's rb_enc_sprintf: the formatted string (mrb_vformat), tagged with enc (the converter maps PRIsVALUE in the
    format as rb_sprintf does) */
 MRB_API mrb_value rb_enc_sprintf(mrb_state *mrb, rb_encoding *enc, const char *format, ...);
