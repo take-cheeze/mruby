@@ -23,7 +23,10 @@ extern "C" {
 # endif
 #endif
 
+/* The read buffer of a readable IO; it grows past this when a read needs more. */
+#ifndef MRB_IO_BUF_SIZE
 #define MRB_IO_BUF_SIZE 4096
+#endif
 
 struct mrb_io_buf {
   short start;
