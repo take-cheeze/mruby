@@ -89,7 +89,7 @@ presym_cmp_next(const char *name, size_t len, const uint8_t **pp, char *buf, siz
    A shared prefix of 63 is a cap (the generator records no more), so a name
    with it is compared from there. */
 static mrb_sym
-presym_find(const char *name, size_t len)
+presym_compact_find(const char *name, size_t len)
 {
   char buf[MRB_PRESYM_LEN_MAX+1];
   const uint8_t *p;
@@ -213,7 +213,7 @@ presym_cache(mrb_state *mrb, mrb_sym sym, size_t pos, const char *name, size_t l
 
 /* With tmp (MRB_SYM_TMP_LEN bytes), a name not cached yet is decoded there instead. */
 static const char*
-presym_sym2name(mrb_state *mrb, mrb_sym sym, char *tmp, mrb_int *lenp)
+presym_compact_sym2name(mrb_state *mrb, mrb_sym sym, char *tmp, mrb_int *lenp)
 {
   if (sym > MRB_PRESYM_MAX) return NULL;
 
@@ -229,6 +229,10 @@ presym_sym2name(mrb_state *mrb, mrb_sym sym, char *tmp, mrb_int *lenp)
   if (tmp && len < MRB_SYM_TMP_LEN) return (const char*)memcpy(tmp, buf, len + 1);
   return presym_cache(mrb, sym, pos, buf, len);
 }
+
+/* own names, so coverage tools merging a plain and a compact build see two functions */
+#define presym_find presym_compact_find
+#define presym_sym2name presym_compact_sym2name
 
 #else
 
