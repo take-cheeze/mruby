@@ -796,3 +796,19 @@ assert('get constant of parent module in singleton class; issue #3568') do
 
   assert_equal("value", actual)
 end
+
+assert('Module#private_constant') do
+  c = Class.new do
+    const_set(:PRIV, 1)
+    const_set(:PUB, 2)
+    private_constant :PRIV
+    def self.lex; PRIV; end
+  end
+  assert_equal 1, c.lex                          # a lexical reference still reaches it
+  assert_equal 2, c::PUB
+  assert_true c.constants.include?(:PUB)
+  assert_false c.constants.include?(:PRIV)       # not listed
+  assert_raise(NameError) { c::PRIV }            # a scoped reference is refused
+  assert_equal 1, c.const_get(:PRIV)             # const_get ignores privacy (as CRuby)
+  assert_raise(NameError) { Class.new.send(:private_constant, :NOPE) }
+end

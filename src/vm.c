@@ -1154,6 +1154,10 @@ RETRY_TRY_BLOCK:
       mrb_value val;
 
       ERR_PC_SET(mrb);
+      if (mrb_const_is_private(mrb, regs[a], syms[b])) {
+        mrb_raisef(mrb, E_NAME_ERROR, "private constant %S::%S referenced",
+                   mrb_class_path(mrb, mrb_class_ptr(regs[a])), mrb_sym2str(mrb, syms[b]));
+      }
       val = mrb_const_get(mrb, regs[a], syms[b]);
       ERR_PC_CLR(mrb);
       regs[a] = val;

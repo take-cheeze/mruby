@@ -718,6 +718,7 @@ mrb_mruby_metaprog_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, mod, "remove_method", mrb_mod_remove_method, MRB_ARGS_ANY()); /* 15.2.2.4.41 */
   mrb_define_method(mrb, mod, "method_removed", mrb_f_nil, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, mod, "constants", mrb_mod_constants, MRB_ARGS_OPT(1)); /* 15.2.2.4.24 */
+  mrb_define_method(mrb, mod, "private_constant", mrb_mod_private_constant, MRB_ARGS_ANY());
   mrb_define_class_method(mrb, mod, "constants", mrb_mod_s_constants, MRB_ARGS_ANY()); /* 15.2.2.3.1 */
   mrb_define_class_method(mrb, mod, "nesting", mrb_mod_s_nesting, MRB_ARGS_NONE()); /* 15.2.2.3.2 */
 }

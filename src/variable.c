@@ -923,6 +923,8 @@ const_i(mrb_state *mrb, mrb_sym sym, mrb_value v, void *p)
   return 0;
 }
 
+static mrb_sym private_consts_sym(mrb_state *mrb);
+
 /* 15.2.2.4.24 */
 /*
  *  call-seq:
@@ -940,12 +942,76 @@ mrb_mod_constants(mrb_state *mrb, mrb_value mod)
   mrb_get_args(mrb, "|b", &inherit);
   ary = mrb_ary_new(mrb);
   while (c) {
+    mrb_value own = mrb_obj_value(c);
     iv_foreach(mrb, c->iv, const_i, &ary);
+    {
+      /* a class's private constants are not listed (CRuby's Module#constants) */
+      mrb_value list = mrb_iv_get(mrb, own, private_consts_sym(mrb));
+      if (mrb_array_p(list) && RARRAY_LEN(list) > 0) {
+        mrb_value kept = mrb_ary_new(mrb);
+        mrb_int k, m = RARRAY_LEN(ary);
+        for (k = 0; k < m; k++) {
+          mrb_value e = RARRAY_PTR(ary)[k];
+          if (!mrb_const_is_private(mrb, own, mrb_symbol(e))) mrb_ary_push(mrb, kept, e);
+        }
+        ary = kept;
+      }
+    }
     if (!inherit) break;
     c = c->super;
     if (c == mrb->object_class) break;
   }
   return ary;
+}
+
+/* The private constants of a module (Module#private_constant): an array of their symbols in an ivar whose name has no '@',
+   so instance_variables does not list it. CRuby hides them from Module#constants and from a scoped reference (Foo::X). */
+static mrb_sym
+private_consts_sym(mrb_state *mrb)
+{
+  return mrb_intern_lit(mrb, "__private_constants__");
+}
+
+MRB_API mrb_bool
+mrb_const_is_private(mrb_state *mrb, mrb_value mod, mrb_sym sym)
+{
+  mrb_value list;
+  mrb_int i, n;
+
+  if (!mrb_class_p(mod) && !mrb_module_p(mod)) return FALSE;
+  list = mrb_iv_get(mrb, mod, private_consts_sym(mrb));
+  if (!mrb_array_p(list)) return FALSE;
+  n = RARRAY_LEN(list);
+  for (i = 0; i < n; i++) {
+    if (mrb_symbol(RARRAY_PTR(list)[i]) == sym) return TRUE;
+  }
+  return FALSE;
+}
+
+/* Module#private_constant(*names): each name must be a constant of the module (NameError otherwise); returns the module */
+MRB_API mrb_value
+mrb_mod_private_constant(mrb_state *mrb, mrb_value mod)
+{
+  mrb_value *argv;
+  mrb_int argc, i;
+  mrb_value list;
+
+  mrb_get_args(mrb, "*", &argv, &argc);
+  list = mrb_iv_get(mrb, mod, private_consts_sym(mrb));
+  if (!mrb_array_p(list)) {
+    list = mrb_ary_new(mrb);
+    mrb_iv_set(mrb, mod, private_consts_sym(mrb), list);
+  }
+  for (i = 0; i < argc; i++) {
+    mrb_sym id = mrb_obj_to_sym(mrb, argv[i]);
+    if (!mrb_const_defined_at(mrb, mod, id)) {
+      mrb_name_error(mrb, id, "constant %S::%S not defined", mrb_class_path(mrb, mrb_class_ptr(mod)), mrb_sym2str(mrb, id));
+    }
+    if (!mrb_const_is_private(mrb, mod, id)) {
+      mrb_ary_push(mrb, list, mrb_symbol_value(id));
+    }
+  }
+  return mod;
 }
 
 MRB_API mrb_value
