@@ -32,13 +32,18 @@ MRuby.each_target do |build|
   presym_task = file presym.list_path => ppps do
     presyms = presym.scan(ppps)
     current_presyms = presym.read_list if File.exist?(presym.list_path)
-    if presyms != current_presyms
+    if presyms != current_presyms || !presym.table_header_current?(presyms)
       mkdir_p presym.header_dir
       %w[id table].each do |type|
         presym.send("write_#{type}_header", presyms)
       end
       presym.write_list(presyms)
     end
+  end
+
+  # A changed presym_compact rewrites the headers even when no source changed.
+  presym_task.define_singleton_method(:needed?) do
+    super() || !presym.table_header_current?(presym.read_list)
   end
 
   # Don't directly write dependency tasks in the "task" arguments.

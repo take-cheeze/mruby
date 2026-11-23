@@ -80,6 +80,8 @@ module MRuby
     include Rake::DSL
     include LoadGems
     attr_accessor :name, :bins, :exts, :file_separator, :build_dir, :gem_clone_dir, :defines, :libdir_name
+    # PRESYM_COMPACT (lib/mruby/presym.rb): a compressed presym name table, decoded on demand (src/symbol.c)
+    attr_accessor :presym_compact
     attr_reader :products, :libmruby_core_objs, :libmruby_objs, :gems, :toolchains, :presym, :mrbc_build, :gem_dir_to_repo_url
     attr_reader :install_excludes
 

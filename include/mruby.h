@@ -395,6 +395,7 @@ typedef struct mrb_state {
   size_t symcapa;
   struct mrb_sym_hash_table *symhash;
   void *sym_pool;
+  void *presym_names;                     /* PRESYM_COMPACT: the presym names decoded so far (src/symbol.c) */
 #ifndef MRB_USE_ALL_SYMBOLS
   char symbuf[8];                         /* buffer for small symbol names */
 #endif
@@ -1314,6 +1315,9 @@ MRB_API mrb_value mrb_check_intern(mrb_state*,const char*,size_t);
 MRB_API mrb_value mrb_check_intern_str(mrb_state*,mrb_value);
 MRB_API const char *mrb_sym_name(mrb_state*,mrb_sym);
 MRB_API const char *mrb_sym_name_len(mrb_state*,mrb_sym,mrb_int*);
+/* the buffer mrb_sym_name_tmp may write the name to (see src/symbol.c) */
+#define MRB_SYM_TMP_LEN 64
+MRB_API const char *mrb_sym_name_tmp(mrb_state*,mrb_sym,char*,mrb_int*);
 MRB_API const char *mrb_sym_dump(mrb_state*,mrb_sym);
 MRB_API mrb_value mrb_sym_str(mrb_state*,mrb_sym);
 #define mrb_sym2name(mrb,sym) mrb_sym_name(mrb,sym)
