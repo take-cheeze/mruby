@@ -62,11 +62,16 @@ struct mrb_data_int_or_nil {
 
 /** A Ruby instance variable stored in an RData payload. */
 struct mrb_data_ivar {
+  /** The name ("@x"); NULL when `sym` names it. */
   const char *name;
-  size_t offset;
+  uint16_t offset;
   /** enum mrb_data_ivar_kind; zero (a two-field initializer) is VALUE. */
-  int kind;
+  uint8_t kind;
+  /** The name as a symbol (a presym id, so no string is kept), or 0 to use `name`. */
+  mrb_sym sym;
 };
+/** struct mrb_data_ivar has `sym`: a descriptor may name its ivar by symbol. */
+#define MRB_DATA_IVAR_SYM 1
 
 struct RData {
   MRB_OBJECT_HEADER;
