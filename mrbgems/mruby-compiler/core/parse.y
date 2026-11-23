@@ -14,6 +14,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <mruby.h>
@@ -5513,7 +5514,8 @@ parser_yylex(parser_state *p)
       if (d == 0 && endp == tok(p)) {
         yywarning_s(p, "corrupted float value", tok(p));
       }
-      else if (errno == ERANGE) {
+      else if (errno == ERANGE && (d == 0 || isinf(d))) {
+        /* underflow to zero or overflow (as CRuby): a subnormal result is in range, though strtod sets ERANGE for it */
         yywarning_s(p, "float out of range", tok(p));
         errno = 0;
       }

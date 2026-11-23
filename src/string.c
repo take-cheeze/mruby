@@ -3019,6 +3019,23 @@ static const double powersOf10[] = {/* Table giving binary powers of 10.  Entry 
 
 MRB_API double
 mrb_float_read(const char *string, char **endPtr)
+{
+  /* correctly rounded (glibc strtod); the reader below builds the value by powers of ten, which loses the last bits of long
+     mantissas and the subnormals (5e-324 read as 0.0, 9007199254740993.0 as ...994). A Ruby float is a decimal number: digits
+     with an optional sign and point and an optional exponent, so "inf" and "nan" are not numbers here (0.0, nothing read). */
+  const char *q = string;
+  while (ISSPACE(*q)) q++;
+  if (*q == '+' || *q == '-') q++;
+  if (!(ISDIGIT(*q) || (*q == '.' && ISDIGIT(q[1])))) {
+    if (endPtr) *endPtr = (char *)string;
+    return 0.0;
+  }
+  return strtod(string, endPtr);
+}
+
+#if 0  /* the previous reader, kept for reference: replaced by strtod above */
+static double
+mrb_float_read_builtin(const char *string, char **endPtr)
 /*  const char *string;            A decimal ASCII floating-point number,
                                  * optionally preceded by white space.
                                  * Must have form "-I.FE-X", where I is the
@@ -3224,6 +3241,7 @@ done:
     }
     return fraction;
 }
+#endif /* mrb_float_read_builtin: the reader above replaces it (correct rounding) */
 #endif
 
 static int

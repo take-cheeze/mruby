@@ -206,16 +206,24 @@ assert('Float#>>') do
   assert_equal(-1, -23.0 >> 128)
 end
 
+assert('Float literals and to_s are correctly rounded') do
+  assert_true 5e-324 > 0.0                       # the smallest subnormal reads, not 0.0
+  assert_equal "5.0e-324", 5e-324.to_s
+  assert_equal "9.007199254740992e+15", 9007199254740993.0.to_s   # round to even
+  assert_equal "1.7976931348623157e+308", 1.7976931348623157e308.to_s
+  assert_equal "1.234567890123456e+15", 1234567890123456.0.to_s
+end
+
 assert('Float#to_s') do
   uses_float = 4e38.infinite?  # enable MRB_USE_FLOAT?
 
   assert_equal("Infinity", Float::INFINITY.to_s)
   assert_equal("-Infinity", (-Float::INFINITY).to_s)
   assert_equal("NaN", Float::NAN.to_s)
-  assert_equal("0", 0.0.to_s)
-  assert_equal("-0", -0.0.to_s)
+  assert_equal("0.0", 0.0.to_s)
+  assert_equal("-0.0", -0.0.to_s)
   assert_equal("-3.25", -3.25.to_s)
-  assert_equal("50", 50.0.to_s)
+  assert_equal("50.0", 50.0.to_s)
   assert_equal("0.0125", 0.0125.to_s)
   assert_equal("-0.0125", -0.0125.to_s)
   assert_equal("1.0e-10", 0.0000000001.to_s)
@@ -224,8 +232,8 @@ assert('Float#to_s') do
   assert_equal("-1.0e+20", -1e20.to_s)
   assert_equal("1.0e+16", 10000000000000000.0.to_s)
   assert_equal("-1.0e+16", -10000000000000000.0.to_s)
-  assert_equal("100000", 100000.0.to_s)
-  assert_equal("-100000", -100000.0.to_s)
+  assert_equal("100000.0", 100000.0.to_s)
+  assert_equal("-100000.0", -100000.0.to_s)
   if uses_float
     assert_equal("1.0e+08", 100000000.0.to_s)
     assert_equal("-1.0e+08", -100000000.0.to_s)
@@ -234,8 +242,8 @@ assert('Float#to_s') do
   else
     assert_equal("1.0e+15", 1000000000000000.0.to_s)
     assert_equal("-1.0e+15", -1000000000000000.0.to_s)
-    assert_equal("100000000000000", 100000000000000.0.to_s)
-    assert_equal("-100000000000000", -100000000000000.0.to_s)
+    assert_equal("100000000000000.0", 100000000000000.0.to_s)
+    assert_equal("-100000000000000.0", -100000000000000.0.to_s)
   end
 end
 

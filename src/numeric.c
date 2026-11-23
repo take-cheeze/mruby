@@ -9,6 +9,7 @@
 #include <math.h>
 #endif
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -219,35 +220,67 @@ flo_to_s(mrb_state *mrb, mrb_value flt)
     return mrb_str_new_lit(mrb, "NaN");
   }
   else {
-    char fmt[] = "%." MRB_STRINGIZE(FLO_TO_STR_PREC) "g";
-    mrb_value str = mrb_float_to_str(mrb, flt, fmt);
-    mrb_int len;
-    char *begp, *p, *endp;
+    /* CRuby prints the shortest digit string that reads back as the same double, laid out by the decimal point position
+       (decpt): fixed when -4 < decpt <= 15, else d.ddde+XX. The shortest digits come from %.<p-1>e for the least p that
+       reads back exactly. */
+    char fmt[16], buf[64], digits[32], out[96];
+    int p, neg, nd = 0, exp10, decpt, i, o = 0;
+    mrb_value str = mrb_nil_value();
+    const char *c;
 
-    insert_dot_zero:
-    begp = RSTRING_PTR(str);
-    len = RSTRING_LEN(str);
-    for (p = begp, endp = p + len; p < endp; ++p) {
-      if (*p == '.') {
-        return str;
-      }
-      else if (*p == 'e') {
-        ptrdiff_t e_pos = p - begp;
-        mrb_str_cat(mrb, str, ".0", 2);
-        p = RSTRING_PTR(str) + e_pos;
-        memmove(p + 2, p, len - e_pos);
-        memcpy(p, ".0", 2);
-        return str;
-      }
-    }
-
-    if (FLO_TO_STR_PREC + (begp[0] == '-') <= len) {
-      --fmt[sizeof(fmt) - 3];  /* %.16g(%.8g) -> %.15g(%.7g) */
+    for (p = 1; p <= 17; p++) {
+      snprintf(fmt, sizeof(fmt), "%%.%de", p - 1);
       str = mrb_float_to_str(mrb, flt, fmt);
-      goto insert_dot_zero;
+      if (RSTRING_LEN(str) >= (mrb_int)sizeof(buf)) break;
+      memcpy(buf, RSTRING_PTR(str), RSTRING_LEN(str));
+      buf[RSTRING_LEN(str)] = '\0';
+      if (strtod(buf, NULL) == f) break;
     }
+    /* buf: [-]d[.ddd]e[+-]XX */
+    c = buf;
+    neg = (*c == '-');
+    if (neg) c++;
+    for (; *c && *c != 'e'; c++) {
+      if (*c >= '0' && *c <= '9' && nd < (int)sizeof(digits) - 1) digits[nd++] = *c;
+    }
+    exp10 = (*c == 'e') ? atoi(c + 1) : 0;
+    while (nd > 1 && digits[nd - 1] == '0') nd--;   /* trailing zeros are not significant */
+    digits[nd] = '\0';
+    decpt = exp10 + 1;
 
-    return str;
+    if (neg) out[o++] = '-';
+    if (decpt > 0 && decpt <= 15) {   /* DBL_DIG: 1e15 is 1.0e+15, 123456789012345.0 is fixed */
+      if (nd <= decpt) {
+        for (i = 0; i < nd; i++) out[o++] = digits[i];
+        for (i = nd; i < decpt; i++) out[o++] = '0';
+        out[o++] = '.';
+        out[o++] = '0';
+      }
+      else {
+        for (i = 0; i < decpt; i++) out[o++] = digits[i];
+        out[o++] = '.';
+        for (i = decpt; i < nd; i++) out[o++] = digits[i];
+      }
+    }
+    else if (decpt <= 0 && decpt > -4) {
+      out[o++] = '0';
+      out[o++] = '.';
+      for (i = 0; i < -decpt; i++) out[o++] = '0';
+      for (i = 0; i < nd; i++) out[o++] = digits[i];
+    }
+    else {
+      out[o++] = digits[0];
+      out[o++] = '.';
+      if (nd > 1) {
+        for (i = 1; i < nd; i++) out[o++] = digits[i];
+      }
+      else {
+        out[o++] = '0';
+      }
+      o += snprintf(out + o, sizeof(out) - o, "e%+03d", decpt - 1);
+    }
+    out[o] = '\0';
+    return mrb_str_new_cstr(mrb, out);
   }
 }
 
