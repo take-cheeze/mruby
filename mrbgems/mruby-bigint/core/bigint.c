@@ -935,6 +935,17 @@ mpz_sqr_basic_limbs(mp_limb *result, const mp_limb *x, size_t n)
 }
 
 /*
+ * MRB_BIGINT_SCHOOLBOOK: multiply, square and convert to decimal by the schoolbook methods only. The results are
+ * the same; operands past KARATSUBA_THRESHOLD limbs (or all-ones/sparse ones) only take longer, and the faster
+ * algorithms' code becomes unreachable, so the linker drops it.
+ */
+#ifdef MRB_BIGINT_SCHOOLBOOK
+#define MPZ_FAST_ALGORITHMS 0
+#else
+#define MPZ_FAST_ALGORITHMS 1
+#endif
+
+/*
  * Karatsuba Multiplication
  *
  * Splits inputs into 2 parts: A = A1*B^half + A0, B = B1*B^half + B0
@@ -949,7 +960,7 @@ mpz_sqr_basic_limbs(mp_limb *result, const mp_limb *x, size_t n)
 static inline mrb_bool
 should_use_karatsuba(size_t n)
 {
-  return n >= KARATSUBA_THRESHOLD;
+  return MPZ_FAST_ALGORITHMS && n >= KARATSUBA_THRESHOLD;
 }
 
 /* Calculate scratch space needed for Karatsuba */
@@ -1120,7 +1131,7 @@ mpz_mul_karatsuba_limbs(mp_limb *result,
 static inline mrb_bool
 should_use_toom3(size_t n)
 {
-  return n >= TOOM3_THRESHOLD;
+  return MPZ_FAST_ALGORITHMS && n >= TOOM3_THRESHOLD;
 }
 
 /* Calculate scratch space needed for Toom-3 (including Karatsuba at base) */
@@ -1917,7 +1928,7 @@ mpz_sqr_toom3(mpz_ctx_t *ctx, mp_limb *result,
 static size_t
 mpz_all_ones_p(mpz_t *x)
 {
-  if (x->sn <= 0 || x->sz == 0) return 0;
+  if (!MPZ_FAST_ALGORITHMS || x->sn <= 0 || x->sz == 0) return 0;
 
   /* Check all but top limb */
   for (size_t i = 0; i + 1 < x->sz; i++) {
@@ -2010,7 +2021,7 @@ mpz_popcount(mpz_t *x, size_t max_count)
 static size_t
 mpz_sparse_p(mpz_t *x)
 {
-  if (x->sn <= 0 || x->sz < TOOM3_THRESHOLD) return 0;
+  if (!MPZ_FAST_ALGORITHMS || x->sn <= 0 || x->sz < TOOM3_THRESHOLD) return 0;
 
   size_t popcount = mpz_popcount(x, SPARSE_MAX_BITS);
   if (popcount > SPARSE_MAX_BITS) return 0;
@@ -4015,7 +4026,7 @@ mpz_get_str(mpz_ctx_t *ctx, char *s, mrb_int sz, mrb_int base, mpz_t *x)
 
     /* Use D&C algorithm for large base-10 numbers */
     size_t est_digits = (size_t)(xlen * DIG_SIZE * 30103UL / 100000UL) + 2;
-    if (base == 10 && est_digits > DC_GET_STR_THRESHOLD) {
+    if (MPZ_FAST_ALGORITHMS && base == 10 && est_digits > DC_GET_STR_THRESHOLD) {
       return mpz_get_str_dc(ctx, s, x);
     }
 
