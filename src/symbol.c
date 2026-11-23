@@ -100,7 +100,9 @@ sym_validate_len(mrb_state *mrb, size_t len)
 }
 
 /* Chunk-based string pool for heap-allocated symbol names */
+#ifndef MRB_SYM_POOL_CHUNK_SIZE
 #define MRB_SYM_POOL_CHUNK_SIZE 4096
+#endif
 
 struct sym_pool_chunk {
   struct sym_pool_chunk *next;
