@@ -393,7 +393,7 @@ mtx_owned_p(mrb_state *mrb, mrb_value self)
 }
 
 void
-mrb_mruby_thread_gem_init(mrb_state *mrb)
+mrb_mruby_uv_thread_gem_init(mrb_state *mrb)
 {
   mrb_define_class(mrb, "ThreadError", mrb_class_get(mrb, "StandardError"));
   struct RClass *c = mrb_define_class(mrb, "Thread", mrb->object_class);
@@ -413,7 +413,7 @@ mrb_mruby_thread_gem_init(mrb_state *mrb)
 }
 
 void
-mrb_mruby_thread_gem_final(mrb_state *mrb)
+mrb_mruby_uv_thread_gem_final(mrb_state *mrb)
 {
   (void)mrb;
 }
