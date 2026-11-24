@@ -1990,19 +1990,21 @@ io_read_all(mrb_state *mrb, struct mrb_io *fptr, mrb_value outbuf)
  * else what a regular file still holds, up to length, so a large read is one
  * allocation of its final size instead of a string grown MRB_IO_BUF_SIZE at a
  * time, past it on the way. Anything else, or with MRB_IO_READ_NO_PRESIZE,
- * starts empty and grows as before. */
+ * starts empty and grows as before. One byte over: mrb_str_cat grows a string
+ * whose capacity is not above its new length. */
 static mrb_int
 io_read_capa(struct mrb_io *fptr, mrb_int length)
 {
 #ifndef MRB_IO_READ_NO_PRESIZE
   struct stat sb;
   off_t cur;
-  if (length <= MRB_IO_BUF_SIZE) return length;
+  if (length <= MRB_IO_BUF_SIZE) return length + 1;
   if (fstat(fptr->fd, &sb) == 0 && S_ISREG(sb.st_mode) &&
       (cur = lseek(fptr->fd, 0, SEEK_CUR)) != -1) {
     off_t left = sb.st_size - cur + fptr->buf->len;
     if (left < 0) return 0;
-    return left < (off_t)length ? (mrb_int)left : length;
+    mrb_int want = left < (off_t)length ? (mrb_int)left : length;
+    return want < MRB_INT_MAX ? want + 1 : want;
   }
 #endif
   return 0;
