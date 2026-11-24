@@ -4624,6 +4624,7 @@ static const mrb_mt_entry mod_rom_entries[] = {
   MRB_MT_ENTRY(mrb_mod_ancestors,       MRB_SYM(ancestors),        MRB_ARGS_NONE())                    /* 15.2.2.4.9 */
   MRB_MT_ENTRY(mrb_mod_attr_accessor,   MRB_SYM(attr_accessor),    MRB_ARGS_ANY())                     /* 15.2.2.4.12 */
   MRB_MT_ENTRY(mrb_mod_attr_reader,     MRB_SYM(attr_reader),      MRB_ARGS_ANY())                     /* 15.2.2.4.13 */
+  MRB_MT_ENTRY(mrb_mod_attr_reader,     MRB_SYM(attr),             MRB_ARGS_ANY())                     /* 15.2.2.4.11, the alias */
   MRB_MT_ENTRY(mrb_mod_attr_writer,     MRB_SYM(attr_writer),      MRB_ARGS_ANY())                     /* 15.2.2.4.14 */
   MRB_MT_ENTRY(mrb_mod_module_eval,     MRB_SYM(class_eval),       MRB_ARGS_ANY())                     /* 15.2.2.4.15 */
   MRB_MT_ENTRY(mrb_do_nothing,          MRB_SYM(const_added),      MRB_ARGS_REQ(1) | MRB_MT_PRIVATE)
@@ -4705,7 +4706,6 @@ mrb_init_class(mrb_state *mrb)
   MRB_MT_INIT_ROM(mrb, cls, cls_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, mod, mod_rom_entries);
-  mrb_define_alias_id(mrb, mod, MRB_SYM(attr), MRB_SYM(attr_reader));                                                  /* 15.2.2.4.11 */
 
   mrb_undef_method_id(mrb, cls, MRB_SYM(module_function));
 

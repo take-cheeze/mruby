@@ -158,11 +158,6 @@ class IO
   end
 
 
-  # Alias for eof?
-  alias_method :eof, :eof?
-  # Alias for pos
-  alias_method :tell, :pos
-
   #
   # call-seq:
   #   ios.pos = integer    -> integer
@@ -281,11 +276,6 @@ class IO
     write sprintf(*args)
     nil
   end
-
-  # Alias for fileno - returns the integer file descriptor for ios
-  alias_method :to_i, :fileno
-  # Alias for isatty - returns true if ios is associated with a terminal device
-  alias_method :tty?, :isatty
 end
 
 # Standard input stream - connected to file descriptor 0
