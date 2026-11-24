@@ -29,6 +29,7 @@ typedef struct thr {
   mrb_value value;         /* the block's value, once done */
   mrb_value exc;           /* the exception the block raised, or nil */
   mrb_value arena_keep;    /* the arena entries of this thread while it does not hold the GVL, or nil */
+  mrb_value owned;         /* the Mutex objects this thread holds, or nil */
   int started;
   int done;
   int joined;
@@ -41,6 +42,14 @@ typedef struct thr {
   struct RObject *errinfo;
   mrb_int errinfo_ci_depth;
 } thr;
+
+typedef struct mtx mtx;
+
+struct mtx {
+  uv_mutex_t m;
+  thr *owner;               /* the thread holding it, or NULL */
+  int inited;
+};
 
 static mrb_state *G;                /* the one VM all threads share */
 static uv_mutex_t gvl;
@@ -60,6 +69,7 @@ thr_mark(mrb_state *mrb, void *p)
   mrb_gc_mark_value(mrb, t->value);
   mrb_gc_mark_value(mrb, t->exc);
   mrb_gc_mark_value(mrb, t->arena_keep);
+  mrb_gc_mark_value(mrb, t->owned);
 }
 
 static void
@@ -170,6 +180,17 @@ thread_entry(void *arg)
     t->value = res;
   }
   thr_barrier(mrb, t, res);
+  if (mrb_array_p(t->owned)) {
+    mrb_int i, n = RARRAY_LEN(t->owned);
+    for (i = 0; i < n; i++) {
+      mtx *x = (mtx*)DATA_PTR(mrb_ary_ref(mrb, t->owned, i));
+      if (x && x->owner == t) {
+        x->owner = NULL;
+        uv_mutex_unlock(&x->m);
+      }
+    }
+    t->owned = mrb_nil_value();
+  }
   t->done = 1;
   holder = NULL;
   uv_mutex_unlock(&gvl);
@@ -191,6 +212,7 @@ gvl_init(mrb_state *mrb)
   main_thr->value = mrb_nil_value();
   main_thr->exc = mrb_nil_value();
   main_thr->arena_keep = mrb_nil_value();
+  main_thr->owned = mrb_nil_value();
   main_thr->started = 1;
   main_thr->joined = 1;
   {
@@ -231,6 +253,7 @@ thr_initialize(mrb_state *mrb, mrb_value self)
   t->value = mrb_nil_value();
   t->exc = mrb_nil_value();
   t->arena_keep = mrb_nil_value();
+  t->owned = mrb_nil_value();
   t->fiber = mrb_fiber_new(mrb, mrb_proc_ptr(blk));
   thr_barrier(mrb, t, t->fiber);
   t->cxt = ((struct RFiber*)mrb_ptr(t->fiber))->cxt;
@@ -298,11 +321,6 @@ thr_current(mrb_state *mrb, mrb_value klass)
 
 
 /* Mutex: a uv_mutex. A thread that must wait for it gives the GVL up while it waits (so the holder can run). */
-typedef struct mtx {
-  uv_mutex_t m;
-  thr *owner;               /* the thread holding it, or NULL */
-  int inited;
-} mtx;
 
 static void
 mtx_free(mrb_state *mrb, void *p)
@@ -339,6 +357,35 @@ mtx_initialize(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+/* Keeps a thread's list of the Mutex objects it holds (released when it ends) in step with the owner. */
+static void
+mtx_owner_set(mrb_state *mrb, mrb_value mobj, mtx *x, thr *nw)
+{
+  thr *old = x->owner;
+  if (old == nw) return;
+  if (old && mrb_array_p(old->owned)) {
+    mrb_int i, n = RARRAY_LEN(old->owned);
+    for (i = 0; i < n; i++) {
+      if (mrb_ptr(mrb_ary_ref(mrb, old->owned, i)) == mrb_ptr(mobj)) {
+        mrb_int j;
+        for (j = i; j < n - 1; j++) {
+          mrb_ary_set(mrb, old->owned, j, mrb_ary_ref(mrb, old->owned, j + 1));
+        }
+        mrb_ary_pop(mrb, old->owned);
+        break;
+      }
+    }
+  }
+  x->owner = nw;
+  if (nw) {
+    if (!mrb_array_p(nw->owned)) {
+      nw->owned = mrb_ary_new(mrb);
+      thr_barrier(mrb, nw, nw->owned);
+    }
+    mrb_ary_push(mrb, nw->owned, mobj);
+  }
+}
+
 static mrb_value
 mtx_lock(mrb_state *mrb, mrb_value self)
 {
@@ -353,7 +400,7 @@ mtx_lock(mrb_state *mrb, mrb_value self)
     uv_mutex_lock(&x->m);
     if (me) gvl_acquire(mrb, me);
   }
-  x->owner = me;
+  mtx_owner_set(mrb, self, x, me);
   return self;
 }
 
@@ -362,7 +409,7 @@ mtx_try_lock(mrb_state *mrb, mrb_value self)
 {
   mtx *x = mtx_of(mrb, self);
   if (uv_mutex_trylock(&x->m) != 0) return mrb_false_value();
-  x->owner = holder;
+  mtx_owner_set(mrb, self, x, holder);
   return mrb_true_value();
 }
 
@@ -373,7 +420,7 @@ mtx_unlock(mrb_state *mrb, mrb_value self)
   if (x->owner != holder) {
     mrb_raise(mrb, mrb_class_get(mrb, "ThreadError"), "Attempt to unlock a mutex which is not locked");
   }
-  x->owner = NULL;
+  mtx_owner_set(mrb, self, x, NULL);
   uv_mutex_unlock(&x->m);
   return self;
 }
@@ -390,6 +437,136 @@ mtx_owned_p(mrb_state *mrb, mrb_value self)
 {
   mtx *x = mtx_of(mrb, self);
   return mrb_bool_value(x->owner != NULL && x->owner == holder);
+}
+
+
+/* Thread#alive? and #status. */
+static mrb_value
+thr_alive_p(mrb_state *mrb, mrb_value self)
+{
+  thr *t = thr_of(mrb, self);
+  return mrb_bool_value(t->started && !t->done);
+}
+
+static mrb_value
+thr_status(mrb_state *mrb, mrb_value self)
+{
+  thr *t = thr_of(mrb, self);
+  if (!t->done) return mrb_str_new_cstr(mrb, "run");
+  if (!mrb_nil_p(t->exc)) return mrb_nil_value();
+  return mrb_false_value();
+}
+
+/* ConditionVariable: a uv_cond_t. wait releases the mutex and the GVL together, so other threads run while it waits. */
+typedef struct cvar {
+  uv_cond_t c;
+  int inited;
+} cvar;
+
+static void
+cvar_free(mrb_state *mrb, void *p)
+{
+  cvar *x = (cvar*)p;
+  if (x) {
+    if (x->inited) uv_cond_destroy(&x->c);
+    mrb_free(mrb, x);
+  }
+}
+
+static const struct mrb_data_type cvar_type = { .struct_name = "ConditionVariable", .dfree = cvar_free };
+
+static cvar*
+cvar_of(mrb_state *mrb, mrb_value self)
+{
+  cvar *x = (cvar*)DATA_PTR(self);
+  if (!x) mrb_raise(mrb, E_RUNTIME_ERROR, "uninitialized condition variable");
+  return x;
+}
+
+static mrb_value
+cvar_initialize(mrb_state *mrb, mrb_value self)
+{
+  cvar *x = (cvar*)mrb_calloc(mrb, 1, sizeof(cvar));
+  gvl_init(mrb);
+  if (uv_cond_init(&x->c) != 0) {
+    mrb_free(mrb, x);
+    mrb_raise(mrb, E_RUNTIME_ERROR, "can't create condition variable");
+  }
+  x->inited = 1;
+  DATA_PTR(self) = x;
+  DATA_TYPE(self) = &cvar_type;
+  return self;
+}
+
+static mrb_value
+cvar_wait(mrb_state *mrb, mrb_value self)
+{
+  cvar *cv = cvar_of(mrb, self);
+  mrb_value mobj, tmo = mrb_nil_value();
+  mtx *mx;
+  thr *me = holder;
+  int rc;
+
+  mrb_get_args(mrb, "o|o", &mobj, &tmo);
+  mx = mtx_of(mrb, mobj);
+  if (mx->owner != me) {
+    mrb_raise(mrb, mrb_class_get(mrb, "ThreadError"), "mutex not locked by this thread");
+  }
+  mtx_owner_set(mrb, mobj, mx, NULL);
+  if (me) gvl_release(mrb, me);
+  if (mrb_nil_p(tmo)) {
+    uv_cond_wait(&cv->c, &mx->m);
+    rc = 0;
+  }
+  else {
+    double secs = mrb_float(mrb_to_float(mrb, tmo));
+    uint64_t ns = secs <= 0 ? 0 : (uint64_t)(secs * 1e9);
+    rc = uv_cond_timedwait(&cv->c, &mx->m, ns);
+  }
+  if (me) gvl_acquire(mrb, me);
+  mtx_owner_set(mrb, mobj, mx, me);
+  (void)rc;
+  return self;
+}
+
+static mrb_value
+cvar_signal(mrb_state *mrb, mrb_value self)
+{
+  uv_cond_signal(&cvar_of(mrb, self)->c);
+  return self;
+}
+
+static mrb_value
+cvar_broadcast(mrb_state *mrb, mrb_value self)
+{
+  uv_cond_broadcast(&cvar_of(mrb, self)->c);
+  return self;
+}
+
+
+/* Kernel#sleep: the GVL is released while the thread sleeps, so other threads run. Returns the seconds slept, rounded. */
+static mrb_value
+k_sleep(mrb_state *mrb, mrb_value self)
+{
+  mrb_value arg = mrb_nil_value();
+  thr *me = holder;
+  double secs, ms;
+
+  (void)self;
+  mrb_get_args(mrb, "|o", &arg);
+  if (mrb_nil_p(arg)) {
+    secs = 1e9;
+  }
+  else {
+    secs = mrb_float(mrb_to_float(mrb, arg));
+    if (secs < 0) mrb_raise(mrb, E_ARGUMENT_ERROR, "time interval must not be negative");
+  }
+  ms = secs * 1000.0;
+  if (ms > 4e9) ms = 4e9;
+  if (me) gvl_release(mrb, me);
+  uv_sleep((unsigned int)ms);
+  if (me) gvl_acquire(mrb, me);
+  return mrb_fixnum_value((mrb_int)(secs + 0.5));
 }
 
 void
@@ -410,6 +587,15 @@ mrb_mruby_uv_thread_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, c, "unlock", mtx_unlock, MRB_ARGS_NONE());
   mrb_define_method(mrb, c, "locked?", mtx_locked_p, MRB_ARGS_NONE());
   mrb_define_method(mrb, c, "owned?", mtx_owned_p, MRB_ARGS_NONE());
+  mrb_define_method(mrb, mrb_class_get(mrb, "Thread"), "alive?", thr_alive_p, MRB_ARGS_NONE());
+  mrb_define_method(mrb, mrb_class_get(mrb, "Thread"), "status", thr_status, MRB_ARGS_NONE());
+  c = mrb_define_class(mrb, "ConditionVariable", mrb->object_class);
+  MRB_SET_INSTANCE_TT(c, MRB_TT_CDATA);
+  mrb_define_method(mrb, c, "initialize", cvar_initialize, MRB_ARGS_NONE());
+  mrb_define_method(mrb, c, "wait", cvar_wait, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, c, "signal", cvar_signal, MRB_ARGS_NONE());
+  mrb_define_method(mrb, c, "broadcast", cvar_broadcast, MRB_ARGS_NONE());
+  mrb_define_method(mrb, mrb->kernel_module, "sleep", k_sleep, MRB_ARGS_OPT(1));
 }
 
 void
