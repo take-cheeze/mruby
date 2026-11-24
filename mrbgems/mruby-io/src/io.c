@@ -2357,6 +2357,11 @@ static const mrb_mt_entry io_rom_entries[] = {
   MRB_MT_ENTRY(io_pwrite,            MRB_SYM(pwrite), MRB_ARGS_ANY())   /* Ruby 2.5 feature */
   MRB_MT_ENTRY(io_getbyte,           MRB_SYM(getbyte),       MRB_ARGS_NONE())
   MRB_MT_ENTRY(io_readbyte,          MRB_SYM(readbyte),      MRB_ARGS_NONE())
+  /* the aliases of C methods: a copy of the aliased entry (mrb_alias_method) */
+  MRB_MT_ENTRY(io_eof,               MRB_SYM(eof),           MRB_ARGS_NONE())
+  MRB_MT_ENTRY(io_pos,               MRB_SYM(tell),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(io_fileno,            MRB_SYM(to_i),          MRB_ARGS_NONE())
+  MRB_MT_ENTRY(io_isatty,            MRB_SYM_Q(tty),         MRB_ARGS_NONE())
 };
 #undef MRB_MT_CLASS
 #define MRB_MT_CLASS IO_singleton

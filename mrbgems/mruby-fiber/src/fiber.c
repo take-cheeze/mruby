@@ -548,22 +548,33 @@ mrb_fiber_new(mrb_state *mrb, const struct RProc *p)
   return init_fiber(mrb, f, p);
 }
 
+#define MRB_MT_CLASS Fiber
+static const mrb_mt_entry fiber_rom_entries[] = {
+  MRB_MT_ENTRY(fiber_init,     MRB_SYM(initialize), MRB_ARGS_NONE()|MRB_ARGS_BLOCK() | MRB_MT_PRIVATE)
+  MRB_MT_ENTRY(fiber_resume,   MRB_SYM(resume),     MRB_ARGS_ANY())
+  MRB_MT_ENTRY(fiber_transfer, MRB_SYM(transfer),   MRB_ARGS_ANY())
+  MRB_MT_ENTRY(fiber_alive_p,  MRB_SYM_Q(alive),    MRB_ARGS_NONE())
+  MRB_MT_ENTRY(fiber_eq,       MRB_OPSYM(eq),       MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(fiber_to_s,     MRB_SYM(to_s),       MRB_ARGS_NONE())
+  /* the alias of a C method is a copy of its entry (mrb_alias_method) */
+  MRB_MT_ENTRY(fiber_to_s,     MRB_SYM(inspect),    MRB_ARGS_NONE())
+};
+#undef MRB_MT_CLASS
+#define MRB_MT_CLASS Fiber_singleton
+static const mrb_mt_entry fiber_s_rom_entries[] = {
+  MRB_MT_ENTRY(fiber_yield,   MRB_SYM(yield),   MRB_ARGS_ANY())
+  MRB_MT_ENTRY(fiber_current, MRB_SYM(current), MRB_ARGS_NONE())
+};
+#undef MRB_MT_CLASS
+
 void
 mrb_mruby_fiber_gem_init(mrb_state* mrb)
 {
   struct RClass *c = mrb_define_class_id(mrb, MRB_SYM(Fiber), mrb->object_class);
   MRB_SET_INSTANCE_TT(c, MRB_TT_FIBER);
 
-  mrb_define_method_id(mrb, c, MRB_SYM(initialize), fiber_init,     MRB_ARGS_NONE()|MRB_ARGS_BLOCK());
-  mrb_define_method_id(mrb, c, MRB_SYM(resume),     fiber_resume,   MRB_ARGS_ANY());
-  mrb_define_method_id(mrb, c, MRB_SYM(transfer),   fiber_transfer, MRB_ARGS_ANY());
-  mrb_define_method_id(mrb, c, MRB_SYM_Q(alive),    fiber_alive_p,  MRB_ARGS_NONE());
-  mrb_define_method_id(mrb, c, MRB_OPSYM(eq),       fiber_eq,       MRB_ARGS_REQ(1));
-  mrb_define_method_id(mrb, c, MRB_SYM(to_s),       fiber_to_s,     MRB_ARGS_NONE());
-  mrb_define_alias_id(mrb, c, MRB_SYM(inspect), MRB_SYM(to_s));
-
-  mrb_define_class_method_id(mrb, c, MRB_SYM(yield), fiber_yield, MRB_ARGS_ANY());
-  mrb_define_class_method_id(mrb, c, MRB_SYM(current), fiber_current, MRB_ARGS_NONE());
+  MRB_MT_INIT_ROM(mrb, c, fiber_rom_entries);
+  MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(c)), fiber_s_rom_entries);
 
   mrb_define_class_id(mrb, MRB_SYM(FiberError), E_STANDARD_ERROR);
 }
