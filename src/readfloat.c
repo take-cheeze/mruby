@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <mruby.h>
 
 #ifndef MRB_NO_FLOAT
@@ -112,6 +113,20 @@ mrb_pow10(int exp)
 MRB_API mrb_bool
 mrb_read_float(const char *str, char **endp, double *fp)
 {
+  /* a decimal number is rounded by strtod (correctly: 5e-324 is a subnormal, not 0.0); the digit-by-digit reader below is
+     kept for the rest. Success means a number was read. */
+  {
+    const char *q = str;
+    while (*q == ' ' || (*q >= '\t' && *q <= '\r')) q++;
+    if (*q == '+' || *q == '-') q++;
+    if ((*q >= '0' && *q <= '9') || (*q == '.' && q[1] >= '0' && q[1] <= '9')) {
+      char *e;
+      *fp = strtod(str, &e);
+      if (endp) *endp = e;
+      return e != str;
+    }
+  }
+  {
   const char *p = str;
   const char *a = p;
   uint64_t int_part = 0;
@@ -224,6 +239,7 @@ mrb_read_float(const char *str, char **endp, double *fp)
   }
 #endif
   return TRUE;
+  }
 }
 
 #endif
