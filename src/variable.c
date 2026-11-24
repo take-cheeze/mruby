@@ -12,6 +12,7 @@
 #include <mruby/proc.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
+#include <mruby/hash.h>
 #include <mruby/internal.h>
 
 /* Instance variable table structure */
@@ -1510,11 +1511,34 @@ L_RETRY:
   return mrb_undef_value();
 }
 
+/* Module#autoload: the module's pending autoloads are a Hash in a hidden ivar (no '@', so instance_variables omits it).
+   A constant that is missing and has one has its path required; the autoload is then removed (a failed require keeps
+   it, as CRuby does) and the lookup runs again. Returns undef when there is no autoload for sym. */
+static mrb_value
+autoload_const(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
+{
+  mrb_value mod = mrb_obj_value(base);
+  mrb_value tbl = mrb_iv_get(mrb, mod, mrb_intern_lit(mrb, "__autoload__"));
+  mrb_value key, path;
+
+  if (!mrb_hash_p(tbl)) return mrb_undef_value();
+  key = mrb_symbol_value(sym);
+  path = mrb_hash_get(mrb, tbl, key);
+  if (mrb_nil_p(path)) return mrb_undef_value();
+  mrb_funcall_argv(mrb, mod, mrb_intern_lit(mrb, "require"), 1, &path);
+  mrb_hash_delete_key(mrb, tbl, key);
+  return const_get_nohook(mrb, base, sym, skip);
+}
+
 static mrb_value
 const_get(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
 {
   mrb_value v = const_get_nohook(mrb, base, sym, skip);
 
+  if (mrb_undef_p(v)) {
+    v = autoload_const(mrb, base, sym, skip);
+    if (!mrb_undef_p(v)) return v;
+  }
   /* call const_missing hook */
   if (mrb_undef_p(v)) {
     mrb_value mod = mrb_obj_value(base);
