@@ -37,6 +37,13 @@ typedef struct mrb_data_type {
    */
   const uint16_t *ivar_hash;
   size_t ivar_hash_mask;
+#ifndef MRB_DATA_IVAR_BY_NAME
+  /**
+   * Optional "@name" of each `ivars` entry, for a table that cannot spell its
+   * symbols (no presym for them): an entry whose `sym` is 0 is named here.
+   */
+  const char *const *ivar_names;
+#endif
 } mrb_data_type;
 
 /**
@@ -60,13 +67,29 @@ struct mrb_data_int_or_nil {
   mrb_int value;
 };
 
-/** A Ruby instance variable stored in an RData payload. */
+/**
+ * A Ruby instance variable stored in an RData payload: its "@name" symbol, the
+ * offset of its slot and its enum mrb_data_ivar_kind. A table in ROM names the
+ * symbol by presym (MRB_DATA_IVAR_ENTRY), so it carries no name string.
+ * MRB_DATA_IVAR_BY_NAME keeps the earlier entry, named by its "@name" string.
+ */
+#ifdef MRB_DATA_IVAR_BY_NAME
 struct mrb_data_ivar {
   const char *name;
   size_t offset;
   /** enum mrb_data_ivar_kind; zero (a two-field initializer) is VALUE. */
   int kind;
 };
+#else
+struct mrb_data_ivar {
+  mrb_sym sym;
+  uint16_t offset;
+  uint8_t kind;
+};
+
+/** One `ivars` entry for `@name`; an offset past uint16_t fails to compile. */
+#define MRB_DATA_IVAR_ENTRY(name, offset, kind) { MRB_IVSYM(name), (offset), (kind) }
+#endif
 
 struct RData {
   MRB_OBJECT_HEADER;
