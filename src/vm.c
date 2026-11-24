@@ -2365,7 +2365,13 @@ RETRY_TRY_BLOCK:
     }
 
     CASE(OP_GETMCNST, BB) {
-      mrb_value v = mrb_const_get(mrb, regs[a], irep->syms[b]);
+      mrb_sym cs = irep->syms[b];
+      mrb_value v;
+      if (mrb_const_is_private(mrb, regs[a], cs)) {
+        mrb_raisef(mrb, E_NAME_ERROR, "private constant %S::%S referenced",
+                   mrb_class_path(mrb, mrb_class_ptr(regs[a])), mrb_sym2str(mrb, cs));
+      }
+      v = mrb_const_get(mrb, regs[a], cs);
       ci = mrb->c->ci;
       regs[a] = v;
       NEXT;
