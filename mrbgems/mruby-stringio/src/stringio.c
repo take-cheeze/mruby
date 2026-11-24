@@ -55,7 +55,7 @@ static const struct mrb_data_type mrb_stringio_type = { "StringIO", stringio_fre
 static struct StringIO *
 get_strio(mrb_state *mrb, mrb_value self)
 {
-  struct StringIO *ptr = mrb_data_get_ptr(mrb, self, &mrb_stringio_type);
+  struct StringIO *ptr = (struct StringIO *)mrb_data_get_ptr(mrb, self, &mrb_stringio_type);
   if (!ptr) mrb_raise(mrb, E_IOERROR, "uninitialized stream");
   return ptr;
 }
@@ -531,7 +531,7 @@ stringio_gets(mrb_state *mrb, mrb_value self)
       }
     }
     s = p;
-    while ((p = memchr(p, '\n', e - p)) && (p != e)) {
+    while ((p = (const char *)memchr(p, '\n', e - p)) && (p != e)) {
       if (*++p == '\n') {
         e = p + 1;
         break;
@@ -540,7 +540,7 @@ stringio_gets(mrb_state *mrb, mrb_value self)
     str = strio_substr(mrb, self, s - RSTRING_PTR(string), e - s);
   }
   else if (n == 1) {
-    if ((p = memchr(s, RSTRING_PTR(str)[0], e - s)) != 0) {
+    if ((p = (const char *)memchr(s, RSTRING_PTR(str)[0], e - s)) != 0) {
       e = p + 1;
     }
     str = strio_substr(mrb, self, ptr->pos, e - s);
