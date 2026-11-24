@@ -74,6 +74,17 @@ MRuby.each_target do
           f.puts %Q[}]
           f.puts %Q[]
         end
+        # with mruby-require, every gem's name and its name without the mruby- prefix (CRuby's feature name, as "time" for
+        # mruby-time) is a provided feature: require of a built-in library returns false (see mrbgems/mruby-require)
+        require_features = gems.any? { |g| g.name == 'mruby-require' }
+        if require_features
+          f.puts %Q[void mrb_require_provide(mrb_state *mrb, const char *name);]
+          f.puts %Q[static const char *const gem_features[] = {]
+          gems.flat_map { |g| [g.name, g.name.sub(/\Amruby-/, '')] }.uniq.each { |n| f.puts %Q[  "#{n}",] }
+          f.puts %Q[  NULL]
+          f.puts %Q[};]
+          f.puts %Q[]
+        end
         f.puts %Q[void]
         f.puts %Q[mrb_init_mrbgems(mrb_state *mrb) {]
         unless gem_funcs.empty?
@@ -86,6 +97,7 @@ MRuby.each_target do
           f.puts %Q[      mrb_exc_raise(mrb, mrb_obj_value(mrb->exc));]
           f.puts %Q[    }]
           f.puts %Q[  }]
+          f.puts %Q[  for (const char *const *ft = gem_features; *ft; ft++) mrb_require_provide(mrb, *ft);] if require_features
           f.puts %Q[  mrb_state_atexit(mrb, mrb_final_mrbgems);]
         end
         f.puts %Q[}]
