@@ -37,6 +37,13 @@ typedef struct mrb_data_type {
    */
   const uint16_t *ivar_hash;
   size_t ivar_hash_mask;
+#ifndef MRB_DATA_IVAR_BY_NAME
+  /**
+   * Optional "@name" of each `ivars` entry, for a table that cannot spell its
+   * symbols (no presym for them): an entry whose `sym` is 0 is named here.
+   */
+  const char *const *ivar_names;
+#endif
 } mrb_data_type;
 
 /**
