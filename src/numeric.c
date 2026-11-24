@@ -501,17 +501,12 @@ flo_to_s(mrb_state *mrb, mrb_value flt)
   else {
     /* CRuby prints the shortest digit string that reads back as the same double, laid out by the decimal point position
        (decpt): fixed when 0 < decpt <= 15, a short fixed form when -4 < decpt <= 0, else d.ddde+XX. */
-    char fmt[16], buf[64], digits[32], out[96];
+    char buf[64], digits[32], out[96];
     int p, neg, nd = 0, exp10, decpt, i, o = 0;
     const char *c;
 
     for (p = 1; p <= 17; p++) {
-      mrb_value t;
-      snprintf(fmt, sizeof(fmt), "%%.%de", p - 1);
-      t = mrb_float_to_str(mrb, flt, fmt);
-      if (RSTRING_LEN(t) >= (mrb_int)sizeof(buf)) break;
-      memcpy(buf, RSTRING_PTR(t), RSTRING_LEN(t));
-      buf[RSTRING_LEN(t)] = '\0';
+      snprintf(buf, sizeof(buf), "%.*e", p - 1, f);
       if (strtod(buf, NULL) == f) break;
     }
     c = buf;
