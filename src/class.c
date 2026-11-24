@@ -2009,7 +2009,9 @@ boot_defclass(mrb_state *mrb, struct RClass *super, enum mrb_vtype tt)
     // limited to cases where BasicObject class is defined during mruby initialization
     mrb_assert(mrb->object_class == NULL);
   }
-  c->mt = mt_new(mrb);
+  /* No method table yet: the first run-time definition makes the mutable layer (mt_writable), so a class whose
+     methods are all ROM tables keeps none. A module's stays eager: an iclass copies its pointer (include_class_new). */
+  c->mt = NULL;
   return c;
 }
 
