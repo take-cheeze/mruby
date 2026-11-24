@@ -130,6 +130,39 @@ struct mt_set {
 
 #define vicheck(flags, visi) (((visi)==MT_NOPRIV) ? (((flags)&MRB_METHOD_VISIBILITY_MASK)!=MRB_METHOD_PRIVATE_FL) : (((flags)&MRB_METHOD_VISIBILITY_MASK)==(visi)))
 
+/* mod.{public,private,protected}_method_defined?(name): the method is found (inherited methods too) and has that visibility */
+static mrb_value
+mod_method_defined_visi(mrb_state *mrb, mrb_value mod, unsigned int visi)
+{
+  mrb_sym id;
+  struct RClass *c;
+  mrb_method_t m;
+
+  mrb_get_args(mrb, "n", &id);
+  c = mrb_class_ptr(mod);
+  m = mrb_method_search_vm(mrb, &c, id);
+  if (MRB_METHOD_UNDEF_P(m)) return mrb_false_value();
+  return mrb_bool_value(vicheck(m.flags, visi));
+}
+
+static mrb_value
+mrb_mod_public_method_defined(mrb_state *mrb, mrb_value mod)
+{
+  return mod_method_defined_visi(mrb, mod, MRB_MT_PUBLIC);
+}
+
+static mrb_value
+mrb_mod_private_method_defined(mrb_state *mrb, mrb_value mod)
+{
+  return mod_method_defined_visi(mrb, mod, MRB_METHOD_PRIVATE_FL);
+}
+
+static mrb_value
+mrb_mod_protected_method_defined(mrb_state *mrb, mrb_value mod)
+{
+  return mod_method_defined_visi(mrb, mod, MT_PROTECTED);
+}
+
 static int
 method_entry_i(mrb_state *mrb, mrb_sym mid, mrb_method_t m, void *p)
 {
@@ -711,6 +744,9 @@ static const mrb_mt_entry metaprog_mod_rom_entries[] = {
   MRB_MT_ENTRY(mrb_mod_public_instance_methods,  MRB_SYM(public_instance_methods), MRB_ARGS_OPT(1))
   MRB_MT_ENTRY(mrb_mod_private_instance_methods, MRB_SYM(private_instance_methods), MRB_ARGS_OPT(1))
   MRB_MT_ENTRY(mrb_mod_protected_instance_methods, MRB_SYM(protected_instance_methods), MRB_ARGS_OPT(1))
+  MRB_MT_ENTRY(mrb_mod_public_method_defined,    MRB_SYM_Q(public_method_defined), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_mod_private_method_defined,   MRB_SYM_Q(private_method_defined), MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_mod_protected_method_defined, MRB_SYM_Q(protected_method_defined), MRB_ARGS_REQ(1))
   MRB_MT_ENTRY(mrb_mod_undefined_methods,        MRB_SYM(undefined_instance_methods), MRB_ARGS_NONE())
   MRB_MT_ENTRY(mrb_mod_remove_method,            MRB_SYM(remove_method),  MRB_ARGS_ANY())   /* 15.2.2.4.41 */
   MRB_MT_ENTRY(mrb_do_nothing,                   MRB_SYM(method_removed), MRB_ARGS_REQ(1))
