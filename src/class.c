@@ -4630,6 +4630,7 @@ static const mrb_mt_entry mod_rom_entries[] = {
   MRB_MT_ENTRY(mrb_mod_const_defined,   MRB_SYM_Q(const_defined),  MRB_ARGS_ARG(1,1))                  /* 15.2.2.4.20 */
   MRB_MT_ENTRY(mrb_mod_const_get,       MRB_SYM(const_get),        MRB_ARGS_REQ(1))                    /* 15.2.2.4.21 */
   MRB_MT_ENTRY(mrb_mod_const_missing,   MRB_SYM(const_missing),    MRB_ARGS_REQ(1))
+  MRB_MT_ENTRY(mrb_mod_private_constant, MRB_SYM(private_constant), MRB_ARGS_ANY()) /* CRuby: Module#private_constant, core */
   MRB_MT_ENTRY(mrb_mod_const_set,       MRB_SYM(const_set),        MRB_ARGS_REQ(2))                    /* 15.2.2.4.23 */
   MRB_MT_ENTRY(mod_define_method,       MRB_SYM(define_method),    MRB_ARGS_ARG(1,1))
   MRB_MT_ENTRY(mrb_mod_dup,             MRB_SYM(dup),              MRB_ARGS_NONE())
