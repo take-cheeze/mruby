@@ -701,6 +701,7 @@ static const mrb_mt_entry metaprog_krn_rom_entries[] = {
 
 #define MRB_MT_CLASS Module
 static const mrb_mt_entry metaprog_mod_rom_entries[] = {
+  MRB_MT_ENTRY(mrb_mod_private_constant,         MRB_SYM(private_constant), MRB_ARGS_ANY())
   MRB_MT_ENTRY(mrb_mod_class_variables,          MRB_SYM(class_variables), MRB_ARGS_OPT(1))   /* 15.2.2.4.19 */
   MRB_MT_ENTRY(mrb_mod_remove_cvar,              MRB_SYM(remove_class_variable), MRB_ARGS_REQ(1))   /* 15.2.2.4.39 */
   MRB_MT_ENTRY(mrb_mod_cvar_defined,             MRB_SYM_Q(class_variable_defined), MRB_ARGS_REQ(1))   /* 15.2.2.4.16 */
