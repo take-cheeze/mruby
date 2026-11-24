@@ -11,6 +11,8 @@
 #include <mruby/class.h>
 #include <mruby/proc.h>
 #include <mruby/internal.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 MRB_BEGIN_DECL
@@ -497,7 +499,65 @@ flo_to_s(mrb_state *mrb, mrb_value flt)
     str = mrb_str_new_lit(mrb, "NaN");
   }
   else {
-    str = mrb_float_to_str(mrb, flt, NULL);
+    /* CRuby prints the shortest digit string that reads back as the same double, laid out by the decimal point position
+       (decpt): fixed when 0 < decpt <= 15, a short fixed form when -4 < decpt <= 0, else d.ddde+XX. */
+    char fmt[16], buf[64], digits[32], out[96];
+    int p, neg, nd = 0, exp10, decpt, i, o = 0;
+    const char *c;
+
+    for (p = 1; p <= 17; p++) {
+      mrb_value t;
+      snprintf(fmt, sizeof(fmt), "%%.%de", p - 1);
+      t = mrb_float_to_str(mrb, flt, fmt);
+      if (RSTRING_LEN(t) >= (mrb_int)sizeof(buf)) break;
+      memcpy(buf, RSTRING_PTR(t), RSTRING_LEN(t));
+      buf[RSTRING_LEN(t)] = '\0';
+      if (strtod(buf, NULL) == f) break;
+    }
+    c = buf;
+    neg = (*c == '-');
+    if (neg) c++;
+    for (; *c && *c != 'e'; c++) {
+      if (*c >= '0' && *c <= '9' && nd < (int)sizeof(digits) - 1) digits[nd++] = *c;
+    }
+    exp10 = (*c == 'e') ? atoi(c + 1) : 0;
+    while (nd > 1 && digits[nd - 1] == '0') nd--;
+    digits[nd] = '\0';
+    decpt = exp10 + 1;
+
+    if (neg) out[o++] = '-';
+    if (decpt > 0 && decpt <= 15) {
+      if (nd <= decpt) {
+        for (i = 0; i < nd; i++) out[o++] = digits[i];
+        for (i = nd; i < decpt; i++) out[o++] = '0';
+        out[o++] = '.';
+        out[o++] = '0';
+      }
+      else {
+        for (i = 0; i < decpt; i++) out[o++] = digits[i];
+        out[o++] = '.';
+        for (i = decpt; i < nd; i++) out[o++] = digits[i];
+      }
+    }
+    else if (decpt <= 0 && decpt > -4) {
+      out[o++] = '0';
+      out[o++] = '.';
+      for (i = 0; i < -decpt; i++) out[o++] = '0';
+      for (i = 0; i < nd; i++) out[o++] = digits[i];
+    }
+    else {
+      out[o++] = digits[0];
+      out[o++] = '.';
+      if (nd > 1) {
+        for (i = 1; i < nd; i++) out[o++] = digits[i];
+      }
+      else {
+        out[o++] = '0';
+      }
+      o += snprintf(out + o, sizeof(out) - o, "e%+03d", decpt - 1);
+    }
+    out[o] = '\0';
+    str = mrb_str_new_cstr(mrb, out);
   }
 
   RSTR_SET_ASCII_FLAG(mrb_str_ptr(str));
