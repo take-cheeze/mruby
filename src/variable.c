@@ -12,6 +12,7 @@
 #include <mruby/proc.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
+#include <mruby/hash.h>
 #include <mruby/internal.h>
 
 /* Instance variable table structure */
@@ -1510,11 +1511,34 @@ L_RETRY:
   return mrb_undef_value();
 }
 
+/* Module#autoload: the module's pending autoloads are a Hash in a hidden ivar (no '@', so instance_variables omits it).
+   A constant that is missing and has one has its path required; the autoload is then removed (a failed require keeps
+   it, as CRuby does) and the lookup runs again. Returns undef when there is no autoload for sym. */
+static mrb_value
+autoload_const(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
+{
+  mrb_value mod = mrb_obj_value(base);
+  mrb_value tbl = mrb_iv_get(mrb, mod, mrb_intern_lit(mrb, "__autoload__"));
+  mrb_value key, path;
+
+  if (!mrb_hash_p(tbl)) return mrb_undef_value();
+  key = mrb_symbol_value(sym);
+  path = mrb_hash_get(mrb, tbl, key);
+  if (mrb_nil_p(path)) return mrb_undef_value();
+  mrb_funcall_argv(mrb, mod, mrb_intern_lit(mrb, "require"), 1, &path);
+  mrb_hash_delete_key(mrb, tbl, key);
+  return const_get_nohook(mrb, base, sym, skip);
+}
+
 static mrb_value
 const_get(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
 {
   mrb_value v = const_get_nohook(mrb, base, sym, skip);
 
+  if (mrb_undef_p(v)) {
+    v = autoload_const(mrb, base, sym, skip);
+    if (!mrb_undef_p(v)) return v;
+  }
   /* call const_missing hook */
   if (mrb_undef_p(v)) {
     mrb_value mod = mrb_obj_value(base);
@@ -1558,6 +1582,20 @@ mrb_const_get(mrb_state *mrb, mrb_value mod, mrb_sym sym)
 {
   mod_const_check(mrb, mod);
   return const_get(mrb, mrb_class_ptr(mod), sym, FALSE);
+}
+
+MRB_API mrb_value
+mrb_const_get_at(mrb_state *mrb, struct RClass *c, mrb_sym sym)
+{
+  mrb_value v;
+
+  if (iv_get(mrb, c->iv, sym, &v)) {
+    return v;
+  }
+  {
+    mrb_value name = mrb_symbol_value(sym);
+    return mrb_funcall_argv(mrb, mrb_obj_value(c), mrb_intern_lit(mrb, "const_missing"), 1, &name);
+  }
 }
 
 mrb_value
@@ -1732,6 +1770,56 @@ mrb_mod_const_at(mrb_state *mrb, struct RClass *c, mrb_value ary)
   return ary;
 }
 
+/* The private constants of a module (Module#private_constant): an array of their symbols in an ivar whose name has no '@',
+   so instance_variables does not list it. CRuby hides them from Module#constants and from a scoped reference (Foo::X). */
+static mrb_sym
+private_consts_sym(mrb_state *mrb)
+{
+  return mrb_intern_lit(mrb, "__private_constants__");
+}
+
+MRB_API mrb_bool
+mrb_const_is_private(mrb_state *mrb, mrb_value mod, mrb_sym sym)
+{
+  mrb_value list;
+  mrb_int i, n;
+
+  if (!mrb_class_p(mod) && !mrb_module_p(mod)) return FALSE;
+  list = mrb_iv_get(mrb, mod, private_consts_sym(mrb));
+  if (!mrb_array_p(list)) return FALSE;
+  n = RARRAY_LEN(list);
+  for (i = 0; i < n; i++) {
+    if (mrb_symbol(RARRAY_PTR(list)[i]) == sym) return TRUE;
+  }
+  return FALSE;
+}
+
+/* Module#private_constant(*names): each name must be a constant of the module (NameError otherwise); returns the module */
+MRB_API mrb_value
+mrb_mod_private_constant(mrb_state *mrb, mrb_value mod)
+{
+  mrb_value *argv;
+  mrb_int argc, i;
+  mrb_value list;
+
+  mrb_get_args(mrb, "*", &argv, &argc);
+  list = mrb_iv_get(mrb, mod, private_consts_sym(mrb));
+  if (!mrb_array_p(list)) {
+    list = mrb_ary_new(mrb);
+    mrb_iv_set(mrb, mod, private_consts_sym(mrb), list);
+  }
+  for (i = 0; i < argc; i++) {
+    mrb_sym id = mrb_obj_to_sym(mrb, argv[i]);
+    if (!mrb_const_defined_at(mrb, mod, id)) {
+      mrb_name_error(mrb, id, "constant %S::%S not defined", mrb_class_path(mrb, mrb_class_ptr(mod)), mrb_sym2str(mrb, id));
+    }
+    if (!mrb_const_is_private(mrb, mod, id)) {
+      mrb_ary_push(mrb, list, mrb_symbol_value(id));
+    }
+  }
+  return mod;
+}
+
 /* 15.2.2.4.24 */
 /*
  *  call-seq:
@@ -1748,7 +1836,15 @@ mrb_mod_constants(mrb_state *mrb, mrb_value mod)
   mrb_get_args(mrb, "|b", &inherit);
   mrb_value ary = mrb_ary_new(mrb);
   while (c) {
-    mrb_mod_const_at(mrb, c, ary);
+    /* a class's private constants are not listed (CRuby's Module#constants): collect its own, skip the private ones */
+    mrb_value own = mrb_ary_new(mrb);
+    mrb_int i, n;
+    mrb_mod_const_at(mrb, c, own);
+    n = RARRAY_LEN(own);
+    for (i = 0; i < n; i++) {
+      mrb_value e = RARRAY_PTR(own)[i];
+      if (!mrb_const_is_private(mrb, mrb_obj_value(c), mrb_symbol(e))) mrb_ary_push(mrb, ary, e);
+    }
     if (!inherit) break;
     c = c->super;
     if (c == mrb->object_class) break;

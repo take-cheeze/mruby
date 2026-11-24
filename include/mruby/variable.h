@@ -21,6 +21,11 @@
 MRB_BEGIN_DECL
 
 MRB_API mrb_value mrb_const_get(mrb_state*, mrb_value, mrb_sym);
+/**
+ * Looks up a constant in the given module or class only, not in its ancestors (CRuby's rb_const_get_at).
+ * A missing constant goes to const_missing, as with mrb_const_get().
+ */
+MRB_API mrb_value mrb_const_get_at(mrb_state*, struct RClass*, mrb_sym);
 MRB_API void mrb_const_set(mrb_state*, mrb_value, mrb_sym, mrb_value);
 MRB_API mrb_bool mrb_const_defined(mrb_state*, mrb_value, mrb_sym);
 MRB_API void mrb_const_remove(mrb_state*, mrb_value, mrb_sym);
@@ -36,6 +41,8 @@ MRB_API mrb_bool mrb_iv_defined(mrb_state*, mrb_value, mrb_sym);
 MRB_API mrb_value mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym);
 MRB_API void mrb_iv_copy(mrb_state *mrb, mrb_value dst, mrb_value src);
 MRB_API mrb_bool mrb_const_defined_at(mrb_state *mrb, mrb_value mod, mrb_sym id);
+MRB_API mrb_bool mrb_const_is_private(mrb_state *mrb, mrb_value mod, mrb_sym sym);
+MRB_API mrb_value mrb_mod_private_constant(mrb_state *mrb, mrb_value mod);
 
 /**
  * Get a global variable. Will return nil if the var does not exist

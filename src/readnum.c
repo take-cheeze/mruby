@@ -4,6 +4,7 @@
 #include <mruby.h>
 #include <mruby/numeric.h>
 #include <errno.h>
+#include <stdlib.h>
 
 /* mrb_int_read(): read mrb_int from a string (base 10 only) */
 /* const char *p - string to read                            */
@@ -33,6 +34,26 @@ mrb_int_read(const char *p, const char *e, char **endp)
 MRB_API double
 mrb_float_read(const char *str, char **endp)
 {
+  /* a decimal number is read by strtod, which rounds correctly (5e-324 is a subnormal, not 0.0); anything else is not a number */
+  {
+    const char *q = str;
+    while (*q == ' ' || (*q >= '\t' && *q <= '\r')) q++;
+    if (*q == '+' || *q == '-') q++;
+    if ((*q >= '0' && *q <= '9') || (*q == '.' && q[1] >= '0' && q[1] <= '9')) {
+      return strtod(str, endp);
+    }
+  }
+  {
+    double d0;
+    if (!mrb_read_float(str, endp, &d0)) errno = ERANGE;
+    return d0;
+  }
+}
+
+#if 0  /* the previous reader, replaced by the strtod path above */
+static double
+mrb_float_read_unused(const char *str, char **endp)
+{
   double d;
 
   if (!mrb_read_float(str, endp, &d)) {
@@ -40,4 +61,5 @@ mrb_float_read(const char *str, char **endp)
   }
   return d;
 }
+#endif
 #endif

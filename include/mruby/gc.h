@@ -69,6 +69,9 @@ typedef struct mrb_gc {
   int arena_capa;                          /* size of protection array */
 #endif
   int arena_idx;
+  mrb_value **addr_roots;   /* addresses of values kept alive (mrb_gc_register_address) */
+  size_t addr_roots_len;
+  size_t addr_roots_capa;
 } mrb_gc;
 
 MRB_API mrb_bool mrb_object_dead_p(struct mrb_state *mrb, struct RBasic *object);

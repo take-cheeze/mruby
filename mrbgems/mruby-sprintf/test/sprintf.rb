@@ -271,3 +271,13 @@ assert('sprintf("%.*") ignores the smallest negative precision') do
   assert_equal "..f", sprintf("%.*x", int_min, -1)
   assert_equal "..f", sprintf("%.*x", -1, -1)
 end
+
+assert('sprintf exact digits for long precisions (CRuby)') do
+  assert_equal "0.10000000000000001", sprintf("%.17g", 0.1)
+  assert_equal "0.33333333333333331", sprintf("%.17g", 1.0/3)
+  assert_equal "1152921504606846976.000000", sprintf("%f", 2.0**60)
+  assert_equal "1.7976931348623157e+308", sprintf("%.17g", 1.7976931348623157e308)
+  assert_equal "4.9406564584124654e-324", sprintf("%.17g", 5e-324)
+  assert_equal "+1.000000e+00", sprintf("%+e", 1.0)
+  assert_equal "100", sprintf("%g", 100.0)
+end

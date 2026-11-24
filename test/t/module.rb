@@ -1111,3 +1111,4 @@ assert('visibility change on a singleton class holding only ROM methods') do
   sc.__send__(:public, :step_ratio)
   assert_kind_of Integer, GC.step_ratio
 end
+

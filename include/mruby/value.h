@@ -470,6 +470,17 @@ mrb_ro_data_p(const char *p)
 # define mrb_ro_data_p(p) FALSE
 #endif
 
+/**
+ * The address of a value's payload, for ordering values (CRuby orders VALUEs by address in its class tables: the converted
+ * extensions' sorted tables are built and searched with the same order, so any consistent total order serves). Heap objects
+ * are ordered by their addresses; an immediate value's payload is its word.
+ */
+MRB_INLINE uintptr_t
+mrb_value_addr(mrb_value v)
+{
+  return (uintptr_t)mrb_ptr(v);
+}
+
 MRB_END_DECL
 
 #endif  /* MRUBY_VALUE_H */

@@ -30,8 +30,9 @@ MRB_END_DECL
  * - MRB_NO_BOXING: Checks if types are equal. If so, performs
  *   type-specific comparisons (value for immediates, pointer for others).
  */
+/* identity of two values: the same object, or the same immediate value (no mruby state is needed) */
 MRB_API mrb_bool
-mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
+mrb_value_identical(mrb_value v1, mrb_value v2)
 {
 #if defined(MRB_NAN_BOXING)
   return v1.u == v2.u;
@@ -70,6 +71,13 @@ mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
  * Checks if two mruby values, `v1` and `v2`, are equal.
  * This function currently calls mrb_obj_eq to perform the comparison.
  */
+MRB_API mrb_bool
+mrb_obj_eq(mrb_state *mrb, mrb_value v1, mrb_value v2)
+{
+  (void)mrb;
+  return mrb_value_identical(v1, v2);
+}
+
 MRB_API mrb_bool
 mrb_obj_equal(mrb_state *mrb, mrb_value v1, mrb_value v2)
 {

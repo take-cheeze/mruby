@@ -1,5 +1,7 @@
 #include <mruby.h>
 #include <string.h>
+#include <stdio.h>
+#include <math.h>
 
 #ifndef MRB_NO_FLOAT
 /***********************************************************************
@@ -96,6 +98,29 @@ mrb_format_float(mrb_float f, char *buf, size_t buf_size, char fmt, int prec, ch
       *s++ = '\0';
     }
     return buf_size >= 2;
+  }
+  {
+    /* The hand-written path below scales with power tables and is not exact
+       for long precisions (%.17g, large %f). libc is exact, and numeric.c
+       already depends on snprintf, so use it for finite e/f/g. */
+    char lower = fmt | 0x20;
+    if (isfinite(f) && (lower == 'e' || lower == 'f' || lower == 'g') && buf_size > 0) {
+      char spec[8];
+      char *p = spec;
+      *p++ = '%';
+      if (alt_form) *p++ = '#';
+      if (sign == '+' || sign == ' ') *p++ = sign;
+      *p++ = '.';
+      *p++ = '*';
+      *p++ = fmt;   /* keeps the case the caller asked for */
+      *p = '\0';
+      int n = snprintf(buf, buf_size, spec, prec < 0 ? 6 : prec, (double)f);
+      if (n < 0) {
+        buf[0] = '\0';
+        return 0;
+      }
+      return n >= (int)buf_size ? (int)buf_size - 1 : n;
+    }
   }
   if (signbit(f)) {
     *s++ = '-';

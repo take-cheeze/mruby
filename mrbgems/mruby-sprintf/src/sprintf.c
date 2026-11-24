@@ -360,7 +360,7 @@ get_hash(mrb_state *mrb, mrb_value *hash, mrb_int argc, const mrb_value *argv)
   *hash = tmp;
 }
 
-static mrb_value
+MRB_API mrb_value
 mrb_str_format(mrb_state *mrb, mrb_int argc, const mrb_value *argv, mrb_value fmt)
 {
   const char *p, *end;

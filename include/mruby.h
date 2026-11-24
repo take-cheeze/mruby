@@ -1484,6 +1484,8 @@ MRB_API mrb_int mrb_obj_id(mrb_value obj);
 MRB_API mrb_sym mrb_obj_to_sym(mrb_state *mrb, mrb_value name);
 
 MRB_API mrb_bool mrb_obj_eq(mrb_state *mrb, mrb_value a, mrb_value b);
+/** identity of two values without a state (the same object, or the same immediate value) */
+MRB_API mrb_bool mrb_value_identical(mrb_value a, mrb_value b);
 MRB_API mrb_bool mrb_obj_equal(mrb_state *mrb, mrb_value a, mrb_value b);
 MRB_API mrb_bool mrb_equal(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
 #ifndef MRB_NO_FLOAT
@@ -1496,6 +1498,10 @@ MRB_API mrb_value mrb_inspect(mrb_state *mrb, mrb_value obj);
 MRB_API mrb_bool mrb_eql(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
 /* mrb_cmp(mrb, obj1, obj2): 1:0:-1; -2 for error */
 MRB_API mrb_int mrb_cmp(mrb_state *mrb, mrb_value obj1, mrb_value obj2);
+/* CRuby rb_cmpint: the int sign of a <=> result; nil raises ArgumentError (comparison failed) */
+MRB_API int mrb_cmpint(mrb_state *mrb, mrb_value val, mrb_value a, mrb_value b);
+/* CRuby rb_memhash: a hash of len bytes at p (FNV-1a), as a fixnum-sized value */
+MRB_API mrb_int mrb_memhash(const void *p, size_t len);
 
 /* recursion detection */
 MRB_API mrb_bool mrb_recursive_method_p(mrb_state *mrb, mrb_sym mid, mrb_value obj1, mrb_value obj2);
@@ -1531,6 +1537,9 @@ MRB_API void mrb_field_write_barrier(mrb_state*, struct RBasic*, struct RBasic*)
   if (!mrb_immediate_p(val)) mrb_field_write_barrier((mrb), (obj), mrb_basic_ptr(val)); \
 } while (0)
 MRB_API void mrb_write_barrier(mrb_state *, struct RBasic*);
+/* Store v into the field slot of obj, with mruby's field write barrier (CRuby's RB_OBJ_WRITE: the barrier is run once) */
+#define mrb_write_field(mrb, obj, slot, v) do { mrb_value nfcx_wf_v = (v); *(slot) = nfcx_wf_v; \
+  mrb_field_write_barrier_value((mrb), mrb_basic_ptr(obj), nfcx_wf_v); } while (0)
 
 MRB_API mrb_value mrb_type_convert(mrb_state *mrb, mrb_value val, enum mrb_vtype type, mrb_sym method);
 #define mrb_convert_type(mrb, val, type, tname, method) mrb_type_convert(mrb, val, type, mrb_intern_lit(mrb, method))
@@ -1616,6 +1625,10 @@ mrb_value mrb_yield_cont(mrb_state *mrb, mrb_value b, mrb_value self, mrb_int ar
 MRB_API void mrb_gc_protect(mrb_state *mrb, mrb_value obj);
 /* mrb_gc_register() keeps the object from GC. */
 MRB_API void mrb_gc_register(mrb_state *mrb, mrb_value obj);
+/* mrb_gc_register_address() keeps the value at *ptr alive for as long as ptr is registered: the value
+   is read at each GC, so a store through ptr is rooted. Unregister with mrb_gc_unregister_address(). */
+MRB_API void mrb_gc_register_address(mrb_state *mrb, mrb_value *ptr);
+MRB_API void mrb_gc_unregister_address(mrb_state *mrb, mrb_value *ptr);
 /* mrb_gc_unregister() removes the object from GC root. */
 MRB_API void mrb_gc_unregister(mrb_state *mrb, mrb_value obj);
 
