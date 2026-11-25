@@ -12,6 +12,7 @@ MRuby::GemBox.new do |conf|
   conf.gem :core => "mruby-strftime"
   conf.gem :core => "mruby-env"
   conf.gem :core => "mruby-process"
+  conf.gem :core => "mruby-exit"
   conf.gem :core => "mruby-encoding"
 
   # Use standard Struct class

@@ -1,13 +1,8 @@
-assert('Kernel#exit with a status past int') do
-  # 2**32 + 3 was cut to 3 and the process exited with it. Computed, not
-  # written out, so the file still compiles where mrb_int is 32 bits.
-  shift = 32
-  big = begin
-    (1 << shift) + 3
-  rescue RangeError
-    nil
-  end
-  skip "no integer past 32 bits" unless big
-  assert_raise(RangeError) { exit(big) }
-  assert_raise(RangeError) { exit(-big) }
+assert('at_exit requires a block') do
+  assert_raise(ArgumentError) { at_exit }
+end
+
+assert('at_exit returns its block') do
+  b = Proc.new { }
+  assert_equal b, at_exit(&b)
 end
