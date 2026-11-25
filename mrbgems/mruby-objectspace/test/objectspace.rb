@@ -75,3 +75,15 @@ assert('ObjectSpace.each_object does not reach the frames of Array#join') do
   assert_equal("e,a,b", e.outer.join(","))
 end
 
+
+assert('ObjectSpace::WeakMap stores and looks up by identity') do
+  m = ObjectSpace::WeakMap.new
+  k = "a"
+  m[k] = 1
+  assert_equal 1, m[k]
+  assert_nil m["a"]
+  assert_true m.key?(k)
+  assert_equal 1, m.size
+  assert_equal 1, m.delete(k)
+  assert_equal 0, m.size
+end
