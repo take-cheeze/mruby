@@ -20,6 +20,14 @@ typedef struct iv_tbl {
   mrb_value *ptr;
 } iv_tbl;
 
+/* SCLASS_ATTACHED: a singleton class whose one instance variable is __attached__ keeps that object in its `iv`
+   pointer, tagged by the low bit, in place of a table (every class has a singleton class, so a table each was most of
+   the class iv memory). The table helpers read a tagged `iv` as that one entry; a store of anything else, or a remove,
+   makes the table (iv_writable). */
+#define IV_ATTACHED_P(t) (((uintptr_t)(t)) & 1)
+#define IV_ATTACHED_TAG(o) ((iv_tbl*)((uintptr_t)(o) | 1))
+#define IV_ATTACHED_VALUE(t) mrb_obj_value((void*)((uintptr_t)(t) & ~(uintptr_t)1))
+
 
 
 /* Creates the instance variable table. */
@@ -144,6 +152,11 @@ iv_put(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value val)
 static int
 iv_get(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 {
+  if (IV_ATTACHED_P(t)) {
+    if (sym != MRB_SYM(__attached__)) return 0;
+    if (vp) *vp = IV_ATTACHED_VALUE(t);
+    return 1;
+  }
   /* Return 0 if table is null, uninitialized, or empty */
   if (t == NULL || t->alloc == 0 || t->size == 0) return 0;
 
@@ -167,8 +180,8 @@ iv_get(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 static mrb_bool
 iv_del(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 {
-  /* Return FALSE if table is null, uninitialized, or empty */
-  if (t == NULL || t->alloc == 0 || t->size == 0) return FALSE;
+  /* Return FALSE if table is null, uninitialized, or empty; a tagged one is removed by its owner (mrb_iv_remove) */
+  if (t == NULL || IV_ATTACHED_P(t) || t->alloc == 0 || t->size == 0) return FALSE;
 
   mrb_sym   *keys = (mrb_sym*)&t->ptr[t->alloc];
   mrb_value *vals =  t->ptr;
@@ -196,6 +209,10 @@ iv_del(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
 static void
 iv_foreach(mrb_state *mrb, iv_tbl *t, mrb_iv_foreach_func *func, void *p)
 {
+  if (IV_ATTACHED_P(t)) {
+    (*func)(mrb, MRB_SYM(__attached__), IV_ATTACHED_VALUE(t), p);
+    return;
+  }
   if (t == NULL || t->alloc == 0 || t->size == 0) return;
   for (int i = 0; i < t->size; i++) {
     mrb_sym   *keys = (mrb_sym*)&t->ptr[t->alloc];
@@ -208,6 +225,7 @@ iv_foreach(mrb_state *mrb, iv_tbl *t, mrb_iv_foreach_func *func, void *p)
 static size_t
 iv_size(mrb_state *mrb, iv_tbl *t)
 {
+  if (IV_ATTACHED_P(t)) return 1;
   return t ? t->size : 0;
 }
 
@@ -215,6 +233,7 @@ iv_size(mrb_state *mrb, iv_tbl *t)
 static iv_tbl*
 iv_copy(mrb_state *mrb, iv_tbl *t)
 {
+  if (IV_ATTACHED_P(t)) return t;
   if (t == NULL || t->alloc == 0 || t->size == 0) return NULL;
 
   /* create new table and mirror alloc/size */
@@ -236,8 +255,22 @@ iv_copy(mrb_state *mrb, iv_tbl *t)
 static void
 iv_free(mrb_state *mrb, iv_tbl *t)
 {
+  if (IV_ATTACHED_P(t)) return;
   mrb_free(mrb, t->ptr);
   mrb_free(mrb, t);
+}
+
+/* The table `*slot` names, made when it is NULL or SCLASS_ATTACHED. Stored only once complete: an allocation here may
+   run the GC, which marks through `*slot`. */
+static iv_tbl*
+iv_writable(mrb_state *mrb, iv_tbl **slot)
+{
+  iv_tbl *t = *slot;
+  if (t && !IV_ATTACHED_P(t)) return t;
+  iv_tbl *n = iv_new(mrb);
+  if (t) iv_put(mrb, n, MRB_SYM(__attached__), IV_ATTACHED_VALUE(t));
+  *slot = n;
+  return n;
 }
 
 /*
@@ -832,10 +865,13 @@ mrb_obj_iv_set_force(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value
     mrb_field_write_barrier_value(mrb, (struct RBasic*)obj, v);
     return;
   }
-  if (!obj->iv) {
-    obj->iv = iv_new(mrb);
+  if (obj->tt == MRB_TT_SCLASS && sym == MRB_SYM(__attached__) && !mrb_immediate_p(v) &&
+      (!obj->iv || IV_ATTACHED_P(obj->iv))) {
+    obj->iv = IV_ATTACHED_TAG(mrb_ptr(v));
   }
-  iv_put(mrb, obj->iv, sym, v);
+  else {
+    iv_put(mrb, iv_writable(mrb, &obj->iv), sym, v);
+  }
   mrb_field_write_barrier_value(mrb, (struct RBasic*)obj, v);
 }
 
@@ -1173,6 +1209,11 @@ mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym)
 
     iv_tbl *t = o->iv;
     mrb_value val;
+    if (IV_ATTACHED_P(t)) {
+      if (!iv_get(mrb, t, sym, &val)) return mrb_undef_value();
+      o->iv = NULL;
+      return val;
+    }
     if (iv_del(mrb, t, sym, &val)) {
       return val;
     }
@@ -1342,7 +1383,7 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
 
   while (c) {
     iv_tbl *t = class_iv_ptr(c);
-    int pos = iv_get(mrb, t, sym, NULL);
+    int pos = IV_ATTACHED_P(t) ? 0 : iv_get(mrb, t, sym, NULL);
 
     if (pos) {
       mrb_check_frozen(mrb, c);
@@ -1375,11 +1416,7 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
   }
 
   mrb_check_frozen(mrb, c);
-  if (!c->iv) {
-    c->iv = iv_new(mrb);
-  }
-
-  iv_put(mrb, c->iv, sym, v);
+  iv_put(mrb, iv_writable(mrb, &c->iv), sym, v);
   mrb_field_write_barrier_value(mrb, (struct RBasic*)c, v);
 }
 
@@ -2018,8 +2055,9 @@ mrb_class_find_path(mrb_state *mrb, struct RClass *c)
   const char *str = mrb_sym_name_len(mrb, name, &len);
   mrb_str_cat(mrb, path, str, len);
   if (RSTRING_PTR(path)[0] != '#') {
-    iv_del(mrb, c->iv, MRB_SYM(__outer__), NULL);
-    iv_put(mrb, c->iv, MRB_SYM(__classname__), path);
+    iv_tbl *t = iv_writable(mrb, &c->iv);
+    iv_del(mrb, t, MRB_SYM(__outer__), NULL);
+    iv_put(mrb, t, MRB_SYM(__classname__), path);
     mrb_field_write_barrier_value(mrb, (struct RBasic*)c, path);
     path = mrb_str_dup(mrb, path);
   }
@@ -2037,7 +2075,7 @@ mrb_obj_iv_tbl_memsize(mrb_value obj)
            sizeof(mrb_value) * siv->shape->count;
   }
   iv_tbl *t = o->iv;
-  if (t == NULL) return 0;
+  if (t == NULL || IV_ATTACHED_P(t)) return 0;
   return sizeof(iv_tbl) + t->alloc*(sizeof(mrb_value)+sizeof(mrb_sym));
 }
 

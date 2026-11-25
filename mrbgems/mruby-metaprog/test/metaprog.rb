@@ -546,3 +546,25 @@ assert('a visibility change on a ROM method leaves other mrb_states alone') do
     GC.singleton_class.__send__(:public, :step_ratio)
   end
 end
+
+assert('singleton class instance variables beside __attached__') do
+  o = Object.new
+  sc = o.singleton_class
+  assert_equal [], sc.instance_variables
+  sc.instance_variable_set(:@a, 1)
+  assert_equal 1, sc.instance_variable_get(:@a)
+  assert_equal [:@a], sc.instance_variables
+  assert_equal 1, sc.remove_instance_variable(:@a)
+  assert_equal [], sc.instance_variables
+  def o.hi
+    :hi
+  end
+  assert_equal :hi, o.clone.hi
+  20.times { Object.new.singleton_class.instance_variables }
+  GC.start
+
+  m = Module.new
+  m.singleton_class.const_set(:SCONST, 3)
+  assert_equal 3, m.singleton_class::SCONST
+  assert_true m.singleton_class.inspect.include?('#<Class:')
+end
