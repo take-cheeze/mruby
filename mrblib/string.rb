@@ -7,6 +7,13 @@ class String
   include Comparable
 
   ##
+  # Returns a frozen string with the same bytes: self when already frozen, otherwise a frozen copy.
+  # CRuby's -str also deduplicates through its string table; this build has no such table.
+  def -@
+    frozen? ? self : dup.freeze
+  end
+
+  ##
   # Calls the given block for each line
   # and pass the respective line.
   #
