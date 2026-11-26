@@ -20,8 +20,8 @@ assert('Integer#+', '15.2.8.3.1') do
 
   skip unless Object.const_defined?(:Float)
   e = Mrbtest::FIXNUM_MAX + 1.0
-  assert_equal Float, c.class
-  assert_equal Float, d.class
+  assert_equal Integer, c.class
+  assert_equal Integer, d.class
   assert_float e, c
   assert_float e, d
 end
@@ -38,8 +38,8 @@ assert('Integer#-', '15.2.8.3.2') do
 
   skip unless Object.const_defined?(:Float)
   e = Mrbtest::FIXNUM_MIN - 1.0
-  assert_equal Float, c.class
-  assert_equal Float, d.class
+  assert_equal Integer, c.class
+  assert_equal Integer, d.class
   assert_float e, c
   assert_float e, d
 end
@@ -59,8 +59,8 @@ assert('Integer#*', '15.2.8.3.3') do
 
   skip unless Object.const_defined?(:Float)
   e = Mrbtest::FIXNUM_MAX * 2.0
-  assert_equal Float, c.class
-  assert_equal Float, d.class
+  assert_equal Integer, c.class
+  assert_equal Integer, d.class
   assert_float e, c
   assert_float e, d
 end

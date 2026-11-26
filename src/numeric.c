@@ -1282,6 +1282,16 @@ fix_to_f(mrb_state *mrb, mrb_value num)
   return mrb_float_value(mrb, (mrb_float)mrb_fixnum(num));
 }
 
+/* Integer#to_f: an Integer is a fixnum or, with MRB_USE_BIGINT, a bigint (class Integer) */
+static mrb_value
+int_to_f(mrb_state *mrb, mrb_value num)
+{
+#ifdef MRB_USE_BIGINT
+  if (mrb_bigint_p(num)) return mrb_float_value(mrb, mrb_bint_as_float(mrb, num));
+#endif
+  return mrb_float_value(mrb, (mrb_float)mrb_fixnum(num));
+}
+
 /*
  *  Document-class: FloatDomainError
  *
@@ -1743,6 +1753,7 @@ mrb_init_numeric(mrb_state *mrb)
   mrb_define_method(mrb, integer, "to_i",     int_to_i,        MRB_ARGS_NONE()); /* 15.2.8.3.24 */
   mrb_define_method(mrb, integer, "to_int",   int_to_i,        MRB_ARGS_NONE());
 #ifndef MRB_WITHOUT_FLOAT
+  mrb_define_method(mrb, integer, "to_f",     int_to_f,        MRB_ARGS_NONE()); /* 15.2.8.3.23 */
   mrb_define_method(mrb, integer, "ceil",     int_to_i,        MRB_ARGS_NONE()); /* 15.2.8.3.8 (x) */
   mrb_define_method(mrb, integer, "floor",    int_to_i,        MRB_ARGS_NONE()); /* 15.2.8.3.10 (x) */
   mrb_define_method(mrb, integer, "round",    int_to_i,        MRB_ARGS_NONE()); /* 15.2.8.3.12 (x) */
