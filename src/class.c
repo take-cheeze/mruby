@@ -338,6 +338,29 @@ mrb_class_mt_memsize(mrb_state *mrb, struct RClass *c)
   return total;
 }
 
+/* Gives the spare entries of `c`'s mutable layers back (mt_put grows a layer by doubling, from 8). An entries array
+   is reached only through its layer, so it may move; a layer left empty keeps its header, which an iclass may share.
+   A block mrb_malloc_simple cannot get leaves the layer as it is. */
+void
+mrb_mt_shrink(mrb_state *mrb, struct RClass *c)
+{
+  for (mrb_mt_tbl *t = c->mt; t && !mt_readonly_p(t); t = t->next) {
+    if (MT_ALLOC(t) <= t->size) continue;
+    if (t->size == 0) {
+      mrb_free(mrb, t->ptr);
+      t->ptr = NULL;
+      t->alloc &= MRB_MT_FLAG_BITS;
+      continue;
+    }
+    mrb_mt_entry *p = (mrb_mt_entry*)mrb_malloc_simple(mrb, sizeof(mrb_mt_entry) * (size_t)t->size);
+    if (p == NULL) continue;
+    memcpy(p, t->ptr, sizeof(mrb_mt_entry) * (size_t)t->size);
+    mrb_free(mrb, t->ptr);
+    t->ptr = p;
+    t->alloc = (t->alloc & MRB_MT_FLAG_BITS) | t->size;
+  }
+}
+
 /* Frees mutable layers of the class method table for GC.
    ROM layers are left intact (freed via mrb->rom_mt at close). */
 void
