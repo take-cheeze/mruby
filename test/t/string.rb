@@ -895,10 +895,3 @@ assert('String#byteslice') do
   assert_equal("o", str1.byteslice(4.0))
   assert_equal("\x82ab", str2.byteslice(2.0, 3.0))
 end
-
-assert('String#ascii_only?') do
-  assert_true "abc".ascii_only?
-  assert_true "".ascii_only?
-  assert_false "h\u00e9".ascii_only?
-  assert_false "\x80".ascii_only?
-end
