@@ -73,12 +73,51 @@ mrb_class(mrb_state *mrb, mrb_value v)
 } while (0)
 #define MRB_FL_CLASS_IS_INHERITED (1 << 17)
 #define MRB_INSTANCE_TT_MASK (0x1F)
-#define MRB_SET_INSTANCE_TT(c, tt) ((c)->flags = (((c)->flags & ~MRB_INSTANCE_TT_MASK) | (char)(tt)))
 #define MRB_INSTANCE_TT(c) (enum mrb_vtype)((c)->flags & MRB_INSTANCE_TT_MASK)
 #define MRB_FL_UNDEF_ALLOCATE (1 << 6)
-#define MRB_UNDEF_ALLOCATOR(c) (mrb_assert((c)->tt == MRB_TT_CLASS), (c)->flags |= MRB_FL_UNDEF_ALLOCATE)
 #define MRB_UNDEF_ALLOCATOR_P(c) ((c)->flags & MRB_FL_UNDEF_ALLOCATE)
-#define MRB_DEFINE_ALLOCATOR(c) ((c)->flags &= ~MRB_FL_UNDEF_ALLOCATE)
+
+#ifdef MRB_ROM_CLASS_GRAPH
+/* A ROM class (mruby/rom_graph.h) is const and painted MRB_GC_RED (7); its `mt` names the RAM slot that holds its
+   method table chain. MRB_CLASS_MT is the chain's head, and an lvalue. */
+#define MRB_ROM_CLASS_P(c) ((c)->gc_color == 7)
+#define MRB_CLASS_MT(c) (*(MRB_ROM_CLASS_P(c) ? (struct mrb_mt_tbl**)(c)->mt : &(c)->mt))
+/* The slot of a ROM class that had no method table in the dump; it stays NULL. */
+MRB_API struct mrb_mt_tbl *const mrb_rom_graph_no_mt;
+/* Made by a definition by name (define_class, define_module), so a later boot's definition finds it again. */
+#define MRB_FL_CLASS_DEFINED (1 << 16)
+/* Sets class flags. A ROM class already has the flags the boot gives it, so a store that changes nothing is left out;
+   one that would change a ROM class raises (mrb_rom_class_frozen). */
+MRB_API void mrb_rom_class_frozen(struct mrb_state *mrb, struct RClass *c);
+#define MRB_CLASS_SET_FLAGS_(c, v) do { \
+  struct RClass *c_ = (c); uint32_t v_ = (v); \
+  if (c_->flags != v_) { if (MRB_ROM_CLASS_P(c_)) mrb_rom_class_frozen(NULL, c_); else c_->flags = v_; } \
+} while (0)
+#else
+#define MRB_ROM_CLASS_P(c) 0
+#define MRB_CLASS_MT(c) ((c)->mt)
+#define MRB_FL_CLASS_DEFINED 0
+#define MRB_CLASS_SET_FLAGS_(c, v) ((c)->flags = (v))
+#define mrb_rom_class_frozen(mrb, c) ((void)0)
+#endif
+#define MRB_SET_INSTANCE_TT(c, tt) MRB_CLASS_SET_FLAGS_(c, ((c)->flags & ~MRB_INSTANCE_TT_MASK) | (char)(tt))
+#define MRB_UNDEF_ALLOCATOR(c) do { \
+  mrb_assert((c)->tt == MRB_TT_CLASS); MRB_CLASS_SET_FLAGS_(c, (c)->flags | MRB_FL_UNDEF_ALLOCATE); \
+} while (0)
+#define MRB_DEFINE_ALLOCATOR(c) MRB_CLASS_SET_FLAGS_(c, (c)->flags & ~MRB_FL_UNDEF_ALLOCATE)
+#define MRB_CLASS_ADD_FLAGS(c, f) MRB_CLASS_SET_FLAGS_(c, (c)->flags | (f))
+
+/* Whether `a` and `b` share a method table, as an iclass shares its module's: the same slot of two ROM classes (even
+   an empty one), or else the same head. */
+MRB_INLINE mrb_bool
+mrb_class_mt_same(struct RClass *a, struct RClass *b)
+{
+#ifdef MRB_ROM_CLASS_GRAPH
+  if (a->mt == b->mt) return a->mt != NULL && a->mt != (struct mrb_mt_tbl*)&mrb_rom_graph_no_mt;
+#endif
+  struct mrb_mt_tbl *h = MRB_CLASS_MT(a);
+  return h != NULL && h == MRB_CLASS_MT(b);
+}
 
 MRB_API void mrb_define_method_raw(mrb_state*, struct RClass*, mrb_sym, mrb_method_t);
 MRB_API void mrb_alias_method(mrb_state*, struct RClass *c, mrb_sym a, mrb_sym b);

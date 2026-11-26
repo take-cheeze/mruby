@@ -204,6 +204,11 @@ mrb_static_assert(MRB_GC_RED <= GC_COLOR_MASK);
 #define is_white(o) ((o)->gc_color & GC_WHITES)
 #define is_black(o) ((o)->gc_color == GC_BLACK)
 #define is_red(o) ((o)->gc_color == GC_RED)
+#ifdef MRB_ROM_CLASS_GRAPH
+/* MRB_ROM_CLASS_P spells the color out */
+mrb_static_assert(MRB_GC_RED == 7);
+void mrb_rom_graph_mark(mrb_state *mrb);
+#endif
 #define flip_white_part(s) ((s)->current_white_part = other_white_part(s))
 #define other_white_part(s) ((s)->current_white_part ^ GC_WHITES)
 /* A persistent String is never dead (ADR 0546): the generational sweep does not repaint it. */
@@ -1085,6 +1090,9 @@ root_scan_phase(mrb_state *mrb, mrb_gc *gc)
   }
 
   mrb_gc_mark_gv(mrb);
+#ifdef MRB_ROM_CLASS_GRAPH
+  mrb_rom_graph_mark(mrb);
+#endif
   mrb_gc_mark_value(mrb, mrb->frozen_literals);
   /* mark arena */
   for (i=0,e=gc->arena_idx; i<e; i++) {
@@ -1226,6 +1234,9 @@ final_marking_phase(mrb_state *mrb, mrb_gc *gc)
     mrb_gc_mark(mrb, gc->arena[i]);
   }
   mrb_gc_mark_gv(mrb);
+#ifdef MRB_ROM_CLASS_GRAPH
+  mrb_rom_graph_mark(mrb);
+#endif
   mark_context(mrb, mrb->c);
   if (mrb->c != mrb->root_c) {
     mark_context(mrb, mrb->root_c);
