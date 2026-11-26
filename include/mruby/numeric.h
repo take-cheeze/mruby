@@ -183,7 +183,6 @@ mrb_int_mul_overflow(mrb_int multiplier, mrb_int multiplicand, mrb_int *product)
 # endif /* MRB_USE_FLOAT */
 #endif /* MRB_WITHOUT_FLOAT */
 
-MRB_END_DECL
 
 #ifdef MRB_USE_BIGINT
 /* the arbitrary-precision Integer (mrbgems/mruby-bigint): the operations the Integer methods use on overflow and on a
@@ -209,4 +208,5 @@ MRB_API mrb_int mrb_bint_sign(mrb_state *mrb, mrb_value x);
 MRB_API size_t mrb_bint_absint_size(mrb_state *mrb, mrb_value x, int *nlz_bits);
 #endif
 
+MRB_END_DECL
 #endif  /* MRUBY_NUMERIC_H */
