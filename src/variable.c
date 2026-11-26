@@ -31,6 +31,20 @@ typedef struct iv_tbl {
 
 
 
+#ifdef MRB_ROM_CLASS_GRAPH
+#include <mruby/rom_graph.h>
+mrb_static_assert(sizeof(struct mrb_rom_iv) == sizeof(iv_tbl) && offsetof(struct mrb_rom_iv, ptr) == offsetof(iv_tbl, ptr));
+extern const void *mrb_rom_iv_lo, *mrb_rom_iv_hi;
+iv_tbl *mrb_rom_graph_iv_lookup(iv_tbl *t);
+void mrb_rom_graph_iv_cow(mrb_state *mrb, iv_tbl *rom, iv_tbl *t);
+/* A ROM class's const table reads as its heap copy once it has one (rom_iv_put). */
+#define IV_ROM_P(t) ((const void*)(t) >= mrb_rom_iv_lo && (const void*)(t) < mrb_rom_iv_hi)
+#define IV_TBL(t) (IV_ROM_P(t) ? mrb_rom_graph_iv_lookup(t) : (t))
+#else
+#define IV_ROM_P(t) 0
+#define IV_TBL(t) (t)
+#endif
+
 /* Creates the instance variable table. */
 static iv_tbl*
 iv_new(mrb_state *mrb)
@@ -158,6 +172,7 @@ iv_get(mrb_state *mrb, iv_tbl *t, mrb_sym sym, mrb_value *vp)
     if (vp) *vp = IV_ATTACHED_VALUE(t);
     return 1;
   }
+  t = IV_TBL(t);
   /* Return 0 if table is null, uninitialized, or empty */
   if (t == NULL || t->alloc == 0 || t->size == 0) return 0;
 
@@ -214,6 +229,7 @@ iv_foreach(mrb_state *mrb, iv_tbl *t, mrb_iv_foreach_func *func, void *p)
     (*func)(mrb, MRB_SYM(__attached__), IV_ATTACHED_VALUE(t), p);
     return;
   }
+  t = IV_TBL(t);
   if (t == NULL || t->alloc == 0 || t->size == 0) return;
   for (int i = 0; i < t->size; i++) {
     mrb_sym   *keys = (mrb_sym*)&t->ptr[t->alloc];
@@ -227,6 +243,7 @@ static size_t
 iv_size(mrb_state *mrb, iv_tbl *t)
 {
   if (IV_ATTACHED_P(t)) return 1;
+  t = IV_TBL(t);
   return t ? t->size : 0;
 }
 
@@ -235,6 +252,7 @@ static iv_tbl*
 iv_copy(mrb_state *mrb, iv_tbl *t)
 {
   if (IV_ATTACHED_P(t)) return t;
+  t = IV_TBL(t);
   if (t == NULL || t->alloc == 0 || t->size == 0) return NULL;
 
   /* create new table and mirror alloc/size */
@@ -289,7 +307,10 @@ class_shrink_i(mrb_state *mrb, struct RBasic *obj, void *data)
 {
   (void)data;
   if (obj->tt == MRB_TT_CLASS || obj->tt == MRB_TT_MODULE || obj->tt == MRB_TT_SCLASS) {
-    iv_shrink(mrb, ((struct RClass*)obj)->iv);
+    iv_tbl *t = ((struct RClass*)obj)->iv;
+    /* a const table is not shrunk, its heap copy is */
+    if (!IV_ATTACHED_P(t)) t = IV_TBL(t);
+    if (!IV_ROM_P(t)) iv_shrink(mrb, t);
     mrb_mt_shrink(mrb, (struct RClass*)obj);
   }
   return MRB_EACH_OBJ_OK;
@@ -299,7 +320,48 @@ MRB_API void
 mrb_class_shrink(mrb_state *mrb)
 {
   mrb_objspace_each_objects(mrb, class_shrink_i, NULL);
+#ifdef MRB_ROM_CLASS_GRAPH
+  mrb_rom_graph_each(mrb, class_shrink_i, NULL);
+#endif
 }
+
+#ifdef MRB_ROM_CLASS_GRAPH
+/* A store into a ROM class: its RAM table takes any; a const table (or none) only one of what it holds already, as a
+   reopening definition makes. */
+static iv_tbl* rom_iv_writable(mrb_state *mrb, struct RObject *obj);
+
+static mrb_bool
+rom_iv_put(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value v)
+{
+  if (obj->gc_color != MRB_GC_RED) return FALSE;
+  mrb_value old;
+  if (iv_get(mrb, obj->iv, sym, &old) && mrb_obj_eq(mrb, old, v)) return TRUE;
+  iv_put(mrb, rom_iv_writable(mrb, obj), sym, v);
+  return TRUE;
+}
+
+/* The heap copy of a ROM class's const table, made on the first store that changes it. A class with no table (a
+   singleton class keeps only __attached__) has nowhere to put one. */
+static iv_tbl*
+rom_iv_writable(mrb_state *mrb, struct RObject *obj)
+{
+  iv_tbl *rom = obj->iv;
+  if (rom == NULL || IV_ATTACHED_P(rom)) mrb_rom_class_frozen(mrb, (struct RClass*)obj);
+  iv_tbl *t = IV_TBL(rom);
+  if (t != rom) return t;
+  t = iv_new(mrb);
+  if (rom->size > 0) {
+    t->alloc = t->size = rom->size;
+    t->ptr = (mrb_value*)mrb_malloc(mrb, (sizeof(mrb_value)+sizeof(mrb_sym)) * rom->size);
+    memcpy(t->ptr, rom->ptr, sizeof(mrb_value) * rom->size);
+    memcpy(&t->ptr[t->alloc], &rom->ptr[rom->alloc], sizeof(mrb_sym) * rom->size);
+  }
+  mrb_rom_graph_iv_cow(mrb, rom, t);
+  return t;
+}
+#else
+#define rom_iv_put(mrb, obj, sym, v) FALSE
+#endif
 
 /* The table `*slot` names, made when it is NULL or SCLASS_ATTACHED. Stored only once complete: an allocation here may
    run the GC, which marks through `*slot`. */
@@ -901,6 +963,7 @@ mrb_obj_iv_set_force(mrb_state *mrb, struct RObject *obj, mrb_sym sym, mrb_value
   if (namespace_p(obj->tt)) {
     assign_class_name(mrb, obj, sym, v);
   }
+  if (rom_iv_put(mrb, obj, sym, v)) return;
   if (MRB_OBJ_SHAPED_P(obj)) {
     shaped_iv_set(mrb, obj, sym, v);
     mrb_field_write_barrier_value(mrb, (struct RBasic*)obj, v);
@@ -1250,6 +1313,12 @@ mrb_iv_remove(mrb_state *mrb, mrb_value obj, mrb_sym sym)
 
     iv_tbl *t = o->iv;
     mrb_value val;
+#ifdef MRB_ROM_CLASS_GRAPH
+    if (o->gc_color == MRB_GC_RED) {
+      if (!iv_get(mrb, t, sym, NULL)) return mrb_undef_value();
+      t = rom_iv_writable(mrb, o);
+    }
+#endif
     if (IV_ATTACHED_P(t)) {
       if (!iv_get(mrb, t, sym, &val)) return mrb_undef_value();
       o->iv = NULL;
@@ -1428,6 +1497,7 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
 
     if (pos) {
       mrb_check_frozen(mrb, c);
+      if (rom_iv_put(mrb, (struct RObject*)(c->tt == MRB_TT_ICLASS ? c->c : c), sym, v)) return;
       t->ptr[pos-1] = v;        /* iv_get returns pos+1 to put */
       mrb_field_write_barrier_value(mrb, (struct RBasic*)c, v);
       return;
@@ -1457,6 +1527,7 @@ mrb_mod_cv_set(mrb_state *mrb, struct RClass *c, mrb_sym sym, mrb_value v)
   }
 
   mrb_check_frozen(mrb, c);
+  if (rom_iv_put(mrb, (struct RObject*)c, sym, v)) return;
   iv_put(mrb, iv_writable(mrb, &c->iv), sym, v);
   mrb_field_write_barrier_value(mrb, (struct RBasic*)c, v);
 }
@@ -2132,7 +2203,8 @@ mrb_class_find_path(mrb_state *mrb, struct RClass *c)
   const char *str = mrb_sym_name_len(mrb, name, &len);
   mrb_str_cat(mrb, path, str, len);
 #ifndef MRB_NO_CLASS_PATH_CACHE
-  if (RSTRING_PTR(path)[0] != '#') {
+  /* a ROM class's table is const: its path is made each time */
+  if (RSTRING_PTR(path)[0] != '#' && !MRB_ROM_CLASS_P(c)) {
     iv_tbl *t = iv_writable(mrb, &c->iv);
     iv_del(mrb, t, MRB_SYM(__outer__), NULL);
     iv_put(mrb, t, MRB_SYM(__classname__), path);

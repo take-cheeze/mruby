@@ -632,7 +632,7 @@ mrb_obj_is_kind_of(mrb_state *mrb, mrb_value obj, struct RClass *c)
   MRB_CLASS_ORIGIN(c);
   while (cl) {
     /* the iclass of module c shares its table; a class may have none, which matches nothing */
-    if (cl == c || (c->mt && cl->mt == c->mt))
+    if (cl == c || mrb_class_mt_same(cl, c))
       return TRUE;
     cl = cl->super;
   }

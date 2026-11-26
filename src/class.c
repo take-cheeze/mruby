@@ -29,6 +29,19 @@ MRB_END_DECL
 #define MT_VMASK MRB_METHOD_VISIBILITY_MASK
 
 #define MRB_MT_FLAG_BITS (MRB_MT_READONLY_BIT | MRB_MT_FROZEN_BIT)
+
+#ifdef MRB_ROM_CLASS_GRAPH
+#include <mruby/rom_graph.h>
+const struct mrb_rom_graph *mrb_rom_graph_claim(mrb_state *mrb);
+/* A ROM class the dump saw without a method table has no slot to install one in. */
+static void
+rom_mt_check(mrb_state *mrb, struct RClass *c)
+{
+  if (MRB_ROM_CLASS_P(c) && c->mt == (struct mrb_mt_tbl*)&mrb_rom_graph_no_mt) mrb_rom_class_frozen(mrb, c);
+}
+#else
+#define rom_mt_check(mrb, c) ((void)0)
+#endif
 #define MT_ALLOC(t)      ((t)->alloc & ~MRB_MT_FLAG_BITS)
 #define mt_readonly_p(t) ((t)->alloc & MRB_MT_READONLY_BIT)
 #define mt_frozen_p(t)   ((t)->alloc & MRB_MT_FROZEN_BIT)
@@ -179,6 +192,14 @@ mt_free(mrb_state *mrb, mrb_mt_tbl *t)
   }
 }
 
+#ifdef MRB_ROM_CLASS_GRAPH
+void
+mrb_rom_graph_mt_free(mrb_state *mrb, mrb_mt_tbl *t)
+{
+  mt_free(mrb, t);
+}
+#endif
+
 /* Allocates a per-state ROM wrapper for the const entries array
    and pushes it onto the class's method table chain.
    The wrapper is also registered in mrb->rom_mt for cleanup
@@ -205,10 +226,11 @@ mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
   else mrb->mt_epoch++;
 
   /* push ROM layer */
-  mrb_mt_tbl *t = c->mt;
+  rom_mt_check(mrb, c);
+  mrb_mt_tbl *t = MRB_CLASS_MT(c);
   if (!t || mt_readonly_p(t)) {
     rom->next = t;
-    c->mt = rom;
+    MRB_CLASS_MT(c) = rom;
   }
   else {
     /* freeze mutable top, insert ROM behind it;
@@ -225,13 +247,14 @@ mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
 void
 mrb_mt_init_rom_tbl(mrb_state *mrb, struct RClass *c, const mrb_mt_tbl *tbl)
 {
-  if (c->mt || tbl->next) {
+  rom_mt_check(mrb, c);
+  if (MRB_CLASS_MT(c) || tbl->next) {
     mrb_mt_init_rom(mrb, c, tbl->ptr, tbl->size);
     return;
   }
   if (!mrb->bootstrapping) mrb_method_cache_clear(mrb);
   else mrb->mt_epoch++;
-  c->mt = (mrb_mt_tbl*)tbl;
+  MRB_CLASS_MT(c) = (mrb_mt_tbl*)tbl;
 }
 
 void
@@ -250,7 +273,7 @@ mrb_mt_mark_frame_free(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_func_t
   int marked = 0;
   (void)mrb;
   MRB_CLASS_ORIGIN(c);
-  for (mrb_mt_tbl *t = c->mt; t; t = t->next) {
+  for (mrb_mt_tbl *t = MRB_CLASS_MT(c); t; t = t->next) {
     if (mt_readonly_p(t)) continue;
     for (int i = 0; i < t->size; i++) {
       mrb_mt_entry *e = &t->ptr[i];
@@ -275,7 +298,7 @@ create_method_value(mrb_state *mrb, uint32_t flags, union mrb_mt_ptr val)
 MRB_API void
 mrb_mt_foreach(mrb_state *mrb, struct RClass *c, mrb_mt_foreach_func *fn, void *p)
 {
-  mrb_mt_tbl *t = c->mt;
+  mrb_mt_tbl *t = MRB_CLASS_MT(c);
   if (!t) return;
 
   /* fast path: single layer */
@@ -322,7 +345,7 @@ size_t
 mrb_gc_mark_mt(mrb_state *mrb, struct RClass *c)
 {
   size_t children = 0;
-  for (mrb_mt_tbl *t = c->mt; t; t = t->next) {
+  for (mrb_mt_tbl *t = MRB_CLASS_MT(c); t; t = t->next) {
     if (mt_readonly_p(t)) continue; /* ROM layers need no GC marking */
     if (t->size == 0) continue;
     mrb_mt_entry *entries = t->ptr;
@@ -341,7 +364,7 @@ size_t
 mrb_class_mt_memsize(mrb_state *mrb, struct RClass *c)
 {
   size_t total = 0;
-  for (mrb_mt_tbl *h = c->mt; h && !mt_readonly_p(h); h = h->next)
+  for (mrb_mt_tbl *h = MRB_CLASS_MT(c); h && !mt_readonly_p(h); h = h->next)
     total += sizeof(mrb_mt_tbl) + (size_t)MT_ALLOC(h) * sizeof(mrb_mt_entry);
   return total;
 }
@@ -352,7 +375,7 @@ mrb_class_mt_memsize(mrb_state *mrb, struct RClass *c)
 void
 mrb_mt_shrink(mrb_state *mrb, struct RClass *c)
 {
-  for (mrb_mt_tbl *t = c->mt; t && !mt_readonly_p(t); t = t->next) {
+  for (mrb_mt_tbl *t = MRB_CLASS_MT(c); t && !mt_readonly_p(t); t = t->next) {
     if (MT_ALLOC(t) <= t->size) continue;
     if (t->size == 0) {
       mrb_free(mrb, t->ptr);
@@ -374,7 +397,7 @@ mrb_mt_shrink(mrb_state *mrb, struct RClass *c)
 void
 mrb_gc_free_mt(mrb_state *mrb, struct RClass *c)
 {
-  if (c->mt) mt_free(mrb, c->mt);
+  if (MRB_CLASS_MT(c)) mt_free(mrb, MRB_CLASS_MT(c));
 }
 
 /* Sets the name of a class within an outer namespace */
@@ -442,6 +465,8 @@ prepare_singleton_class(mrb_state *mrb, struct RBasic *o)
   /* A persistent String's class is not marked (gc.c), so it must stay String. */
   if (MRB_OBJ_PERSISTENT_P(o)) mrb_raise(mrb, E_FROZEN_ERROR, "can't modify frozen literal String");
   if (o->c->tt == MRB_TT_SCLASS) return;
+  /* a ROM class has the singleton class the boot made it, or none */
+  if (o->gc_color == MRB_GC_RED) mrb_rom_class_frozen(mrb, (struct RClass*)o);
   struct RClass *sc = MRB_OBJ_ALLOC(mrb, MRB_TT_SCLASS, mrb->class_class);
   sc->flags |= MRB_FL_CLASS_IS_INHERITED;
   sc->mt = NULL;
@@ -537,6 +562,7 @@ define_module(mrb_state *mrb, mrb_sym name, struct RClass *outer)
     return module_from_sym(mrb, outer, name);
   }
   struct RClass *m = mrb_module_new(mrb);
+  MRB_CLASS_ADD_FLAGS(m, MRB_FL_CLASS_DEFINED);
   setup_class(mrb, outer, m, name);
 
   return m;
@@ -649,6 +675,7 @@ define_class(mrb_state *mrb, mrb_sym name, struct RClass *super, struct RClass *
   }
 
   c = mrb_class_new(mrb, super);
+  MRB_CLASS_ADD_FLAGS(c, MRB_FL_CLASS_DEFINED);
   setup_class(mrb, outer, c, name);
 
   return c;
@@ -777,7 +804,7 @@ mrb_class_inherited(mrb_state *mrb, struct RClass *super, struct RClass *klass)
 
   if (!super)
     super = mrb->object_class;
-  super->flags |= MRB_FL_CLASS_IS_INHERITED;
+  MRB_CLASS_ADD_FLAGS(super, MRB_FL_CLASS_IS_INHERITED);
 
   hook_call(mrb, mrb_obj_value(super), MRB_SYM(inherited), HOOK_GONE_inherited, mrb_obj_value(klass));
 }
@@ -1151,7 +1178,7 @@ find_visibility_scope(mrb_state *mrb, const struct RClass *c, int n, mrb_callinf
 static mrb_mt_tbl*
 mt_writable(mrb_state *mrb, struct RClass *frozen, struct RClass *table)
 {
-  mrb_mt_tbl *h = table->mt;
+  mrb_mt_tbl *h = MRB_CLASS_MT(table);
 
   if (frozen->tt == MRB_TT_SCLASS && mrb_frozen_p(frozen)) {
     mrb_value v = mrb_iv_get(mrb, mrb_obj_value(frozen), MRB_SYM(__attached__));
@@ -1161,7 +1188,8 @@ mt_writable(mrb_state *mrb, struct RClass *frozen, struct RClass *table)
     mrb_check_frozen(mrb, frozen);
   }
   if (!h) {
-    return table->mt = mt_new(mrb);
+    rom_mt_check(mrb, table);
+    return MRB_CLASS_MT(table) = mt_new(mrb);
   }
   if (mt_frozen_p(h)) {
     /* unfreeze heap-allocated frozen layer to preserve table->mt pointer
@@ -1173,7 +1201,7 @@ mt_writable(mrb_state *mrb, struct RClass *frozen, struct RClass *table)
     /* COW: create mutable top layer, chain to ROM */
     mrb_mt_tbl *top = mt_new(mrb);
     top->next = h;
-    return table->mt = top;
+    return MRB_CLASS_MT(table) = top;
   }
   return h;
 }
@@ -2083,7 +2111,7 @@ include_class_new(mrb_state *mrb, struct RClass *m, struct RClass *super)
     m = m->c;
   }
   MRB_CLASS_ORIGIN(m);
-  ic->mt = m->mt;
+  ic->mt = MRB_CLASS_MT(m);
   ic->super = super;
   if (m->tt == MRB_TT_ICLASS) {
     ic->c = m->c;
@@ -2098,7 +2126,7 @@ static int
 include_module_at(mrb_state *mrb, struct RClass *c, struct RClass *ins_pos, struct RClass *m, int search_super)
 {
   struct RClass *ic;
-  void *klass_mt = find_origin(c)->mt;
+  struct RClass *origin = find_origin(c);
 
   while (m) {
     struct RClass *p = c->super;
@@ -2108,13 +2136,13 @@ include_module_at(mrb_state *mrb, struct RClass *c, struct RClass *ins_pos, stru
     if (c == ins_pos) original_seen = TRUE;
     if (m->flags & MRB_FL_CLASS_IS_PREPENDED)
       goto skip;
-    if (klass_mt && klass_mt == m->mt)
+    if (mrb_class_mt_same(origin, m))
       return -1;
 
     while (p) {
       if (c == p) original_seen = TRUE;
       if (p->tt == MRB_TT_ICLASS) {
-        if (p->mt == m->mt) {
+        if (mrb_class_mt_same(p, m)) {
           if (!superclass_seen && original_seen) {
             ins_pos = p; /* move insert point */
           }
@@ -2128,8 +2156,10 @@ include_module_at(mrb_state *mrb, struct RClass *c, struct RClass *ins_pos, stru
       p = p->super;
     }
 
+    /* a ROM class has every module the boot gives it */
+    if (MRB_ROM_CLASS_P(ins_pos)) mrb_rom_class_frozen(mrb, ins_pos);
     ic = include_class_new(mrb, m, ins_pos->super);
-    m->flags |= MRB_FL_CLASS_IS_INHERITED;
+    MRB_CLASS_ADD_FLAGS(m, MRB_FL_CLASS_IS_INHERITED);
     ins_pos->super = ic;
     mrb_field_write_barrier(mrb, (struct RBasic*)ins_pos, (struct RBasic*)ic);
     ins_pos = ic;
@@ -2233,12 +2263,13 @@ mrb_prepend_module(mrb_state *mrb, struct RClass *c, struct RClass *m)
 {
   mrb_check_frozen(mrb, c);
   if (!(c->flags & MRB_FL_CLASS_IS_PREPENDED)) {
+    if (MRB_ROM_CLASS_P(c)) mrb_rom_class_frozen(mrb, c);
     struct RClass *origin = MRB_OBJ_ALLOC(mrb, MRB_TT_ICLASS, c);
     origin->flags |= MRB_FL_CLASS_IS_ORIGIN | MRB_FL_CLASS_IS_INHERITED;
     origin->super = c->super;
     c->super = origin;
-    origin->mt = c->mt;
-    c->mt = NULL;
+    origin->mt = MRB_CLASS_MT(c);
+    MRB_CLASS_MT(c) = NULL;
     mrb_field_write_barrier(mrb, (struct RBasic*)c, (struct RBasic*)origin);
     c->flags |= MRB_FL_CLASS_IS_PREPENDED;
   }
@@ -2855,7 +2886,7 @@ mrb_vm_find_ctor(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym m
   mrb_method_t m;
 
   for (; c; c = c->super) {
-    for (mrb_mt_tbl *t = c->mt; t; t = t->next) {
+    for (mrb_mt_tbl *t = MRB_CLASS_MT(c); t; t = t->next) {
       mrb_mt_entry *entries = t->ptr;
       int i;
       for (i = 0; i < t->size; i++) {
@@ -2944,7 +2975,7 @@ mrb_vm_find_method(mrb_state *mrb, struct RClass *c, struct RClass **cp, mrb_sym
 #endif
 
   while (c) {
-    mrb_mt_tbl *h = c->mt;
+    mrb_mt_tbl *h = MRB_CLASS_MT(c);
 
     if (h) {
       union mrb_mt_ptr ptr;
@@ -3903,7 +3934,7 @@ mrb_remove_method(mrb_state *mrb, struct RClass *c0, mrb_sym mid)
   mrb_bool found = FALSE;
 
   MRB_CLASS_ORIGIN(c);
-  mrb_mt_tbl *h = c->mt;
+  mrb_mt_tbl *h = MRB_CLASS_MT(c);
   if (h) {
     /* a ROM top layer (a singleton class with only ROM methods) is const:
        its entry can only be hidden by the tombstone below */
@@ -3920,7 +3951,7 @@ mrb_remove_method(mrb_state *mrb, struct RClass *c0, mrb_sym mid)
       else if (mt_readonly_p(h)) {
         mrb_mt_tbl *top = mt_new(mrb);
         top->next = h;
-        h = c->mt = top;
+        h = MRB_CLASS_MT(c) = top;
       }
       mt_put(mrb, h, mid, MRB_MT_FUNC, tombstone);
     }
@@ -4271,8 +4302,8 @@ mrb_singleton_class_clone(mrb_state *mrb, mrb_value obj)
       mrb_iv_copy(mrb, mrb_obj_value(clone), mrb_obj_value(klass));
       mrb_obj_iv_set(mrb, (struct RObject*)clone, MRB_SYM(__attached__), obj);
     }
-    if (klass->mt) {
-      clone->mt = mt_copy(mrb, klass->mt);
+    if (MRB_CLASS_MT(klass)) {
+      clone->mt = mt_copy(mrb, MRB_CLASS_MT(klass));
     }
     else {
       clone->mt = mt_new(mrb);
@@ -4302,12 +4333,12 @@ copy_class(mrb_state *mrb, mrb_value dst, mrb_value src)
     c1->super = mrb_class_ptr(mrb_obj_dup(mrb, mrb_obj_value(c0)));
     c1->super->flags |= MRB_FL_CLASS_IS_ORIGIN;
   }
-  if (sc->mt) {
+  if (MRB_CLASS_MT(sc)) {
     if (sc->tt == MRB_TT_ICLASS && !(sc->flags & MRB_FL_CLASS_IS_ORIGIN)) {
-      dc->mt = sc->mt;
+      dc->mt = MRB_CLASS_MT(sc);
     }
     else {
-      dc->mt = mt_copy(mrb, sc->mt);
+      dc->mt = mt_copy(mrb, MRB_CLASS_MT(sc));
     }
   }
   dc->super = sc->super;
@@ -4729,6 +4760,17 @@ mrb_init_class(mrb_state *mrb)
   struct RClass *mod;           /* Module */
   struct RClass *cls;           /* Class */
 
+#ifdef MRB_ROM_CLASS_GRAPH
+  /* the graph has the four, named, with their singleton classes */
+  const struct mrb_rom_graph *g = mrb_rom_graph_claim(mrb);
+  if (g) {
+    bob = g->basic_object;
+    mrb->object_class = obj = g->object;
+    mrb->module_class = mod = g->module;
+    mrb->class_class = cls = g->class_class;
+    goto methods;
+  }
+#endif
   /* boot class hierarchy */
   bob = boot_defclass(mrb, 0, MRB_TT_OBJECT);
   obj = boot_defclass(mrb, bob, MRB_TT_OBJECT); mrb->object_class = obj;
@@ -4753,7 +4795,14 @@ mrb_init_class(mrb_state *mrb)
   mrb_class_name_class(mrb, NULL, obj, MRB_SYM(Object)); /* 15.2.1 */
   mrb_class_name_class(mrb, NULL, mod, MRB_SYM(Module)); /* 15.2.2 */
   mrb_class_name_class(mrb, NULL, cls, MRB_SYM(Class));  /* 15.2.3 */
+  MRB_CLASS_ADD_FLAGS(bob, MRB_FL_CLASS_DEFINED);
+  MRB_CLASS_ADD_FLAGS(obj, MRB_FL_CLASS_DEFINED);
+  MRB_CLASS_ADD_FLAGS(mod, MRB_FL_CLASS_DEFINED);
+  MRB_CLASS_ADD_FLAGS(cls, MRB_FL_CLASS_DEFINED);
 
+#ifdef MRB_ROM_CLASS_GRAPH
+methods:
+#endif
   MRB_MT_INIT_ROM(mrb, bob, bob_rom_entries);
 
   MRB_MT_INIT_ROM(mrb, mrb_singleton_class_ptr(mrb, mrb_obj_value(cls)), cls_s_rom_entries);

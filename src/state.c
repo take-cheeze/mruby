@@ -234,6 +234,12 @@ mrb_close(mrb_state *mrb)
 
   /* free */
   mrb_gc_free_gv(mrb);
+#ifdef MRB_ROM_CLASS_GRAPH
+  {
+    void mrb_rom_graph_release(mrb_state*);
+    mrb_rom_graph_release(mrb);
+  }
+#endif
   mrb_gc_destroy(mrb, &mrb->gc);
   mrb_free_shape(mrb);
   mrb_free_context(mrb, mrb->root_c);

@@ -416,6 +416,9 @@ mrb_obj_freeze(mrb_state *mrb, mrb_value self)
   if (!mrb_immediate_p(self)) {
     struct RBasic *b = mrb_basic_ptr(self);
     if (!mrb_frozen_p(b)) {
+#ifdef MRB_ROM_CLASS_GRAPH
+      if (b->gc_color == MRB_GC_RED) mrb_rom_class_frozen(mrb, (struct RClass*)b);
+#endif
       b->frozen = 1;
       if (b->c->tt == MRB_TT_SCLASS) b->c->frozen = 1;
     }
