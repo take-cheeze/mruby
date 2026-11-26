@@ -234,6 +234,14 @@ mrb_mt_init_rom_tbl(mrb_state *mrb, struct RClass *c, const mrb_mt_tbl *tbl)
   c->mt = (mrb_mt_tbl*)tbl;
 }
 
+void
+mrb_mt_init_rom_layer(mrb_state *mrb, struct RClass *c, const mrb_mt_entry *entries, const mrb_mt_tbl *tbl)
+{
+  mrb_assert(tbl->ptr == entries);
+  (void)entries;
+  mrb_mt_init_rom_tbl(mrb, c, tbl);
+}
+
 /* Being frame-free is a property of the function, so marking every entry that holds `f` is sound wherever the entry is
    shared; a ROM entry is const and keeps the flag its table gave it. */
 MRB_API int
