@@ -1515,7 +1515,7 @@ L_RETRY:
    A constant that is missing and has one has its path required; the autoload is then removed (a failed require keeps
    it, as CRuby does) and the lookup runs again. Returns undef when there is no autoload for sym. */
 static mrb_value
-autoload_const(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
+autoload_one(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
 {
   mrb_value mod = mrb_obj_value(base);
   mrb_value tbl = mrb_iv_get(mrb, mod, mrb_intern_lit(mrb, "__autoload__"));
@@ -1527,7 +1527,23 @@ autoload_const(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
   if (mrb_nil_p(path)) return mrb_undef_value();
   mrb_funcall_argv(mrb, mod, mrb_intern_lit(mrb, "require"), 1, &path);
   mrb_hash_delete_key(mrb, tbl, key);
-  return const_get_nohook(mrb, base, sym, skip);
+  /* The constant is now in base itself: look there with the owner included (skip would drop Object). */
+  return const_get_nohook(mrb, base, sym, FALSE);
+}
+
+/* An autoload registered on base or on one of its superclasses (CRuby looks up the ancestors, Object included,
+   for a constant that is missing where the lookup starts). Include wrappers are skipped: their ivars are the module's. */
+static mrb_value
+autoload_const(mrb_state *mrb, struct RClass *base, mrb_sym sym, mrb_bool skip)
+{
+  struct RClass *c;
+  for (c = base; c; c = c->super) {
+    mrb_value v;
+    if (c->tt == MRB_TT_ICLASS) continue;
+    v = autoload_one(mrb, c, sym, skip);
+    if (!mrb_undef_p(v)) return v;
+  }
+  return mrb_undef_value();
 }
 
 static mrb_value

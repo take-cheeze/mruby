@@ -20,3 +20,14 @@ assert('an autoload whose require does not define the constant raises NameError'
   assert_raise(NameError) { m::Stringy }
   assert_nil m.autoload?(:Stringy)
 end
+
+# A constant autoloaded on Object is found from a class body, as CRuby finds it through the ancestors. The file is
+# loaded by require (see require.rb for the path rules).
+assert('a constant autoloaded on Object is found from a class body') do
+  Object.autoload(:Zq, './mrbgems/mruby-require/test/requirefile/zq')
+  class RequireFileAutoload
+    def go; Zq.val; end
+  end
+  assert_equal 7, RequireFileAutoload.new.go
+  assert_nil Object.autoload?(:Zq)
+end
