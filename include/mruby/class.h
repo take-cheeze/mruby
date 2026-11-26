@@ -210,9 +210,19 @@ struct mrb_mt_rom_list {
    and push it onto the class's method table chain. */
 void mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
                      const mrb_mt_entry *entries, int size);
-#define MRB_MT_INIT_ROM(mrb, cls, entries) \
-  mrb_mt_init_rom(mrb, cls, entries, \
-                  (int)(sizeof(entries)/sizeof(entries[0])))
+/* A ROM layer that is its own const wrapper: the first table of a class with none installs it in place, with no
+   heap. A class that has a table already gets a per-state wrapper as mrb_mt_init_rom makes. */
+#define MRB_MT_ROM_TBL(entries) \
+  { (int)(sizeof(entries)/sizeof(entries[0])), \
+    (int)(sizeof(entries)/sizeof(entries[0])) | MRB_MT_READONLY_BIT, (mrb_mt_entry*)(entries), NULL }
+void mrb_mt_init_rom_tbl(mrb_state *mrb, struct RClass *c, const mrb_mt_tbl *tbl);
+/* MRB_MT_INIT_ROM's install, `tbl` being `entries`' layer: the call keeps mrb_mt_init_rom's (mrb, class, entries, ...)
+   order, which tools reading the preprocessed sources rely on. */
+void mrb_mt_init_rom_layer(mrb_state *mrb, struct RClass *c, const mrb_mt_entry *entries, const mrb_mt_tbl *tbl);
+#define MRB_MT_INIT_ROM(mrb, cls, entries) do { \
+  static const mrb_mt_tbl mrb_mt_rom_tbl_ = MRB_MT_ROM_TBL(entries); \
+  mrb_mt_init_rom_layer(mrb, cls, entries, &mrb_mt_rom_tbl_); \
+} while (0)
 
 MRB_END_DECL
 

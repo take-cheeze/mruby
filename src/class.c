@@ -220,6 +220,28 @@ mrb_mt_init_rom(mrb_state *mrb, struct RClass *c,
   }
 }
 
+/* A const layer is never written: mt_writable puts a mutable top above it, and only a heap wrapper's `next` is set
+   when a layer goes below another (mrb_mt_init_rom). It needs no rom_mt node, since nothing frees it. */
+void
+mrb_mt_init_rom_tbl(mrb_state *mrb, struct RClass *c, const mrb_mt_tbl *tbl)
+{
+  if (c->mt || tbl->next) {
+    mrb_mt_init_rom(mrb, c, tbl->ptr, tbl->size);
+    return;
+  }
+  if (!mrb->bootstrapping) mrb_method_cache_clear(mrb);
+  else mrb->mt_epoch++;
+  c->mt = (mrb_mt_tbl*)tbl;
+}
+
+void
+mrb_mt_init_rom_layer(mrb_state *mrb, struct RClass *c, const mrb_mt_entry *entries, const mrb_mt_tbl *tbl)
+{
+  mrb_assert(tbl->ptr == entries);
+  (void)entries;
+  mrb_mt_init_rom_tbl(mrb, c, tbl);
+}
+
 /* Being frame-free is a property of the function, so marking every entry that holds `f` is sound wherever the entry is
    shared; a ROM entry is const and keeps the flag its table gave it. */
 MRB_API int
