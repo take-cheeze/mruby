@@ -102,6 +102,10 @@ MRB_API mrb_bool mrb_cv_defined(mrb_state *mrb, mrb_value mod, mrb_sym sym);
 /* return non zero to break the loop */
 typedef int (mrb_iv_foreach_func)(mrb_state*,mrb_sym,mrb_value,void*);
 MRB_API void mrb_iv_foreach(mrb_state *mrb, mrb_value obj, mrb_iv_foreach_func *func, void *p);
+/* Shrinks every class's and module's instance variable (and constant) table and method-table layers to their sizes.
+   A table grows again on its next store, so this is for when a program has defined what it will (after the boot). */
+#define MRB_CLASS_SHRINK 1
+MRB_API void mrb_class_shrink(mrb_state *mrb);
 
 MRB_END_DECL
 

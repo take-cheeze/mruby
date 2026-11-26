@@ -9,6 +9,7 @@
 #include <mruby/array.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
+#include <mruby/gc.h>
 #include <mruby/proc.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
@@ -258,6 +259,46 @@ iv_free(mrb_state *mrb, iv_tbl *t)
   if (IV_ATTACHED_P(t)) return;
   mrb_free(mrb, t->ptr);
   mrb_free(mrb, t);
+}
+
+/* Gives a table's spare capacity back: iv_rehash doubles, so a class's constants leave up to half of it unused. The
+   new block comes from mrb_malloc_simple, which never runs the GC; a table it cannot get is left as it is. */
+static void
+iv_shrink(mrb_state *mrb, iv_tbl *t)
+{
+  if (t == NULL || IV_ATTACHED_P(t) || t->alloc <= t->size) return;
+  if (t->size == 0) {
+    mrb_free(mrb, t->ptr);
+    t->ptr = NULL;
+    t->alloc = 0;
+    return;
+  }
+  mrb_value *p = (mrb_value*)mrb_malloc_simple(mrb, (size_t)t->size * (sizeof(mrb_value)+sizeof(mrb_sym)));
+  if (p == NULL) return;
+  memcpy(p, t->ptr, sizeof(mrb_value)*t->size);
+  memcpy(&p[t->size], &t->ptr[t->alloc], sizeof(mrb_sym)*t->size);
+  mrb_free(mrb, t->ptr);
+  t->ptr = p;
+  t->alloc = t->size;
+}
+
+void mrb_mt_shrink(mrb_state *mrb, struct RClass *c);
+
+static int
+class_shrink_i(mrb_state *mrb, struct RBasic *obj, void *data)
+{
+  (void)data;
+  if (obj->tt == MRB_TT_CLASS || obj->tt == MRB_TT_MODULE || obj->tt == MRB_TT_SCLASS) {
+    iv_shrink(mrb, ((struct RClass*)obj)->iv);
+    mrb_mt_shrink(mrb, (struct RClass*)obj);
+  }
+  return MRB_EACH_OBJ_OK;
+}
+
+MRB_API void
+mrb_class_shrink(mrb_state *mrb)
+{
+  mrb_objspace_each_objects(mrb, class_shrink_i, NULL);
 }
 
 /* The table `*slot` names, made when it is NULL or SCLASS_ATTACHED. Stored only once complete: an allocation here may
