@@ -366,6 +366,13 @@ mrb_class_name_class(mrb_state *mrb, struct RClass *outer, struct RClass *c, mrb
     name = mrb_symbol_value(id);
   }
   else {
+#ifdef MRB_NO_CLASS_PATH_CACHE
+    /* the path is made from __outer__ when asked (mrb_class_find_path) */
+    if (outer != c) {
+      mrb_obj_iv_set_force(mrb, (struct RObject*)c, MRB_SYM(__outer__), mrb_obj_value(outer));
+    }
+    return;
+#endif
     name = mrb_class_path(mrb, outer);
     if (mrb_nil_p(name)) {      /* unnamed outer class */
       if (outer != mrb->object_class && outer != c) {

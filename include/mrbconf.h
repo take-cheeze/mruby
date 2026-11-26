@@ -135,6 +135,9 @@
    prototype is `mrb_bool mrb_ro_data_p(const char *ptr)` */
 //#define MRB_USE_CUSTOM_RO_DATA_P
 
+/* a nested class keeps its outer class, not its path String: the path is made each time it is asked for */
+//#define MRB_NO_CLASS_PATH_CACHE
+
 /* turn off generational GC by default */
 //#define MRB_GC_TURN_OFF_GENERATIONAL
 

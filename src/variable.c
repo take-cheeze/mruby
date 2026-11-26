@@ -2046,6 +2046,42 @@ mrb_class_find_path(mrb_state *mrb, struct RClass *c)
   mrb_sym name = find_class_sym(mrb, outer, c);
   if (name == 0) return mrb_nil_value();
 
+#ifdef MRB_NO_CLASS_PATH_CACHE
+  {
+    /* Made on every call, so one String of the path's length: the constant names out to the first named outer. */
+    mrb_sym names[16];
+    int n = 0;
+    struct RClass *k = c, *o = outer;
+    mrb_value top = mrb_nil_value();
+    for (;;) {
+      names[n++] = name;
+      top = mrb_obj_iv_get(mrb, (struct RObject*)o, MRB_SYM(__classname__));
+      if (!mrb_nil_p(top) || n == 16) break;
+      k = o;
+      o = mrb_class_outer(mrb, k);
+      if (o == NULL || (name = find_class_sym(mrb, o, k)) == 0) break;
+    }
+    if (mrb_symbol_p(top) || mrb_string_p(top)) {
+      mrb_int tlen;
+      const char *tp = mrb_symbol_p(top) ? mrb_sym_name_len(mrb, mrb_symbol(top), &tlen) : RSTRING_PTR(top);
+      if (!mrb_symbol_p(top)) tlen = RSTRING_LEN(top);
+      mrb_int len = tlen, l;
+      for (int i = 0; i < n; i++) {
+        mrb_sym_name_len(mrb, names[i], &l);
+        len += 2 + l;
+      }
+      mrb_value path = mrb_str_new_capa(mrb, len);
+      mrb_str_cat(mrb, path, tp, tlen);
+      for (int i = n - 1; i >= 0; i--) {
+        const char *np = mrb_sym_name_len(mrb, names[i], &l);
+        mrb_str_cat_lit(mrb, path, "::");
+        mrb_str_cat(mrb, path, np, l);
+      }
+      return path;
+    }
+    name = names[0];
+  }
+#endif
   mrb_value path = mrb_str_new_capa(mrb, 40);
   const char *cname = mrb_class_name(mrb, outer);
   mrb_str_cat_cstr(mrb, path, cname);
@@ -2054,6 +2090,7 @@ mrb_class_find_path(mrb_state *mrb, struct RClass *c)
   mrb_int len;
   const char *str = mrb_sym_name_len(mrb, name, &len);
   mrb_str_cat(mrb, path, str, len);
+#ifndef MRB_NO_CLASS_PATH_CACHE
   if (RSTRING_PTR(path)[0] != '#') {
     iv_tbl *t = iv_writable(mrb, &c->iv);
     iv_del(mrb, t, MRB_SYM(__outer__), NULL);
@@ -2061,6 +2098,7 @@ mrb_class_find_path(mrb_state *mrb, struct RClass *c)
     mrb_field_write_barrier_value(mrb, (struct RBasic*)c, path);
     path = mrb_str_dup(mrb, path);
   }
+#endif
   return path;
 }
 
