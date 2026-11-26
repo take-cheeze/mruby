@@ -10,3 +10,29 @@ assert('require of an unknown feature raises LoadError') do
   assert_raise(LoadError) { require 'no_such_feature_xyz' }
   assert_kind_of ScriptError, LoadError.new
 end
+
+# A file is loaded from a path (or from $LOAD_PATH for a plain name), once. The fixtures are in test/requirefile/ and
+# are named relative to the repository root, where the test run starts (a gem's test state has no File to write them).
+assert('require loads a file once, from a path') do
+  $requirefile_hello = nil
+  assert_true require('./mrbgems/mruby-require/test/requirefile/hello')
+  assert_false require('./mrbgems/mruby-require/test/requirefile/hello')
+  assert_equal 1, $requirefile_hello
+end
+
+assert('require searches $LOAD_PATH for a plain name') do
+  $requirefile_other = nil
+  $LOAD_PATH = ['./mrbgems/mruby-require/test/requirefile']
+  assert_true require('other')
+  assert_equal 42, $requirefile_other
+  assert_false require('other')
+end
+
+assert('a file that requires itself does not recurse') do
+  assert_true require('./mrbgems/mruby-require/test/requirefile/self')
+  assert_false $requirefile_self
+end
+
+assert('require of a file that is not there raises LoadError') do
+  assert_raise(LoadError) { require('./mrbgems/mruby-require/test/requirefile/does_not_exist') }
+end
