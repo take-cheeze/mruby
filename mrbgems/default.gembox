@@ -104,9 +104,6 @@ MRuby::GemBox.new do |conf|
   # Use arbitrary-precision Integer (mrbgems/mruby-bigint, fgmp-based; needs MRB_USE_BIGINT)
   conf.gem :core => "mruby-bigint"
 
-  # Use Signal.trap (mrbgems/mruby-signal: sigaction on POSIX; the handlers that run Ruby code are NotImplementedError)
-  conf.gem :core => "mruby-signal"
-
   # Use mruby-compiler to build other mrbgems
   conf.gem :core => "mruby-compiler"
 end
