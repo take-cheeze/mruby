@@ -116,3 +116,43 @@ assert('Kernel#Hash') do
   assert_equal({:key => :value}, Hash(key: :value))
   assert_raise(TypeError) { Hash([1, 2, 3]) }
 end
+
+assert('Kernel.caller_locations, Kernel#caller_locations') do
+  skip "backtrace isn't available" if caller_locations(0).empty?
+
+  caller_lineno = __LINE__ + 3
+  c = Class.new do
+    def foo(*args)
+      caller_locations(*args)
+    end
+
+    def bar(*args)
+      foo(*args)
+    end
+
+    def baz(*args)
+      bar(*args)
+    end
+  end
+  loc = c.new.baz(0)[0]
+  assert_kind_of Thread::Backtrace::Location, loc
+  assert_equal caller_lineno, loc.lineno
+  assert_equal "foo", loc.label
+  assert_equal "kernel.rb", loc.path[-9..-1]
+  assert_equal "#{loc.path}:#{caller_lineno}:in foo", loc.to_s
+  assert_equal "bar", c.new.baz[0].label
+  assert_equal "baz", c.new.baz(2)[0].label
+  assert_equal ["foo", "bar"], c.new.baz(0, 2).map { |i| i.label }
+  assert_equal ["bar", "baz"], c.new.baz(1..2).map { |i| i.label }
+  assert_nil c.new.baz(10..20)
+  assert_raise(ArgumentError) { c.new.baz(-1) }
+  assert_raise(NotImplementedError) { loc.absolute_path }
+end
+
+assert('Thread::Backtrace::Location#to_s and #inspect') do
+  loc = Thread::Backtrace::Location.new("a.rb", 12, "meth")
+  assert_equal "a.rb:12:in meth", loc.to_s
+  assert_equal "\"a.rb:12:in meth\"", loc.inspect
+  assert_equal "a.rb:3", Thread::Backtrace::Location.new("a.rb", 3, nil).to_s
+  assert_nil Thread::Backtrace::Location.new("a.rb", 3, nil).label
+end

@@ -1,5 +1,6 @@
 /*
- * Poorman's Encoding: ASCII-8BIT (BINARY), UTF-8 and US-ASCII; no transcoding.
+ * Poorman's Encoding: ASCII-8BIT (BINARY), UTF-8 and US-ASCII. Conversion is among these three only (String#encode);
+ * any other encoding is NotImplementedError.
  * An encoding is the frozen name string of the Encoding constant, not an object.
  * A string carries its encoding in two flags: MRB_STR_BINARY (ASCII-8BIT) and MRB_STR_USASCII
  * (US-ASCII); a string with neither flag is UTF-8.
@@ -11,6 +12,8 @@
 #include <stdarg.h>
 #include <string.h>
 #include <strings.h>
+#include <stdio.h>
+#include <mruby/hash.h>
 
 /* a strict UTF-8 check: no overlong forms, no surrogates, nothing above U+10FFFF */
 static int
@@ -347,36 +350,227 @@ rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *t
   return str;
 }
 
-/* the index of the encoding named by to (an Encoding name: "UTF_8", "US_ASCII" or "BINARY") */
+/* the encoding index of a name given to String#encode. A name is one of the three encodings of this runtime (any spelling
+   rb_enc_find_index takes); another encoding is NotImplementedError, since CRuby would transcode it and this runtime cannot */
 static int
-encoding_index_of_name(mrb_state *mrb, mrb_value to)
+encode_index_of(mrb_state *mrb, mrb_value name)
 {
-  const char *name;
-  if (!mrb_string_p(to)) mrb_raise(mrb, E_TYPE_ERROR, "encoding name expected");
-  name = mrb_str_to_cstr(mrb, to);
-  if (strcmp(name, "UTF_8") == 0) return ENCINDEX_UTF_8;
-  if (strcmp(name, "US_ASCII") == 0) return ENCINDEX_US_ASCII;
-  if (strcmp(name, "BINARY") == 0) return ENCINDEX_ASCII_8BIT;
-  mrb_raisef(mrb, mrb_class_get(mrb, "ArgumentError"), "unknown encoding name - %s", name);
-  return ENCINDEX_ASCII_8BIT; /* not reached */
+  const char *cname;
+  int idx;
+  if (!mrb_string_p(name)) mrb_raise(mrb, E_TYPE_ERROR, "encoding name must be a String");
+  cname = mrb_str_to_cstr(mrb, name);
+  idx = rb_enc_find_index(cname);
+  if (idx < 0) {
+    mrb_raisef(mrb, E_NOTIMP_ERROR, "encoding %s is not supported (this runtime has ASCII-8BIT, UTF-8 and US-ASCII only)", cname);
+  }
+  return idx;
+}
+
+static struct RClass *
+enc_error_class(mrb_state *mrb, const char *name)
+{
+  struct RClass *e = mrb_module_get(mrb, "Encoding");
+  return mrb_class_get_under(mrb, e, name);
+}
+
+/* the UTF-8 character at p: 1 when it is valid (*len its length); 0 when it is not (*len the length of the maximal invalid
+   subpart, at least 1) */
+static int
+utf8_char_at(const unsigned char *p, const unsigned char *e, int *len)
+{
+  unsigned char c = *p;
+  int n, k, lo = 0x80, hi = 0xBF;
+  if (c < 0x80) { *len = 1; return 1; }
+  if (c >= 0xC2 && c <= 0xDF) n = 1;
+  else if (c >= 0xE0 && c <= 0xEF) {
+    n = 2;
+    if (c == 0xE0) lo = 0xA0;
+    if (c == 0xED) hi = 0x9F;
+  }
+  else if (c >= 0xF0 && c <= 0xF4) {
+    n = 3;
+    if (c == 0xF0) lo = 0x90;
+    if (c == 0xF4) hi = 0x8F;
+  }
+  else { *len = 1; return 0; }
+  for (k = 1; k <= n; k++) {
+    if (p + k >= e || p[k] < lo || p[k] > hi) { *len = k; return 0; }
+    lo = 0x80;
+    hi = 0xBF;
+  }
+  *len = n + 1;
+  return 1;
+}
+
+/* the replacement for an invalid or undefined character: the replace: option, else U+FFFD into UTF-8 and "?" otherwise */
+static void
+append_replacement(mrb_state *mrb, mrb_value out, mrb_value repl, int to)
+{
+  if (!mrb_nil_p(repl)) mrb_str_cat(mrb, out, RSTRING_PTR(repl), RSTRING_LEN(repl));
+  else if (to == ENCINDEX_UTF_8) mrb_str_cat(mrb, out, "\xEF\xBF\xBD", 3);
+  else mrb_str_cat(mrb, out, "?", 1);
+}
+
+/* the bytes of str (tagged from) in the encoding to. An ASCII byte is the same in all three encodings. Above ASCII: a byte
+   that is invalid in from is an invalid byte sequence, and a character that to lacks is an undefined conversion; each is an
+   error (Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError) unless invalid_repl or undef_repl replaces it.
+   The same encoding is a copy, and is only changed when invalid_repl scrubs its invalid bytes */
+static mrb_value
+transcode(mrb_state *mrb, mrb_value str, int from, int to, int invalid_repl, int undef_repl, mrb_value repl)
+{
+  const unsigned char *p = (const unsigned char *)RSTRING_PTR(str);
+  const unsigned char *e = p + RSTRING_LEN(str);
+  mrb_value out = mrb_str_new(mrb, "", 0);
+  const char *fname = rb_enc_from_index(from)->name;
+  const char *tname = rb_enc_from_index(to)->name;
+  char hb[32], msg[160];
+
+  if (from == to && !invalid_repl) return mrb_str_new(mrb, (const char *)p, (mrb_int)(e - p));
+
+  while (p < e) {
+    unsigned char c = *p;
+    int n = 1;
+
+    if (c < 0x80) {
+      mrb_str_cat(mrb, out, (const char *)p, 1);
+      p++;
+      continue;
+    }
+    if (from == ENCINDEX_ASCII_8BIT) {
+      if (to == ENCINDEX_ASCII_8BIT) {
+        mrb_str_cat(mrb, out, (const char *)p, 1);
+      }
+      else if (undef_repl) {
+        append_replacement(mrb, out, repl, to);
+      }
+      else {
+        snprintf(hb, sizeof hb, "\\x%02X", c);
+        snprintf(msg, sizeof msg, "\"%s\" from ASCII-8BIT to %s", hb, tname);
+        mrb_raise(mrb, enc_error_class(mrb, "UndefinedConversionError"), msg);
+      }
+      p++;
+      continue;
+    }
+    if (from == ENCINDEX_UTF_8 && utf8_char_at(p, e, &n)) {
+      if (to == ENCINDEX_UTF_8) {
+        mrb_str_cat(mrb, out, (const char *)p, n);
+      }
+      else if (undef_repl) {
+        append_replacement(mrb, out, repl, to);
+      }
+      else {
+        int cp_len = 0;
+        unsigned int cp = rb_enc_codepoint_len(mrb, (const char *)p, (const char *)e, &cp_len, &enc_utf8);
+        snprintf(msg, sizeof msg, "U+%04X from UTF-8 to %s", cp, tname);
+        mrb_raise(mrb, enc_error_class(mrb, "UndefinedConversionError"), msg);
+      }
+      p += n;
+      continue;
+    }
+
+    /* an invalid byte sequence: n bytes (the maximal invalid subpart for UTF-8, one byte otherwise) */
+    if (invalid_repl) {
+      append_replacement(mrb, out, repl, to);
+      p += n;
+      continue;
+    }
+    {
+      size_t k = 0;
+      int i;
+      hb[0] = '\0';
+      for (i = 0; i < n && k + 5 < sizeof hb; i++) {
+        snprintf(hb + k, sizeof hb - k, "\\x%02X", p[i]);
+        k = strlen(hb);
+      }
+      snprintf(msg, sizeof msg, "\"%s\" on %s", hb, fname);
+      mrb_raise(mrb, enc_error_class(mrb, "InvalidByteSequenceError"), msg);
+    }
+  }
+  return out;
+}
+
+/* the options of String#encode: invalid:, undef: (nil or :replace), replace: (a String). The options CRuby has for newlines,
+   XML escaping and fallbacks are not implemented: a true value is NotImplementedError rather than a silent difference */
+static void
+encode_options(mrb_state *mrb, mrb_value opts, int *invalid_repl, int *undef_repl, mrb_value *repl)
+{
+  static const char *const unsupported[] = {
+    "xml", "universal_newline", "crlf_newline", "cr_newline", "lf_newline", "newline", "fallback"
+  };
+  mrb_value v;
+  size_t i;
+
+  if (mrb_nil_p(opts)) return;
+  for (i = 0; i < sizeof(unsupported) / sizeof(unsupported[0]); i++) {
+    v = mrb_hash_get(mrb, opts, mrb_symbol_value(mrb_intern_cstr(mrb, unsupported[i])));
+    if (mrb_test(v)) {
+      mrb_raisef(mrb, E_NOTIMP_ERROR, "String#encode option %s is not supported", unsupported[i]);
+    }
+  }
+  v = mrb_hash_get(mrb, opts, mrb_symbol_value(mrb_intern_lit(mrb, "invalid")));
+  if (!mrb_nil_p(v)) {
+    if (!mrb_symbol_p(v) || mrb_symbol(v) != mrb_intern_lit(mrb, "replace")) {
+      mrb_raise(mrb, E_ARGUMENT_ERROR, "unknown value for invalid character option");
+    }
+    *invalid_repl = 1;
+  }
+  v = mrb_hash_get(mrb, opts, mrb_symbol_value(mrb_intern_lit(mrb, "undef")));
+  if (!mrb_nil_p(v)) {
+    if (!mrb_symbol_p(v) || mrb_symbol(v) != mrb_intern_lit(mrb, "replace")) {
+      mrb_raise(mrb, E_ARGUMENT_ERROR, "unknown value for undefined character option");
+    }
+    *undef_repl = 1;
+  }
+  v = mrb_hash_get(mrb, opts, mrb_symbol_value(mrb_intern_lit(mrb, "replace")));
+  if (!mrb_nil_p(v)) {
+    if (!mrb_string_p(v)) mrb_raise(mrb, E_TYPE_ERROR, "replacement must be a String");
+    *repl = v;
+  }
+}
+
+/* String#encode(dst = nil, src = self.encoding, **opts): a new string in dst (dst nil keeps the encoding: CRuby's
+   default_internal is nil) with src, when given, as the source encoding */
+static mrb_value
+str_encode(mrb_state *mrb, mrb_value self)
+{
+  mrb_value *argv;
+  mrb_int argc, npos;
+  mrb_value opts = mrb_nil_value();
+  mrb_value repl = mrb_nil_value();
+  mrb_value src, out;
+  int from, to, invalid_repl = 0, undef_repl = 0;
+
+  mrb_get_args(mrb, "*", &argv, &argc);
+  npos = argc;
+  if (argc > 0 && mrb_hash_p(argv[argc - 1])) {
+    opts = argv[argc - 1];
+    npos--;
+  }
+  if (npos > 2) {
+    mrb_raisef(mrb, E_ARGUMENT_ERROR, "wrong number of arguments (given %d, expected 0..2)", (int)npos);
+  }
+  encode_options(mrb, opts, &invalid_repl, &undef_repl, &repl);
+
+  from = (npos == 2) ? encode_index_of(mrb, argv[1]) : rb_enc_get_index(self);
+  to = (npos >= 1 && !mrb_nil_p(argv[0])) ? encode_index_of(mrb, argv[0]) : from;
+
+  src = mrb_str_new(mrb, RSTRING_PTR(self), RSTRING_LEN(self));
+  rb_enc_set_index(src, from);
+  out = transcode(mrb, src, from, to, invalid_repl, undef_repl, repl);
+  rb_enc_set_index(out, to);
+  return out;
 }
 
 mrb_value
 rb_str_encode(mrb_state *mrb, mrb_value str, mrb_value to, int ecflags, mrb_value ecopts)
 {
-  struct RString *s;
+  int to_index, from;
   mrb_value out;
-  int to_index, from_index;
   (void)ecflags;
   (void)ecopts;
-  to_index = encoding_index_of_name(mrb, to);
-  from_index = rb_enc_get_index(str);
-  out = mrb_str_dup(mrb, str);
-  s = mrb_str_ptr(out);
-  if (from_index != to_index &&
-      !ascii_only((const unsigned char *)RSTR_PTR(s), (const unsigned char *)RSTR_PTR(s) + RSTR_LEN(s))) {
-    mrb_raisef(mrb, mrb_class_get(mrb, "ArgumentError"), "string with non-ASCII bytes cannot be converted to %v", to);
-  }
+  to_index = encode_index_of(mrb, to);
+  from = rb_enc_get_index(str);
+  out = transcode(mrb, str, from, to_index, 0, 0, mrb_nil_value());
   rb_enc_set_index(out, to_index);
   return out;
 }
@@ -411,6 +605,7 @@ mrb_mruby_encoding_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, s, "encoding",        str_encoding,    MRB_ARGS_NONE());
   mrb_define_method(mrb, s, "force_encoding",  str_force_encoding, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, s, "ascii_only?",    str_ascii_only_p, MRB_ARGS_NONE());
+  mrb_define_method(mrb, s, "encode",         str_encode,      MRB_ARGS_ANY());
 
   e = mrb_define_module(mrb, "Encoding");
   b = mrb_str_new_lit_frozen(mrb, "ASCII-8BIT");
@@ -424,6 +619,8 @@ mrb_mruby_encoding_gem_init(mrb_state *mrb)
   {
     struct RClass *ee = mrb_define_class(mrb, "EncodingError", mrb_class_get(mrb, "StandardError"));
     mrb_define_class_under(mrb, e, "CompatibilityError", ee);
+    mrb_define_class_under(mrb, e, "UndefinedConversionError", ee);
+    mrb_define_class_under(mrb, e, "InvalidByteSequenceError", ee);
   }
 }
 
