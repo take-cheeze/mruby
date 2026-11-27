@@ -3,9 +3,13 @@
 #include <mruby/array.h>
 #include <mruby/hash.h>
 #include <mruby/range.h>
+#include <mruby/string.h>
+#include <mruby/class.h>
+#include <string.h>
 
+/* the backtrace lines of caller (the array of "path:lineno:in label" strings) from the arguments of the calling method */
 static mrb_value
-mrb_f_caller(mrb_state *mrb, mrb_value self)
+caller_lines(mrb_state *mrb)
 {
   mrb_value bt, v, length;
   mrb_int bt_len, argc, lev, n;
@@ -58,6 +62,85 @@ mrb_f_caller(mrb_state *mrb, mrb_value self)
   }
 
   return mrb_funcall(mrb, bt, "[]", 2, mrb_fixnum_value(lev), mrb_fixnum_value(n));
+}
+
+static mrb_value
+mrb_f_caller(mrb_state *mrb, mrb_value self)
+{
+  return caller_lines(mrb);
+}
+
+/* the index of the ':' that starts a trailing ":<digits>" of s[0..end), or -1 */
+static mrb_int
+lineno_colon(const char *s, mrb_int end)
+{
+  mrb_int i = end;
+  while (i > 0 && s[i - 1] >= '0' && s[i - 1] <= '9') i--;
+  if (i < end && i > 0 && s[i - 1] == ':') return i - 1;
+  return -1;
+}
+
+/* a Thread::Backtrace::Location for one backtrace line: "path:lineno" or "path:lineno:in label" (no label when the frame
+   has none). The line is the one caller gives, so the location's to_s is the same string */
+static mrb_value
+location_of_line(mrb_state *mrb, struct RClass *loc, mrb_value line)
+{
+  const char *s = RSTRING_PTR(line);
+  mrb_int len = RSTRING_LEN(line);
+  mrb_int end = len, colon, k, lineno = 0;
+  mrb_value path, label = mrb_nil_value(), args[3];
+
+  for (k = 0; k + 4 <= len; k++) {
+    if (s[k] == ':' && memcmp(s + k, ":in ", 4) == 0 && lineno_colon(s, k) >= 0) {
+      end = k;
+      label = mrb_str_new(mrb, s + k + 4, len - k - 4);
+      break;
+    }
+  }
+  colon = lineno_colon(s, end);
+  if (colon < 0) {
+    path = mrb_str_new(mrb, s, end);
+  }
+  else {
+    mrb_int i;
+    path = mrb_str_new(mrb, s, colon);
+    for (i = colon + 1; i < end; i++) lineno = lineno * 10 + (s[i] - '0');
+  }
+  args[0] = path;
+  args[1] = mrb_fixnum_value(lineno);
+  args[2] = label;
+  return mrb_obj_new(mrb, loc, 3, args);
+}
+
+/*
+ *  call-seq:
+ *     caller_locations(start = 1, length = nil)  -> array of Thread::Backtrace::Location, or nil
+ *
+ *  The same frames as caller, as Thread::Backtrace::Location objects (path, lineno, label, to_s).
+ */
+static mrb_value
+mrb_f_caller_locations(mrb_state *mrb, mrb_value self)
+{
+  mrb_value lines, out;
+  mrb_int i, n;
+  struct RClass *loc, *bt_mod, *thread;
+  int ai;
+
+  lines = caller_lines(mrb);
+  if (mrb_nil_p(lines)) return mrb_nil_value();
+
+  thread = mrb_class_get(mrb, "Thread");
+  bt_mod = mrb_module_get_under(mrb, thread, "Backtrace");
+  loc = mrb_class_get_under(mrb, bt_mod, "Location");
+
+  n = RARRAY_LEN(lines);
+  out = mrb_ary_new_capa(mrb, n);
+  ai = mrb_gc_arena_save(mrb);
+  for (i = 0; i < n; i++) {
+    mrb_ary_push(mrb, out, location_of_line(mrb, loc, mrb_ary_ref(mrb, lines, i)));
+    mrb_gc_arena_restore(mrb, ai);
+  }
+  return out;
 }
 
 /*
@@ -212,6 +295,7 @@ mrb_mruby_kernel_ext_gem_init(mrb_state *mrb)
 
   mrb_define_module_function(mrb, krn, "fail", mrb_f_raise, MRB_ARGS_OPT(2));
   mrb_define_module_function(mrb, krn, "caller", mrb_f_caller, MRB_ARGS_OPT(2));
+  mrb_define_module_function(mrb, krn, "caller_locations", mrb_f_caller_locations, MRB_ARGS_OPT(2));
   mrb_define_method(mrb, krn, "__method__", mrb_f_method, MRB_ARGS_NONE());
   mrb_define_module_function(mrb, krn, "Integer", mrb_f_integer, MRB_ARGS_ARG(1,1));
 #ifndef MRB_WITHOUT_FLOAT

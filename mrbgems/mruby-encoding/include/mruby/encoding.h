@@ -79,9 +79,9 @@ MRB_API mrb_value rb_enc_from_encoding(mrb_state *mrb, rb_encoding *enc);
    a failed conversion) */
 MRB_API mrb_value rb_str_conv_enc(mrb_state *mrb, mrb_value str, rb_encoding *from, rb_encoding *to);
 /* CRuby's rb_str_encode(str, to, ecflags, ecopts): a new string of str in the encoding named by to (an Encoding name, as
-   rb_enc_from_encoding gives). The three encodings are ASCII-compatible, so a conversion among them is defined for ASCII only:
-   an ASCII-only string takes the target's tag; a string with other bytes raises ArgumentError (CRuby raises
-   Encoding::UndefinedConversionError here). ecflags and ecopts are not used. */
+   rb_enc_from_encoding gives), converted among the three encodings as String#encode does: a character the target lacks
+   raises Encoding::UndefinedConversionError and an invalid byte raises Encoding::InvalidByteSequenceError. ecflags and
+   ecopts are not used (String#encode's options are in encode.c). */
 MRB_API mrb_value rb_str_encode(mrb_state *mrb, mrb_value str, mrb_value to, int ecflags, mrb_value ecopts);
 /* CRuby's rb_enc_sprintf: the formatted string (mrb_vformat), tagged with enc (the converter maps PRIsVALUE in the
    format as rb_sprintf does) */
