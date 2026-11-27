@@ -32,6 +32,13 @@ typedef struct mrb_data_type {
    * The data may be NULL after dfree has run, so the function must check it.
    */
   void (*mark)(mrb_state *mrb, void *data);
+
+  /**
+   * Optional parent type (NULL: none). An object whose type has this type as
+   * an ancestor (following parent links) passes the type check for this type,
+   * as CRuby's rb_check_typeddata does.
+   */
+  const struct mrb_data_type *parent;
 } mrb_data_type;
 
 struct RData {

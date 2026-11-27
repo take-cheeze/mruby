@@ -21,13 +21,23 @@ mrb_data_object_alloc(mrb_state *mrb, struct RClass *klass, void *ptr, const mrb
   return data;
 }
 
+/* true when t is expected or reaches expected through its parent chain */
+static mrb_bool
+data_type_matches(const mrb_data_type *t, const mrb_data_type *expected)
+{
+  for (; t; t = t->parent) {
+    if (t == expected) return TRUE;
+  }
+  return FALSE;
+}
+
 MRB_API void
 mrb_data_check_type(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
 {
   if (!mrb_data_p(obj)) {
     mrb_check_type(mrb, obj, MRB_TT_DATA);
   }
-  if (DATA_TYPE(obj) != type) {
+  if (!data_type_matches(DATA_TYPE(obj), type)) {
     const mrb_data_type *t2 = DATA_TYPE(obj);
 
     if (t2) {
@@ -47,7 +57,7 @@ mrb_data_check_get_ptr(mrb_state *mrb, mrb_value obj, const mrb_data_type *type)
   if (!mrb_data_p(obj)) {
     return NULL;
   }
-  if (DATA_TYPE(obj) != type) {
+  if (!data_type_matches(DATA_TYPE(obj), type)) {
     return NULL;
   }
   return DATA_PTR(obj);
