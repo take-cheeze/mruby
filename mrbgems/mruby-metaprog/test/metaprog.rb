@@ -86,6 +86,31 @@ assert('Kernel#protected_methods', '15.3.1.3.37') do
   assert_equal [:foo], c.new.protected_methods(false)
 end
 
+assert('protected C method (mrb_define_protected_method)') do
+  c = MetaprogTest::ProtectedC
+  assert_equal [:prot_c], c.protected_instance_methods(false)
+  assert_equal [], c.public_instance_methods(false)
+  assert_raise(NoMethodError) { c.new.prot_c }
+  c.class_eval do
+    def peer_call(o)
+      o.prot_c
+    end
+  end
+  assert_equal 42, c.new.peer_call(c.new)
+end
+
+assert('protected C method is refused from an unrelated self') do
+  c = MetaprogTest::ProtectedC
+  other = Class.new do
+    def try(o)
+      o.prot_c
+    end
+  end
+  assert_raise(NoMethodError) { other.new.try(c.new) }
+  assert_raise(NoMethodError) { c.new.public_send(:prot_c) }
+  assert_equal 42, c.new.send(:prot_c)
+end
+
 assert('Kernel#public_methods', '15.3.1.3.38') do
   assert_equal Array, public_methods.class
   c = Class.new do

@@ -30,9 +30,18 @@ fresh_state_visibility(mrb_state *mrb, mrb_value self)
   return mrb_ary_new_from_values(mrb, 2, pair);
 }
 
+static mrb_value
+protected_c_value(mrb_state *mrb, mrb_value self)
+{
+  return mrb_fixnum_value(42);
+}
+
 void
 mrb_mruby_metaprog_gem_test(mrb_state *mrb)
 {
   struct RClass *t = mrb_define_module(mrb, "MetaprogTest");
   mrb_define_module_function(mrb, t, "fresh_state_visibility", fresh_state_visibility, MRB_ARGS_NONE());
+  /* a C method defined with the protected visibility (rb_define_protected_method) */
+  struct RClass *pc = mrb_define_class_under(mrb, t, "ProtectedC", mrb->object_class);
+  mrb_define_protected_method(mrb, pc, "prot_c", protected_c_value, MRB_ARGS_NONE());
 }

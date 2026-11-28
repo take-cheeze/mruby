@@ -1287,6 +1287,43 @@ mrb_define_private_method(mrb_state *mrb, struct RClass *c, const char *name, mr
 }
 
 /*
+ * Defines a protected C function as a method for a class/module using a symbol for the name.
+ * A protected method is callable with an explicit receiver only from a method whose `self`
+ * is_a? the class/module where the method is defined (as CRuby's rb_define_protected_method).
+ *
+ * @param mrb The mruby state.
+ * @param c The class/module in which to define the method.
+ * @param mid The symbol ID of the method name.
+ * @param func The C function pointer (mrb_func_t) for the method body.
+ * @param aspec The argument specification for the method (e.g., MRB_ARGS_REQ(1)).
+ * @sideeffect Modifies the method table of the class/module `c`.
+ *             Clears the method cache for `mid`.
+ */
+MRB_API void
+mrb_define_protected_method_id(mrb_state *mrb, struct RClass *c, mrb_sym mid, mrb_func_t func, mrb_aspec aspec)
+{
+  define_method_id(mrb, c, mid, func, aspec, MRB_METHOD_PROTECTED_FL);
+}
+
+/*
+ * Defines a protected C function as a method for a class/module.
+ *
+ * @param mrb The mruby state.
+ * @param c The class/module in which to define the method.
+ * @param name The C string name of the method.
+ * @param func The C function pointer (mrb_func_t) for the method body.
+ * @param aspec The argument specification for the method (e.g., MRB_ARGS_REQ(1)).
+ * @sideeffect Modifies the method table of the class/module `c`.
+ *             Interns the method name string.
+ *             Clears the method cache for the interned method name.
+ */
+MRB_API void
+mrb_define_protected_method(mrb_state *mrb, struct RClass *c, const char *name, mrb_func_t func, mrb_aspec aspec)
+{
+  mrb_define_protected_method_id(mrb, c, mrb_intern_cstr(mrb, name), func, aspec);
+}
+
+/*
  * Raises a NotImplementedError, typically indicating that the C function
  * called by Ruby is not implemented for the current platform or build.
  * The error message will include the name of the Ruby method that called this C function.
